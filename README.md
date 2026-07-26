@@ -28,6 +28,7 @@ supabase/migrations/                el esquema, en orden
 
 sql/
   semilla_inicial.sql               crea el negocio y el primer usuario
+  carga_inicial_inventario.sql      mete mercadería de prueba para poder vender
   verificar_instalacion.sql         revisa que todo quedó bien instalado
 ```
 
@@ -63,6 +64,12 @@ Ejecute `sql/verificar_instalacion.sql`. Las siete revisiones deben decir
 
 Deja creado: la organización, una sucursal, Caja 1, el impuesto ISV 15%,
 seis categorías y diez productos de ejemplo.
+
+Los productos aparecen **agotados** hasta que entre mercadería. Para probar
+una venta enseguida, ejecute `sql/carga_inicial_inventario.sql`: registra y
+confirma una factura de compra, que es la vía correcta para que entre
+inventario. Recuerde que el kardex es inmutable y esos movimientos quedan
+en el historial.
 
 ### 4. Publicar la aplicación
 
@@ -163,4 +170,3 @@ estar en este repositorio ni en ningún archivo que llegue al navegador.
 - Motor de promociones
 - Sugerencias de compra por promedio de ventas y tiempo de entrega
 - Conteos de inventario y ajustes
-- Iconos `icono-192.png` y `icono-512.png`
