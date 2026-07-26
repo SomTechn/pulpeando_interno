@@ -159,6 +159,18 @@ select '8. Datos', 'INFO',
        coalesce((select n::text from con_pin), '—') || ' usuarios con PIN'
 
 union all
+select '8b. Funciones cerradas a la llave anonima',
+       case when malas = 0 then 'BIEN' else 'RIESGO' end,
+       case when malas = 0 then 'ninguna de las ' || total || ' funciones se puede llamar sin sesion'
+            else malas || ' abiertas: ' || lista end
+from (select count(*) total, count(*) filter (where puede) malas,
+             string_agg(nombre, ', ' order by nombre) filter (where puede) lista
+      from (select n.nspname || '.' || p.proname as nombre,
+                   has_function_privilege('anon', p.oid, 'execute') as puede
+            from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname in ('public','app') and p.prokind = 'f') f) r8b
+
+union all
 select '9. Postgres', 'INFO', version()
 
 order by 1;

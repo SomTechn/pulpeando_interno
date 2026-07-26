@@ -358,6 +358,7 @@ input,select{font:inherit;color:inherit}
     <div class="barra-fin">
       <span class="pill online" id="h-red">En línea</span>
       <span class="pill num" id="h-ventas">0 ventas</span>
+      <a class="pill oculto" id="h-compras" href="compras.html">Compras</a>
       <button class="btn-bloquear" id="h-bloquear">Bloquear</button>
     </div>
   </header>
@@ -594,6 +595,7 @@ async function arrancar(){
   $('#b-cajero').textContent = data.usuario.nombre;
   $('#h-cajero').textContent = data.usuario.nombre;
   ver('#caja-fiscal', data.organizacion.factura_fiscal);
+  ver('#h-compras', data.usuario.nivel >= 2);   // supervisor en adelante
 
   if (data.usuario.rol === 'repartidor'){
     ver('#p-turno');

@@ -14,6 +14,7 @@ después de cada cobro y funciona sin internet.
 
 ```
 index.html                          POS: catálogo, ticket, cobro, bloqueo por PIN
+compras.html                        entrada de mercadería y cuentas por pagar
 config.js                           URL y llave pública del proyecto
 manifest.webmanifest                para instalar la app
 sw.js                               service worker (abre sin internet)
@@ -25,10 +26,12 @@ supabase/migrations/                el esquema, en orden
   003_pedidos_permisos_y_pos.sql    pedidos, permisos de esquema, vistas del POS
   004_endurecer_permisos_de_funciones.sql
   005_revocar_execute_de_public.sql
+  006_compras_permisos_y_anulacion.sql
+  007_blindaje_de_funciones_nuevas.sql
+  008_compras_correcciones.sql
 
 sql/
   semilla_inicial.sql               crea el negocio y el primer usuario
-  carga_inicial_inventario.sql      mete mercadería de prueba para poder vender
   verificar_instalacion.sql         revisa que todo quedó bien instalado
 ```
 
@@ -64,12 +67,6 @@ Ejecute `sql/verificar_instalacion.sql`. Las siete revisiones deben decir
 
 Deja creado: la organización, una sucursal, Caja 1, el impuesto ISV 15%,
 seis categorías y diez productos de ejemplo.
-
-Los productos aparecen **agotados** hasta que entre mercadería. Para probar
-una venta enseguida, ejecute `sql/carga_inicial_inventario.sql`: registra y
-confirma una factura de compra, que es la vía correcta para que entre
-inventario. Recuerde que el kardex es inmutable y esos movimientos quedan
-en el historial.
 
 ### 4. Publicar la aplicación
 
@@ -162,6 +159,23 @@ estar en este repositorio ni en ningún archivo que llegue al navegador.
 
 ---
 
+## Entrada de mercadería
+
+`compras.html`, para supervisor en adelante. Se busca el producto, se elige
+la presentación en que viene (fardo, caja, unidad) y se digita el costo de
+esa presentación. La pantalla muestra en vivo cuántas unidades entran, el
+costo unitario resultante y **el margen contra el precio de venta actual**,
+en rojo si quedaría vendiendo con pérdida.
+
+Se puede guardar como borrador o confirmar. Al confirmar se crean los lotes,
+se mueve el kardex y se recalcula el costo promedio. El historial permite
+confirmar borradores, abonar a la cuenta por pagar y anular.
+
+Anular una compra confirmada devuelve todo con un movimiento contrario,
+valorado **al costo al que entró**, así el costo promedio vuelve exactamente
+a donde estaba. Si la mercadería ya se vendió, la anulación falla: primero
+hay que resolver las ventas.
+
 ## Pendiente
 
 - Tablero de pedidos en tiempo real y app del repartidor
@@ -170,3 +184,4 @@ estar en este repositorio ni en ningún archivo que llegue al navegador.
 - Motor de promociones
 - Sugerencias de compra por promedio de ventas y tiempo de entrega
 - Conteos de inventario y ajustes
+- Iconos `icono-192.png` y `icono-512.png`
