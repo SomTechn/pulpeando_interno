@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1729">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="icono-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icono-192.png">
+<title>Pedidos · Pulpeando</title>
+<script src="config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ui.css">
+<style>
+/* ---------- resumen ---------- */
+.resumen{
+  display:flex;gap:10px;padding:12px 16px;overflow-x:auto;flex:0 0 auto;
+  background:var(--panel);border-bottom:1px solid var(--linea);scrollbar-width:none;
+}
+.resumen::-webkit-scrollbar{display:none}
+.dato-r{
+  flex:0 0 auto;min-width:104px;padding:10px 14px;border-radius:var(--r-sm);
+  background:var(--fondo);
+}
+.dato-r small{display:block;font-size:11px;font-weight:700;color:var(--tenue);
+  text-transform:uppercase;margin-bottom:2px}
+.dato-r b{font-family:var(--num);font-size:19px;font-weight:700}
+.dato-r.urge{background:#FFEDF1}
+.dato-r.urge b{color:var(--rojo)}
+.dato-r.bien{background:#E7F7EE}
+.dato-r.bien b{color:var(--verde-oscuro)}
+
+/* ---------- columnas ---------- */
+.tablero{
+  flex:1;display:grid;gap:12px;padding:14px 16px;overflow:auto;min-height:0;
+  grid-template-columns:repeat(4,minmax(250px,1fr));align-items:start;
+}
+.columna{display:flex;flex-direction:column;min-height:0;height:100%}
+.col-enc{
+  display:flex;align-items:center;gap:8px;padding:0 4px 10px;flex:0 0 auto;
+  font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--tenue);
+}
+.col-enc i{width:9px;height:9px;border-radius:50%;flex:0 0 auto;font-style:normal}
+.col-enc .cuenta{
+  margin-left:auto;font-family:var(--num);background:var(--linea);color:var(--tenue);
+  padding:2px 8px;border-radius:999px;font-size:11.5px;
+}
+.col-lista{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;
+  padding-bottom:8px;min-height:60px}
+
+/* ---------- tarjeta ---------- */
+.tarjeta-p{
+  background:var(--panel);border:1px solid var(--linea);border-left:4px solid var(--linea);
+  border-radius:var(--r-md);padding:13px;text-align:left;width:100%;
+  box-shadow:var(--sombra);transition:transform .1s,border-color .15s;
+}
+.tarjeta-p:active{transform:scale(.985)}
+.tarjeta-p:hover{border-color:#C9D6E8}
+.tarjeta-p.nuevo{border-left-color:var(--azul)}
+.tarjeta-p.confirmado,.tarjeta-p.preparando{border-left-color:var(--ambar)}
+.tarjeta-p.listo{border-left-color:var(--verde)}
+.tarjeta-p.en_ruta{border-left-color:#7C3AED}
+.tarjeta-p.entregado{border-left-color:#94A3B8;opacity:.72}
+.tarjeta-p.cancelado{border-left-color:var(--rojo);opacity:.6}
+.tarjeta-p.tarde{border-color:var(--rojo)}
+.tarjeta-p.recien{animation:entrar .45s cubic-bezier(.2,1.2,.4,1)}
+@keyframes entrar{from{opacity:0;transform:translateY(-10px) scale(.97)}to{opacity:1;transform:none}}
+
+.p-arriba{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.p-num{font-family:var(--num);font-size:12px;font-weight:700;color:var(--tenue)}
+.p-origen{
+  font-size:9.5px;font-weight:800;text-transform:uppercase;padding:2px 7px;
+  border-radius:999px;background:var(--azul-suave);color:var(--azul);letter-spacing:.03em;
+}
+.p-origen.mostrador{background:var(--fondo);color:var(--tenue)}
+.p-origen.telefono,.p-origen.whatsapp{background:#E7F7EE;color:var(--verde-oscuro)}
+.p-reloj{
+  margin-left:auto;font-family:var(--num);font-size:11.5px;font-weight:700;
+  color:var(--tenue);display:flex;align-items:center;gap:4px;
+}
+.p-reloj.tarde{color:var(--rojo)}
+.p-cliente{font-size:15px;font-weight:700;line-height:1.25;margin-bottom:3px}
+.p-dir{
+  font-size:12px;color:var(--tenue);line-height:1.4;margin-bottom:9px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.p-abajo{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.p-items{font-size:12px;color:var(--tenue);font-weight:600}
+.p-total{margin-left:auto;font-family:var(--num);font-size:16px;font-weight:700}
+.p-marca{
+  font-size:10px;font-weight:800;text-transform:uppercase;padding:3px 8px;
+  border-radius:999px;
+}
+.p-marca.falta{background:#FFEDF1;color:var(--rojo)}
+.p-marca.repartidor{background:#F3E8FF;color:#6D28D9}
+.p-marca.recoge{background:var(--fondo);color:var(--tenue)}
+.p-marca.facturado{background:#E7F7EE;color:var(--verde-oscuro)}
+
+.col-vacia{
+  border:2px dashed var(--linea);border-radius:var(--r-md);padding:22px 12px;
+  text-align:center;color:#A6B2C4;font-size:12.5px;
+}
+
+/* ---------- detalle ---------- */
+.d-enc{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.d-enc h2{font-size:19px;line-height:1.2}
+.d-enc .sub{margin:0}
+.bloque{background:var(--fondo);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:12px}
+.bloque h4{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  color:#9AA8BC;margin-bottom:7px}
+.bloque p{font-size:13.5px;line-height:1.5}
+.bloque a{color:var(--azul);font-weight:600}
+.linea-p{
+  display:grid;grid-template-columns:1fr 96px 78px;gap:8px;align-items:center;
+  padding:10px 0;border-bottom:1px solid var(--fondo);
+}
+.linea-p .nom{font-size:13.5px;font-weight:600;line-height:1.3}
+.linea-p .nom small{display:block;font-size:11.5px;color:var(--tenue);font-weight:500;margin-top:2px}
+.linea-p .nom small.falta{color:var(--rojo);font-weight:700}
+.surtir{display:flex;align-items:center;justify-content:center;gap:3px}
+.surtir button{width:28px;height:28px;border-radius:8px;background:var(--fondo);
+  font-size:15px;font-weight:700;color:var(--tenue);line-height:1}
+.surtir input{
+  width:40px;height:28px;border:1.5px solid var(--linea);border-radius:8px;
+  text-align:center;font-family:var(--num);font-weight:600;font-size:13px;outline:none;padding:0;
+}
+.surtir input:focus{border-color:var(--azul)}
+.linea-p .imp{text-align:right;font-family:var(--num);font-weight:600;font-size:13.5px}
+.tot-p{display:flex;justify-content:space-between;padding:6px 0;font-size:13.5px;color:var(--tenue)}
+.tot-p b{font-family:var(--num);color:var(--tinta)}
+.tot-p.grande{border-top:1px dashed var(--linea);margin-top:6px;padding-top:10px;
+  font-size:15px;color:var(--tinta);font-weight:700}
+.tot-p.grande b{font-size:21px}
+.pasos{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.pasos .btn{width:100%}
+.linea-t{display:flex;gap:10px;font-size:12.5px;padding:6px 0;color:var(--tenue)}
+.linea-t b{color:var(--tinta);font-weight:600}
+.linea-t .hora{font-family:var(--num);flex:0 0 auto;color:#9AA8BC}
+
+/* ---------- avisos ---------- */
+.timbre{
+  position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(120%);
+  z-index:95;background:var(--tinta);color:#fff;border-radius:999px;
+  padding:13px 22px;display:flex;align-items:center;gap:11px;font-weight:700;font-size:14px;
+  box-shadow:0 12px 32px -8px rgba(15,23,41,.55);transition:transform .3s cubic-bezier(.2,.8,.3,1);
+  max-width:calc(100vw - 32px);
+}
+.timbre.ver{transform:translateX(-50%) translateY(0)}
+.timbre i{width:32px;height:32px;border-radius:50%;background:var(--verde);
+  display:grid;place-items:center;font-style:normal;flex:0 0 auto}
+.timbre button{background:rgba(255,255,255,.16);border-radius:999px;padding:6px 13px;
+  font-size:12.5px;font-weight:700;flex:0 0 auto}
+
+@media (max-width:1180px){
+  .tablero{grid-template-columns:repeat(2,minmax(230px,1fr))}
+}
+@media (max-width:820px){
+  .tablero{grid-template-columns:1fr;padding:12px}
+  .columna{height:auto}
+  .col-lista{overflow:visible}
+  .resumen{padding:10px 12px}
+  .dato-r{min-width:92px;padding:9px 12px}
+  .dato-r b{font-size:17px}
+}
+</style>
+</head>
+<body>
+
+<div class="oscura oculto" id="p-config">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Configuración</div>
+    <div class="titulo-o">Falta conectar el proyecto</div>
+    <p class="sub-o">Ponga la URL y la llave publishable en <b>config.js</b>.</p>
+  </div>
+</div>
+
+<div class="oscura oculto" id="p-sesion">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Pedidos</div>
+    <div class="titulo-o">Iniciar sesión</div>
+    <p class="sub-o">Use el correo con el que su gerente lo dio de alta</p>
+    <input class="campo-o" id="s-email" type="email" placeholder="correo@negocio.hn" autocomplete="username">
+    <input class="campo-o" id="s-clave" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <div class="error-o" id="s-error"></div>
+    <button class="btn-o" id="s-entrar">Entrar</button>
+  </div>
+</div>
+
+<div class="oscura oculto" id="p-bloqueado">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Pedidos</div>
+    <div class="titulo-o" id="bl-titulo">Sin permiso</div>
+    <p class="sub-o" id="bl-texto"></p>
+    <a class="btn-o" href="index.html" style="display:block;line-height:52px">Ir a la caja</a>
+    <button class="btn-o fantasma" id="bl-salir">Cerrar sesión</button>
+  </div>
+</div>
+
+<div class="armazon oculto" id="app">
+  <aside id="menu"></aside>
+
+  <div class="principal">
+    <header class="barra">
+      <button class="hamburguesa" id="abrir-menu" aria-label="Menú">
+        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="barra-titulo">
+        <b>Pedidos</b>
+        <small id="h-sucursal">—</small>
+      </div>
+      <div class="barra-fin">
+        <span class="pill online" id="h-vivo">En vivo</span>
+        <button class="pill" id="h-sonido" title="Aviso sonoro">🔔 Aviso</button>
+      </div>
+    </header>
+
+    <div class="resumen" id="resumen"></div>
+    <div class="tablero" id="tablero"></div>
+  </div>
+</div>
+
+<div class="velo oculto" id="velo"><div class="hoja" id="hoja"></div></div>
+
+<div class="timbre" id="timbre">
+  <i>🛎️</i>
+  <span id="timbre-texto">Pedido nuevo</span>
+  <button id="timbre-ver">Ver</button>
+</div>
+
+<script type="module">
+const CFG = window.SUPABASE_CONFIG || {};
+const SUPABASE_URL = CFG.url || 'PEGUE_AQUI_LA_URL';
+const SUPABASE_KEY = CFG.key || 'PEGUE_AQUI_LA_LLAVE';
+
+const $ = s => document.querySelector(s);
+const ver = (id, si = true) => $(id).classList.toggle('oculto', !si);
+
+if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin configurar'); }
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { montarMenu, escapar } from './menu.js';
+
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth:{ persistSession:true, autoRefreshToken:true }
+});
+
+const COLUMNAS = [
+  { id:'nuevo',    titulo:'Nuevos',      color:'#2563EB', estados:['nuevo'] },
+  { id:'proceso',  titulo:'Preparando',  color:'#F5B301', estados:['confirmado','preparando'] },
+  { id:'listo',    titulo:'Listos',      color:'#12A150', estados:['listo'] },
+  { id:'ruta',     titulo:'En ruta',     color:'#7C3AED', estados:['en_ruta'] }
+];
+
+const S = {
+  ctx:null, sucursal:null, moneda:'L', menu:null,
+  pedidos:[], repartidores:[], canal:null, sonido:true,
+  filtro:'activos', recientes:new Set(), ultimoDetalle:null
+};
+
+const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
+  {minimumFractionDigits:2, maximumFractionDigits:2});
+const num = v => { const n = parseFloat(String(v).replace(/[^0-9.\-]/g,'')); return isNaN(n) ? 0 : n; };
+
+function limpiarError(e){
+  const m = (e?.message || String(e)).replace(/^.*?:\s*/, '');
+  if (/JWT|token/i.test(m)) return 'La sesión venció. Vuelva a entrar.';
+  if (/Failed to fetch|NetworkError/i.test(m)) return 'Sin conexión con el servidor';
+  return m;
+}
+
+/* ================= aviso sonoro ================= */
+let audio = null;
+function timbrar(){
+  if (!S.sonido) return;
+  try{
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === 'suspended') audio.resume();
+    // dos notas, como campanilla de mostrador
+    [0, 0.17].forEach((t, i) => {
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.type = 'sine';
+      o.frequency.value = i === 0 ? 880 : 1170;
+      g.gain.setValueAtTime(0.0001, audio.currentTime + t);
+      g.gain.exponentialRampToValueAtTime(0.22, audio.currentTime + t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + t + 0.42);
+      o.connect(g); g.connect(audio.destination);
+      o.start(audio.currentTime + t); o.stop(audio.currentTime + t + 0.45);
+    });
+  }catch(e){}
+  try{ navigator.vibrate?.([90, 60, 90]); }catch(e){}
+}
+$('#h-sonido').addEventListener('click', () => {
+  S.sonido = !S.sonido;
+  $('#h-sonido').textContent = S.sonido ? '🔔 Aviso' : '🔕 Silencio';
+  if (S.sonido) timbrar();
+});
+
+let timbreTimer = null;
+function mostrarTimbre(pedido){
+  $('#timbre-texto').textContent = 'Pedido nuevo de ' + pedido.cliente;
+  $('#timbre').classList.add('ver');
+  $('#timbre-ver').onclick = () => { $('#timbre').classList.remove('ver'); abrirPedido(pedido.id); };
+  clearTimeout(timbreTimer);
+  timbreTimer = setTimeout(() => $('#timbre').classList.remove('ver'), 9000);
+}
+
+/* ================= sesión ================= */
+$('#s-entrar').addEventListener('click', async () => {
+  const b = $('#s-entrar');
+  $('#s-error').textContent = '';
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+  const { error } = await sb.auth.signInWithPassword({
+    email:$('#s-email').value.trim(), password:$('#s-clave').value });
+  b.disabled = false; b.textContent = 'Entrar';
+  if (error){ $('#s-error').textContent = 'Correo o contraseña incorrectos'; return; }
+  arrancar();
+});
+$('#s-clave').addEventListener('keydown', e => { if (e.key === 'Enter') $('#s-entrar').click(); });
+$('#bl-salir').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
+
+/* ================= arranque ================= */
+async function arrancar(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session){ ver('#p-sesion'); return; }
+  ver('#p-sesion', false);
+
+  const { data, error } = await sb.rpc('fn_pos_contexto');
+  if (error){
+    ver('#p-sesion');
+    $('#s-error').textContent = 'Su usuario no tiene perfil en ningún negocio';
+    await sb.auth.signOut();
+    return;
+  }
+  S.ctx = data;
+  S.moneda = data.organizacion.moneda === 'HNL' ? 'L' : data.organizacion.moneda;
+
+  if (data.usuario.nivel < 1){
+    ver('#p-bloqueado');
+    $('#bl-titulo').textContent = 'Esta pantalla no es para su rol';
+    $('#bl-texto').textContent = 'El tablero de pedidos es para el personal de la tienda.';
+    return;
+  }
+  if (data.sin_sucursal || !data.sucursales.length){
+    ver('#p-bloqueado');
+    $('#bl-titulo').textContent = 'Sin sucursal asignada';
+    $('#bl-texto').textContent = 'Pídale a su gerente que lo asigne a una sucursal.';
+    return;
+  }
+
+  S.sucursal = data.sucursales[0].id;
+  $('#h-sucursal').textContent = data.sucursales[0].nombre;
+  $('#app').classList.remove('oculto');
+
+  S.menu = montarMenu({
+    contenedor:'#menu', modulo:'pedidos', ctx:S.ctx,
+    alSalir: async () => { await sb.auth.signOut(); location.reload(); },
+    secciones:[{
+      id:'filtros', titulo:'Ver',
+      items:[
+        { valor:'activos',   nombre:'Pedidos activos', icono:'pedidos', activo:true },
+        { valor:'entregados',nombre:'Entregados hoy',  icono:'reportes' },
+        { valor:'cancelados',nombre:'Cancelados hoy',  icono:'etiqueta' }
+      ]
+    }]
+  });
+  S.menu.alElegir(v => { S.filtro = v; pintar(); });
+  $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
+
+  await Promise.all([cargar(), cargarRepartidores()]);
+  escuchar();
+  setInterval(() => { pintar(); resumen(); }, 30000);  // refresca los minutos de espera
+}
+
+async function cargarRepartidores(){
+  const { data } = await sb.rpc('fn_repartidores');
+  S.repartidores = data || [];
+}
+
+async function cargar(){
+  const { data, error } = await sb.from('v_pedidos_tablero')
+    .select('*').eq('sucursal_id', S.sucursal)
+    .order('creado_en', { ascending:true });
+  if (error){ console.error(error); return; }
+  S.pedidos = data || [];
+  pintar(); resumen();
+}
+
+async function resumen(){
+  const { data } = await sb.rpc('fn_pedidos_resumen', { p_sucursal_id:S.sucursal });
+  if (!data) return;
+  const tarde = data.espera_max >= 20;
+  $('#resumen').innerHTML = `
+    <div class="dato-r ${data.nuevos > 0 ? 'urge' : ''}">
+      <small>Nuevos</small><b>${data.nuevos}</b></div>
+    <div class="dato-r"><small>Preparando</small><b>${data.en_proceso}</b></div>
+    <div class="dato-r"><small>En ruta</small><b>${data.en_ruta}</b></div>
+    <div class="dato-r bien"><small>Entregados hoy</small><b>${data.entregados}</b></div>
+    <div class="dato-r bien"><small>Vendido hoy</small><b>${money(data.vendido_hoy)}</b></div>
+    <div class="dato-r ${tarde ? 'urge' : ''}"><small>Espera máx.</small><b>${data.espera_max}′</b></div>`;
+}
+
+/* ================= tiempo real ================= */
+function escuchar(){
+  if (S.canal) sb.removeChannel(S.canal);
+  S.canal = sb.channel('pedidos-' + S.sucursal)
+    .on('postgres_changes',
+        { event:'*', schema:'public', table:'pedidos', filter:'sucursal_id=eq.' + S.sucursal },
+        manejarCambio)
+    .subscribe(estado => {
+      const p = $('#h-vivo');
+      const vivo = estado === 'SUBSCRIBED';
+      p.className = 'pill ' + (vivo ? 'online' : 'offline');
+      p.textContent = vivo ? 'En vivo' : 'Reconectando…';
+    });
+}
+
+async function manejarCambio(carga){
+  const nuevo = carga.new, viejo = carga.old;
+
+  if (carga.eventType === 'INSERT'){
+    // La fila de Realtime no trae los datos del cliente ni la dirección:
+    // se relee del tablero para tener la tarjeta completa.
+    await cargar();
+    const p = S.pedidos.find(x => x.id === nuevo.id);
+    if (p){
+      S.recientes.add(p.id);
+      setTimeout(() => S.recientes.delete(p.id), 3000);
+      timbrar(); mostrarTimbre(p);
+      pintar();
+    }
+    return;
+  }
+
+  if (carga.eventType === 'UPDATE'){
+    await cargar();
+    // si cambió el pedido que está abierto, se refresca el detalle
+    if (S.ultimoDetalle === nuevo.id && !$('#velo').classList.contains('oculto'))
+      abrirPedido(nuevo.id, true);
+    return;
+  }
+
+  if (carga.eventType === 'DELETE'){
+    S.pedidos = S.pedidos.filter(x => x.id !== viejo.id);
+    pintar(); resumen();
+  }
+}
+
+/* ================= pintar ================= */
+const ORIGEN = { app_cliente:'App', mostrador:'Mostrador', telefono:'Teléfono', whatsapp:'WhatsApp' };
+
+function tarjeta(p){
+  const tarde = p.minutos >= 20 && !['entregado','cancelado'].includes(p.estado);
+  const marcas = [];
+  if (p.tiene_faltantes)                    marcas.push('<span class="p-marca falta">Falta stock</span>');
+  if (p.tipo_entrega === 'recoge_en_tienda')marcas.push('<span class="p-marca recoge">Recoge</span>');
+  if (p.repartidor)                          marcas.push(`<span class="p-marca repartidor">${escapar(p.repartidor.split(' ')[0])}</span>`);
+  if (p.venta_id)                            marcas.push('<span class="p-marca facturado">Facturado</span>');
+
+  return `
+  <button class="tarjeta-p ${p.estado} ${tarde ? 'tarde' : ''} ${S.recientes.has(p.id) ? 'recien' : ''}"
+          data-p="${p.id}">
+    <div class="p-arriba">
+      <span class="p-num">${escapar(p.numero)}</span>
+      <span class="p-origen ${p.origen}">${ORIGEN[p.origen] || p.origen}</span>
+      <span class="p-reloj ${tarde ? 'tarde' : ''}">${p.minutos}′</span>
+    </div>
+    <div class="p-cliente">${escapar(p.cliente)}</div>
+    <div class="p-dir">${escapar(p.direccion || (p.tipo_entrega === 'recoge_en_tienda' ? 'Pasa a recoger' : 'Sin dirección'))}</div>
+    <div class="p-abajo">
+      <span class="p-items">${p.lineas} ${p.lineas === 1 ? 'producto' : 'productos'}</span>
+      ${marcas.join('')}
+      <span class="p-total">${money(p.total)}</span>
+    </div>
+  </button>`;
+}
+
+function pintar(){
+  const t = $('#tablero');
+
+  if (S.filtro !== 'activos'){
+    const buscado = S.filtro === 'entregados' ? 'entregado' : 'cancelado';
+    const lista = S.pedidos.filter(p => p.estado === buscado);
+    t.style.gridTemplateColumns = '1fr';
+    t.innerHTML = `<div class="columna" style="max-width:620px;margin:0 auto;width:100%">
+      <div class="col-enc"><i style="background:#94A3B8"></i>
+        ${buscado === 'entregado' ? 'Entregados hoy' : 'Cancelados hoy'}
+        <span class="cuenta">${lista.length}</span></div>
+      <div class="col-lista">${lista.length
+        ? lista.map(tarjeta).join('')
+        : '<div class="col-vacia">Nada por aquí todavía</div>'}</div></div>`;
+    return;
+  }
+
+  t.style.gridTemplateColumns = '';
+  t.innerHTML = COLUMNAS.map(c => {
+    const lista = S.pedidos.filter(p => c.estados.includes(p.estado));
+    return `<div class="columna">
+      <div class="col-enc">
+        <i style="background:${c.color}"></i>${c.titulo}
+        <span class="cuenta">${lista.length}</span>
+      </div>
+      <div class="col-lista">${lista.length
+        ? lista.map(tarjeta).join('')
+        : '<div class="col-vacia">Sin pedidos</div>'}</div>
+    </div>`;
+  }).join('');
+}
+
+$('#tablero').addEventListener('click', e => {
+  const b = e.target.closest('[data-p]'); if (!b) return;
+  abrirPedido(b.dataset.p);
+});
+
+/* ================= detalle ================= */
+let lineasEdit = [];
+
+async function abrirPedido(id, silencioso){
+  S.ultimoDetalle = id;
+  const p = S.pedidos.find(x => x.id === id);
+  if (!p) return;
+
+  if (!silencioso){
+    $('#hoja').innerHTML = '<div class="vacio"><p>Cargando…</p></div>';
+    ver('#velo');
+  }
+
+  const [{ data:lineas }, { data:eventos }] = await Promise.all([
+    sb.rpc('fn_pedido_lineas', { p_pedido_id:id }),
+    sb.from('pedido_eventos').select('estado,nota,ocurrido_en,perfiles(nombre)')
+      .eq('pedido_id', id).order('id')
+  ]);
+
+  lineasEdit = (lineas || []).map(l => ({
+    ...l,
+    surtida: l.cantidad_surtida !== null ? Number(l.cantidad_surtida) : Number(l.cantidad)
+  }));
+
+  const editable = !p.venta_id && !['entregado','cancelado'].includes(p.estado);
+  const tel = (p.telefono || '').replace(/[^0-9]/g, '');
+  const wa = tel ? (tel.length === 8 ? '504' + tel : tel) : null;
+
+  $('#hoja').innerHTML = `
+    <div class="d-enc">
+      <div style="flex:1;min-width:0">
+        <h2>${escapar(p.cliente)}</h2>
+        <p class="sub">${escapar(p.numero)} · ${ORIGEN[p.origen] || p.origen} ·
+          hace ${p.minutos} min · <span class="sello ${p.estado === 'cancelado' ? 'anulado' : p.estado === 'entregado' ? 'confirmado' : 'borrador'}">${p.estado.replace('_',' ')}</span></p>
+      </div>
+      <button class="quitar" id="d-cerrar" style="width:34px;height:34px;border-radius:10px;
+        background:var(--fondo);color:var(--tenue);font-size:16px">✕</button>
+    </div>
+
+    ${p.tipo_entrega === 'domicilio' ? `
+    <div class="bloque">
+      <h4>Entregar en</h4>
+      <p>${escapar(p.direccion || 'Sin dirección')}
+      ${p.referencia ? '<br><span style="color:var(--tenue)">' + escapar(p.referencia) + '</span>' : ''}
+      ${p.telefono ? `<br><a href="tel:${escapar(p.telefono)}">${escapar(p.telefono)}</a>
+        ${wa ? ` · <a href="https://wa.me/${wa}" target="_blank" rel="noopener">WhatsApp</a>` : ''}` : ''}
+      ${p.latitud ? `<br><a href="https://maps.google.com/?q=${p.latitud},${p.longitud}"
+        target="_blank" rel="noopener">Abrir en el mapa</a>` : ''}</p>
+    </div>` : `
+    <div class="bloque"><h4>Entrega</h4><p>El cliente pasa a recoger a la tienda</p></div>`}
+
+    ${p.notas ? `<div class="bloque"><h4>Nota del cliente</h4><p>${escapar(p.notas)}</p></div>` : ''}
+
+    <div class="bloque">
+      <h4>Pago</h4>
+      <p>${escapar(p.metodo_pago)}${p.paga_con
+        ? ' · paga con ' + money(p.paga_con) +
+          ' <span style="color:var(--tenue)">(cambio ' + money(Math.max(p.paga_con - p.total, 0)) + ')</span>'
+        : ''}</p>
+    </div>
+
+    <h4 style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+      color:#9AA8BC;margin:16px 0 4px">Productos${editable ? ' · ajuste lo que pudo surtir' : ''}</h4>
+    <div id="d-lineas"></div>
+
+    <div id="d-totales" style="margin-top:12px"></div>
+
+    ${eventos && eventos.length ? `
+      <h4 style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+        color:#9AA8BC;margin:18px 0 4px">Seguimiento</h4>
+      <div>${eventos.map(ev => `
+        <div class="linea-t">
+          <span class="hora">${new Date(ev.ocurrido_en).toLocaleTimeString('es-HN',
+            {hour:'2-digit',minute:'2-digit'})}</span>
+          <span><b>${ev.estado.replace('_',' ')}</b>${ev.nota ? ' · ' + escapar(ev.nota) : ''}
+          ${ev.perfiles?.nombre ? ' <span style="color:#9AA8BC">— ' + escapar(ev.perfiles.nombre) + '</span>' : ''}</span>
+        </div>`).join('')}</div>` : ''}
+
+    <div class="pasos" id="d-pasos"></div>`;
+
+  if (!silencioso) ver('#velo');
+  $('#d-cerrar').onclick = () => ver('#velo', false);
+
+  pintarLineas(p, editable);
+  pintarPasos(p);
+}
+
+function pintarLineas(p, editable){
+  $('#d-lineas').innerHTML = lineasEdit.map((l, i) => {
+    const falta = l.existencia < l.surtida;
+    const menos = Number(l.cantidad) - l.surtida;
+    return `<div class="linea-p" data-i="${i}">
+      <div class="nom">${escapar(l.producto)}
+        <small>${money(l.precio_unitario)} c/u · pedido ${Number(l.cantidad)}</small>
+        ${falta ? `<small class="falta">Solo hay ${Number(l.existencia)} en existencia</small>` : ''}
+        ${!falta && menos > 0 ? `<small class="falta">Faltan ${menos}</small>` : ''}
+        ${l.nota ? `<small>“${escapar(l.nota)}”</small>` : ''}
+      </div>
+      <div class="surtir">
+        ${editable ? `<button data-menos="${i}">−</button>
+          <input data-cant="${i}" inputmode="decimal" value="${l.surtida}">
+          <button data-mas="${i}">+</button>`
+        : `<span class="num" style="font-weight:600">${l.surtida}</span>`}
+      </div>
+      <div class="imp">${money(l.precio_unitario * l.surtida)}</div>
+    </div>`;
+  }).join('');
+  pintarTotales(p);
+}
+
+function pintarTotales(p){
+  const prod = lineasEdit.reduce((s,l) => s + l.precio_unitario * l.surtida, 0);
+  const total = prod + Number(p.costo_envio || 0);
+  $('#d-totales').innerHTML = `
+    <div class="tot-p"><span>Productos</span><b>${money(prod)}</b></div>
+    ${Number(p.costo_envio) > 0
+      ? `<div class="tot-p"><span>Envío</span><b>${money(p.costo_envio)}</b></div>` : ''}
+    <div class="tot-p grande"><span>Total</span><b>${money(total)}</b></div>`;
+}
+
+$('#hoja').addEventListener('click', e => {
+  const mas = e.target.closest('[data-mas]'), menos = e.target.closest('[data-menos]');
+  if (!mas && !menos) return;
+  const i = +(mas || menos).dataset[mas ? 'mas' : 'menos'];
+  const l = lineasEdit[i];
+  l.surtida = Math.max(0, l.surtida + (mas ? 1 : -1));
+  const p = S.pedidos.find(x => x.id === S.ultimoDetalle);
+  pintarLineas(p, true);
+});
+
+$('#hoja').addEventListener('input', e => {
+  const c = e.target.closest('[data-cant]'); if (!c) return;
+  const i = +c.dataset.cant;
+  lineasEdit[i].surtida = Math.max(0, num(c.value));
+  const p = S.pedidos.find(x => x.id === S.ultimoDetalle);
+  const fila = c.closest('.linea-p');
+  fila.querySelector('.imp').textContent =
+    money(lineasEdit[i].precio_unitario * lineasEdit[i].surtida);
+  pintarTotales(p);
+});
+
+/* ================= acciones ================= */
+function pintarPasos(p){
+  const z = $('#d-pasos');
+  const cambiado = lineasEdit.some(l =>
+    l.surtida !== (l.cantidad_surtida !== null ? Number(l.cantidad_surtida) : Number(l.cantidad)));
+
+  const b = [];
+  if (p.estado === 'nuevo'){
+    b.push(['aceptar','principal-b','Aceptar pedido']);
+    b.push(['rechazar','secundario','Rechazar']);
+  } else if (p.estado === 'confirmado' || p.estado === 'preparando'){
+    if (cambiado) b.push(['surtir','secundario','Guardar lo surtido']);
+    b.push(['listo','principal-b','Marcar listo']);
+    b.push(['cancelar','secundario','Cancelar pedido']);
+  } else if (p.estado === 'listo'){
+    if (!p.venta_id) b.push(['facturar','principal-b','Cobrar y despachar']);
+    if (p.tipo_entrega === 'domicilio'){
+      b.push(['repartidor','secundario', p.repartidor ? 'Cambiar repartidor' : 'Asignar repartidor']);
+      if (p.repartidor_id) b.push(['ruta','principal-b','Sale a entregar']);
+    } else {
+      b.push(['entregado','principal-b','Entregado en tienda']);
+    }
+  } else if (p.estado === 'en_ruta'){
+    b.push(['entregado','principal-b','Marcar entregado']);
+  }
+
+  z.innerHTML = b.map(([a,clase,texto]) =>
+    `<button class="btn ${clase}" data-a="${a}">${texto}</button>`).join('');
+}
+
+$('#d-pasos') && null;
+$('#hoja').addEventListener('click', async e => {
+  const b = e.target.closest('[data-a]'); if (!b) return;
+  const a = b.dataset.a;
+  const id = S.ultimoDetalle;
+  const p = S.pedidos.find(x => x.id === id);
+  const previo = b.textContent;
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+
+  const listo = () => { b.disabled = false; b.textContent = previo; };
+  const fallo = err => { listo(); modalAviso('No se pudo', limpiarError(err), 'malo'); };
+
+  try{
+    if (a === 'aceptar'){
+      await guardarSurtido(id);
+      const { error } = await sb.rpc('fn_cambiar_estado_pedido',
+        { p_pedido_id:id, p_estado:'confirmado', p_nota:'Aceptado por la tienda' });
+      if (error) return fallo(error);
+      ver('#velo', false);
+    }
+
+    if (a === 'surtir'){
+      await guardarSurtido(id);
+      listo();
+      await cargar();
+      abrirPedido(id, true);
+      return;
+    }
+
+    if (a === 'listo' || a === 'ruta' || a === 'entregado'){
+      if (a === 'listo') await guardarSurtido(id);
+      const estado = a === 'listo' ? 'listo' : a === 'ruta' ? 'en_ruta' : 'entregado';
+      const { error } = await sb.rpc('fn_cambiar_estado_pedido',
+        { p_pedido_id:id, p_estado:estado, p_nota:null });
+      if (error) return fallo(error);
+      ver('#velo', false);
+    }
+
+    if (a === 'rechazar' || a === 'cancelar'){
+      listo();
+      const motivo = await modalTexto('Cancelar pedido',
+        'Se libera la mercadería apartada. El cliente verá el motivo.', 'Motivo');
+      if (motivo === null) return;
+      const { error } = await sb.rpc('fn_cambiar_estado_pedido',
+        { p_pedido_id:id, p_estado:'cancelado', p_nota:motivo });
+      if (error) return modalAviso('No se pudo cancelar', limpiarError(error), 'malo');
+      ver('#velo', false);
+    }
+
+    if (a === 'repartidor'){
+      listo();
+      const quien = await modalElegir('Asignar repartidor',
+        S.repartidores.map(r => ({
+          valor:r.id, nombre:r.nombre,
+          detalle: r.activos ? r.activos + ' pedido(s) en mano' : 'libre' })));
+      if (!quien) return;
+      const { error } = await sb.rpc('fn_asignar_repartidor',
+        { p_pedido_id:id, p_repartidor_id:quien });
+      if (error) return modalAviso('No se pudo asignar', limpiarError(error), 'malo');
+      await Promise.all([cargar(), cargarRepartidores()]);
+      abrirPedido(id, true);
+      return;
+    }
+
+    if (a === 'facturar'){
+      listo();
+      await facturar(p);
+      return;
+    }
+  }catch(err){ return fallo(err); }
+
+  listo();
+  await cargar();
+});
+
+async function guardarSurtido(id){
+  const cambios = lineasEdit
+    .filter(l => l.surtida !== (l.cantidad_surtida !== null ? Number(l.cantidad_surtida) : Number(l.cantidad)))
+    .map(l => ({ detalle_id:l.detalle_id, cantidad_surtida:l.surtida }));
+  if (!cambios.length) return;
+  const { error } = await sb.rpc('fn_surtir_pedido', { p_pedido_id:id, p_lineas:cambios });
+  if (error) throw error;
+}
+
+/* Cobrar el pedido: hace falta un turno abierto y el PIN, igual que en la caja */
+async function facturar(p){
+  const { data:ctx } = await sb.rpc('fn_pos_contexto');
+  const caja = (ctx.cajas || []).find(c => c.turno_id && c.cajero_id === ctx.usuario.id)
+            || (ctx.cajas || []).find(c => c.turno_id);
+
+  if (!caja){
+    modalAviso('No hay caja abierta',
+      'Para cobrar un pedido primero hay que abrir turno en la caja.', 'ojo');
+    return;
+  }
+
+  const pin = await modalTexto('Cobrar pedido',
+    'Total ' + money(p.total) + ' · caja ' + caja.caja, 'PIN de 5 dígitos', 'pin');
+  if (pin === null) return;
+  if (!/^\d{5}$/.test(pin)){
+    modalAviso('PIN inválido', 'Son 5 dígitos.', 'malo'); return;
+  }
+
+  const { data:desb, error:e1 } = await sb.rpc('fn_desbloquear_caja',
+    { p_turno_id:caja.turno_id, p_pin:pin });
+  if (e1) return modalAviso('No se pudo', limpiarError(e1), 'malo');
+
+  const { data, error:e2 } = await sb.rpc('fn_facturar_pedido',
+    { p_pedido_id:p.id, p_desbloqueo_id:desb, p_fiscal:false });
+  if (e2) return modalAviso('No se pudo cobrar', limpiarError(e2), 'malo');
+
+  await cargar();
+  modalAviso('Pedido cobrado',
+    'Ticket ' + (data.numero_fiscal || data.numero) + '.<br>' +
+    (Number(data.cambio) > 0
+      ? '<b>Entregar de cambio: ' + money(data.cambio) + '</b><br>' : '') +
+    'El inventario ya se descargó y la caja quedó bloqueada.', 'bueno');
+}
+
+/* ================= modales ================= */
+function modalAviso(titulo, texto, tono){
+  $('#hoja').innerHTML = `<h2>${escapar(titulo)}</h2>
+    <div class="aviso ${tono}" style="margin-top:14px">${texto}</div>
+    <button class="btn principal-b" style="width:100%" id="ok">Entendido</button>`;
+  ver('#velo');
+  $('#ok').onclick = () => ver('#velo', false);
+}
+
+function modalTexto(titulo, texto, etiqueta, modo){
+  return new Promise(resolver => {
+    $('#hoja').innerHTML = `<h2>${escapar(titulo)}</h2>
+      <p class="sub">${escapar(texto)}</p>
+      <div class="campo-g"><label>${escapar(etiqueta)}</label>
+        <input class="entrada ${modo === 'pin' ? 'num' : ''}" id="mt-valor"
+          ${modo === 'pin' ? 'inputmode="numeric" maxlength="5" style="text-align:center;letter-spacing:.4em;font-size:22px;height:54px"' : ''}></div>
+      <div class="acciones" style="margin-top:16px">
+        <button class="btn secundario" id="mt-no">Cancelar</button>
+        <button class="btn principal-b" id="mt-si">Aceptar</button>
+      </div>`;
+    ver('#velo');
+    const c = $('#mt-valor'); c.focus();
+    $('#mt-no').onclick = () => { ver('#velo', false); resolver(null); };
+    $('#mt-si').onclick = () => { ver('#velo', false); resolver(c.value); };
+    c.onkeydown = e => { if (e.key === 'Enter') $('#mt-si').click(); };
+  });
+}
+
+function modalElegir(titulo, opciones){
+  return new Promise(resolver => {
+    if (!opciones.length){
+      modalAviso('Sin repartidores',
+        'No hay usuarios con rol repartidor. El gerente puede crearlos desde Usuarios.', 'ojo');
+      resolver(null); return;
+    }
+    $('#hoja').innerHTML = `<h2>${escapar(titulo)}</h2>
+      <div style="margin:14px 0">${opciones.map(o => `
+        <button class="compra" data-v="${o.valor}"
+          style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--fondo);
+          border:1px solid var(--linea);border-radius:var(--r-md);margin-bottom:8px;width:100%">
+          <div style="flex:1;text-align:left">
+            <b style="display:block;font-size:14.5px">${escapar(o.nombre)}</b>
+            <small style="font-size:12.5px;color:var(--tenue)">${escapar(o.detalle)}</small>
+          </div>
+        </button>`).join('')}</div>
+      <button class="btn secundario" style="width:100%" id="me-no">Cancelar</button>`;
+    ver('#velo');
+    $('#me-no').onclick = () => { ver('#velo', false); resolver(null); };
+    $('#hoja').querySelectorAll('[data-v]').forEach(b =>
+      b.onclick = () => { ver('#velo', false); resolver(b.dataset.v); });
+  });
+}
+
+$('#velo').addEventListener('click', e => { if (e.target.id === 'velo') ver('#velo', false); });
+
+/* ================= inicio ================= */
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT') location.reload(); });
+arrancar();
+</script>
+</body>
+</html>

@@ -14,10 +14,15 @@ después de cada cobro y funciona sin internet.
 
 ```
 index.html                          POS: catálogo, ticket, cobro, bloqueo por PIN
+pedidos.html                        tablero de pedidos en tiempo real
 compras.html                        entrada de mercadería y cuentas por pagar
+ui.css                              sistema visual: tokens, menú lateral, componentes
+menu.js                             menú lateral compartido
+escaner.js                          escáner de códigos con la cámara
 config.js                           URL y llave pública del proyecto
 manifest.webmanifest                para instalar la app
 sw.js                               service worker (abre sin internet)
+icono-*.png, favicon.ico            iconos de la app instalada
 
 supabase/migrations/                el esquema, en orden
   001_base_abarrotes.sql            catálogo, inventario, lotes, kardex, compras
@@ -29,6 +34,9 @@ supabase/migrations/                el esquema, en orden
   006_compras_permisos_y_anulacion.sql
   007_blindaje_de_funciones_nuevas.sql
   008_compras_correcciones.sql
+  009_tablero_pedidos.sql
+  010_arqueo_y_envio.sql
+  011_repartidor_sin_datos_comerciales.sql
 
 sql/
   semilla_inicial.sql               crea el negocio y el primer usuario
@@ -176,12 +184,68 @@ valorado **al costo al que entró**, así el costo promedio vuelve exactamente
 a donde estaba. Si la mercadería ya se vendió, la anulación falla: primero
 hay que resolver las ventas.
 
+## Menú lateral
+
+Un solo menú para todo el sistema, que se acomoda al aparato:
+
+| | |
+|---|---|
+| **Escritorio** | desplegado; se pliega a solo iconos y recuerda la preferencia |
+| **Tablet** | arranca en iconos para dar aire al contenido; se despliega por encima |
+| **Celular** | cajón que entra desde la izquierda, con velo y cierre al elegir |
+
+Muestra únicamente los módulos que el rol puede abrir: un auxiliar no ve
+Compras. Debajo de los módulos van las secciones propias de cada pantalla:
+en la caja son las categorías con su conteo, en compras son las vistas.
+
+## Escáner con la cámara
+
+El botón **Escanear** de la caja y de compras abre la cámara trasera. Usa
+`BarcodeDetector`, que ya viene en Chrome de Android y de escritorio; donde
+no existe (iPhone, Firefox) carga ZXing por detrás sin que el usuario lo note.
+
+Trabaja en modo continuo: se lee un código tras otro y cada uno se va
+agregando, con pitido y vibración, y una lista de lo leído en pantalla.
+Incluye linterna en los aparatos que la ofrecen, cambio de cámara si hay
+varias, y siempre la opción de digitar el código a mano.
+
+Lee EAN-13, EAN-8, UPC, Code 128, Code 39, ITF, Codabar y QR.
+
+> La cámara **exige HTTPS**. En GitHub Pages funciona; abriendo el archivo
+> con doble clic (`file://`) no. El escáner lo detecta y lo explica.
+
+También sigue funcionando el lector de pistola USB: teclea rápido y termina
+en Enter, y el buscador lo reconoce por la velocidad de tecleo.
+
+## Tablero de pedidos
+
+`pedidos.html`, para todo el personal de tienda. Cuatro columnas —Nuevos,
+Preparando, Listos, En ruta— que se actualizan **solas**: cuando entra un
+pedido desde la app del cliente, la tarjeta aparece con campanilla y
+vibración, sin recargar nada.
+
+El flujo de una tarjeta: aceptar → ajustar lo que se pudo surtir → marcar
+listo → asignar repartidor → cobrar → entregado. En cada paso queda registro
+de quién lo hizo y a qué hora.
+
+**Al aceptar un pedido se aparta la mercadería.** La caja deja de poder
+venderla mientras el pedido se prepara, así no se despacha algo que ya se
+comprometió. La reserva no toca el kardex —nada ha salido todavía— y se
+libera al cobrar, al cancelar o al entregar.
+
+**Surtir con faltantes** es lo normal en una pulpería: se ajusta la cantidad
+de cada línea, el total se recalcula solo y el cliente ve el monto correcto.
+
+Las tarjetas que llevan más de 20 minutos esperando se marcan en rojo.
+
 ## Pendiente
 
-- Tablero de pedidos en tiempo real y app del repartidor
-- App del cliente (catálogo, carrito, seguimiento)
+- App del cliente (catálogo, carrito, seguimiento) — la base ya está lista:
+  `fn_tiendas_cliente`, `fn_catalogo_cliente`, `fn_crear_pedido`,
+  `fn_mis_pedidos`, `fn_cancelar_mi_pedido`
+- App del repartidor — la base ya está lista: `fn_mis_entregas`
+- Fiado (cuentas por cobrar de los clientes)
 - Panel de administración de la plataforma
 - Motor de promociones
 - Sugerencias de compra por promedio de ventas y tiempo de entrega
 - Conteos de inventario y ajustes
-- Iconos `icono-192.png` y `icono-512.png`

@@ -13,165 +13,78 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ui.css">
 <style>
-:root{
-  --tinta:#0F1729;--panel:#FFFFFF;--fondo:#F2F5F9;--linea:#E3E9F2;
-  --azul:#2563EB;--azul-suave:#EFF4FF;--verde:#12A150;--verde-oscuro:#0E8443;
-  --ambar:#F5B301;--rojo:#E11D48;--tenue:#6B7A90;
-  --r-sm:10px;--r-md:16px;--r-lg:22px;
-  --sombra:0 1px 2px rgba(15,23,41,.06),0 8px 24px -12px rgba(15,23,41,.18);
-  --ui:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
-  --num:'IBM Plex Mono',ui-monospace,monospace;
-}
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%}
-body{font-family:var(--ui);background:var(--fondo);color:var(--tinta);overflow:hidden;font-size:15px}
-button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
-input,select{font:inherit;color:inherit}
-.num{font-family:var(--num);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-:focus-visible{outline:3px solid var(--azul);outline-offset:2px}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-.oculto{display:none!important}
-
-/* ---------- pantallas oscuras: sesión, turno, PIN ---------- */
-.oscura{
-  position:fixed;inset:0;z-index:100;background:var(--tinta);display:grid;place-items:center;
-  padding:24px;background-image:radial-gradient(circle at 50% 0%,#1E2B45 0%,var(--tinta) 60%);
-  overflow-y:auto;
-}
-.tarjeta-oscura{width:100%;max-width:360px;text-align:center;color:#fff}
-.marca{display:inline-flex;align-items:center;gap:9px;font-weight:800;font-size:13px;
-  letter-spacing:.14em;text-transform:uppercase;color:#7C8CA8;margin-bottom:26px}
-.marca span{width:26px;height:26px;border-radius:8px;background:var(--verde);
-  display:grid;place-items:center;color:#fff;font-size:14px}
-.avatar{width:60px;height:60px;border-radius:50%;margin:0 auto 14px;
-  background:linear-gradient(160deg,#2E3D5C,#1B2436);border:1px solid #33415C;
-  display:grid;place-items:center;font-weight:700;font-size:20px;color:#C7D3E6}
-.titulo-o{font-size:20px;font-weight:700;margin-bottom:4px}
-.sub-o{font-size:14px;color:#8A99B3;margin-bottom:26px;line-height:1.5}
-.sub-o b{color:#D6E0EF;font-weight:600}
-.campo-o{width:100%;height:52px;border-radius:14px;background:rgba(255,255,255,.07);
-  border:1px solid rgba(255,255,255,.12);color:#fff;padding:0 16px;margin-bottom:10px;
-  font-size:15px;outline:none}
-.campo-o::placeholder{color:#6B7A96}
-.campo-o:focus{border-color:var(--azul);background:rgba(255,255,255,.1)}
-.btn-o{width:100%;height:52px;border-radius:14px;background:var(--verde);color:#fff;
-  font-weight:700;font-size:15px;margin-top:6px}
-.btn-o:disabled{background:#3B4A66;color:#8A99B3}
-.btn-o.fantasma{background:transparent;border:1px solid rgba(255,255,255,.15);color:#B9C6DA}
-.error-o{min-height:20px;font-size:13px;color:#FF8095;font-weight:600;margin:8px 0}
-.pie-o{margin-top:22px;font-size:12px;color:#5E6E88;line-height:1.6}
-.lista-o{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;text-align:left}
-.opcion-o{display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;
-  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff}
-.opcion-o.sel{border-color:var(--verde);background:rgba(18,161,80,.16)}
-.opcion-o b{font-size:14px;font-weight:700;display:block}
-.opcion-o small{font-size:12px;color:#8A99B3}
-.opcion-o .marca-sel{margin-left:auto;color:var(--verde);font-size:18px}
-
-.puntos{display:flex;gap:14px;justify-content:center;margin-bottom:8px}
-.punto{width:14px;height:14px;border-radius:50%;border:2px solid #3B4A66;transition:all .18s}
-.punto.on{background:#fff;border-color:#fff;transform:scale(1.12)}
-.sacudir{animation:sacudir .4s}
-@keyframes sacudir{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}
-40%{transform:translateX(9px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
-.teclado{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.tecla{height:66px;border-radius:18px;background:rgba(255,255,255,.07);
-  border:1px solid rgba(255,255,255,.09);color:#fff;font-size:24px;font-weight:600;
-  font-family:var(--num);transition:transform .08s,background .15s}
-.tecla:active{transform:scale(.94);background:rgba(255,255,255,.16)}
-.tecla.plana{background:transparent;border-color:transparent;font-size:14px;
-  font-family:var(--ui);color:#8A99B3}
-.girando{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);
-  border-top-color:#fff;border-radius:50%;animation:girar .7s linear infinite;vertical-align:-3px}
-@keyframes girar{to{transform:rotate(360deg)}}
-
-/* ---------- POS ---------- */
-#caja{display:flex;flex-direction:column;height:100%}
-.barra{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--panel);
-  border-bottom:1px solid var(--linea);flex:0 0 auto}
-.logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:15px;white-space:nowrap}
-.logo i{width:30px;height:30px;border-radius:9px;background:var(--verde);color:#fff;
-  display:grid;place-items:center;font-style:normal;font-size:15px}
-.barra-sep{width:1px;height:26px;background:var(--linea)}
-.turno{display:flex;flex-direction:column;line-height:1.25;min-width:0}
-.turno b{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.turno small{font-size:11px;color:var(--tenue)}
-.barra-fin{margin-left:auto;display:flex;align-items:center;gap:8px}
-.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;
-  font-size:12px;font-weight:700;background:var(--fondo);color:var(--tenue)}
-.pill.online{background:#E7F7EE;color:var(--verde-oscuro)}
-.pill.online::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--verde)}
-.pill.offline{background:#FFF4E0;color:#8A5A00}
-.pill.offline::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--ambar)}
-.btn-bloquear{padding:8px 14px;border-radius:11px;background:var(--tinta);color:#fff;
-  font-size:13px;font-weight:700}
+/* ---------- propio de la caja ---------- */
 .cuerpo{flex:1;display:grid;grid-template-columns:1fr 392px;min-height:0}
 .catalogo{display:flex;flex-direction:column;min-width:0;padding:14px 16px 0}
-.buscador{display:flex;gap:10px;margin-bottom:12px}
-.campo{flex:1;display:flex;align-items:center;gap:10px;background:var(--panel);
-  border:1px solid var(--linea);border-radius:var(--r-md);padding:0 14px;height:48px;
-  box-shadow:var(--sombra)}
-.campo input{flex:1;border:none;outline:none;background:none;font-size:15px;min-width:0}
-.campo input::placeholder{color:#9AA8BC}
-.campo svg{flex:0 0 auto;color:var(--tenue)}
-.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;scrollbar-width:none}
-.chips::-webkit-scrollbar{display:none}
-.chip{flex:0 0 auto;padding:9px 15px;border-radius:999px;background:var(--panel);
-  border:1px solid var(--linea);font-size:13px;font-weight:600;color:var(--tenue);white-space:nowrap}
-.chip b{font-weight:700;color:#A6B2C4;margin-left:5px;font-size:12px}
-.chip.activo{background:var(--tinta);border-color:var(--tinta);color:#fff}
-.chip.activo b{color:#8A99B3}
-.grid{flex:1;overflow-y:auto;display:grid;gap:12px;padding-bottom:20px;
-  grid-template-columns:repeat(auto-fill,minmax(132px,1fr));align-content:start}
-.prod{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);
+.buscador{display:flex;gap:10px;margin-bottom:14px}
+
+.grid{
+  flex:1;overflow-y:auto;display:grid;gap:12px;padding-bottom:20px;
+  grid-template-columns:repeat(auto-fill,minmax(140px,1fr));align-content:start;
+}
+.prod{
+  background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);
   overflow:hidden;text-align:left;position:relative;display:flex;flex-direction:column;
-  transition:transform .1s,box-shadow .15s,border-color .15s}
+  transition:transform .1s,box-shadow .15s,border-color .15s;
+}
 .prod:hover{border-color:#C9D6E8;box-shadow:var(--sombra)}
 .prod:active{transform:scale(.975)}
-.prod-img{height:78px;display:grid;place-items:center;font-size:30px;font-weight:800;
-  color:#A6B2C4;background:var(--fondo);border-bottom:1px solid var(--linea);
-  background-size:cover;background-position:center}
+.prod-img{
+  height:80px;display:grid;place-items:center;font-size:30px;font-weight:800;color:#A6B2C4;
+  background:var(--fondo);border-bottom:1px solid var(--linea);
+  background-size:cover;background-position:center;
+}
 .prod-txt{padding:9px 11px 11px}
-.prod-nom{font-size:13px;font-weight:600;line-height:1.3;margin-bottom:5px;min-height:34px;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.prod-nom{
+  font-size:13px;font-weight:600;line-height:1.3;margin-bottom:5px;min-height:34px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
 .prod-fila{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
 .prod-precio{font-size:15px;font-weight:700;font-family:var(--num)}
 .prod-stock{font-size:11px;color:var(--tenue);font-family:var(--num)}
-.etiqueta{position:absolute;top:8px;left:8px;padding:3px 8px;border-radius:999px;
-  font-size:10px;font-weight:800;text-transform:uppercase;color:#fff}
+.etiqueta{
+  position:absolute;top:8px;left:8px;padding:3px 8px;border-radius:999px;
+  font-size:10px;font-weight:800;text-transform:uppercase;color:#fff;
+}
 .etiqueta.vence{background:var(--ambar);color:#4A3500}
 .etiqueta.bajo{background:var(--rojo)}
 .prod.agotado{opacity:.45;pointer-events:none}
-.en-ticket{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;
-  background:var(--verde);color:#fff;display:grid;place-items:center;font-size:12px;
-  font-weight:800;font-family:var(--num)}
+.en-ticket{
+  position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;
+  background:var(--verde);color:#fff;display:grid;place-items:center;
+  font-size:12px;font-weight:800;font-family:var(--num);
+}
+
 .ticket{background:var(--panel);border-left:1px solid var(--linea);display:flex;
   flex-direction:column;min-height:0}
 .ticket-top{padding:14px 16px;border-bottom:1px solid var(--linea)}
-.cliente{display:flex;align-items:center;gap:10px;width:100%;background:var(--fondo);
-  border-radius:var(--r-sm);padding:10px 12px;font-size:14px;color:var(--tenue);font-weight:600}
+.cliente{
+  display:flex;align-items:center;gap:10px;width:100%;background:var(--fondo);
+  border-radius:var(--r-sm);padding:10px 12px;font-size:14px;color:var(--tenue);font-weight:600;
+}
 .cliente i{width:26px;height:26px;border-radius:50%;background:var(--azul);color:#fff;
   display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:800}
 .cliente span{margin-left:auto;font-size:20px;line-height:1;color:#A6B2C4}
 .lineas{flex:1;overflow-y:auto;padding:6px 16px}
-.lineas-enc{display:grid;grid-template-columns:1fr 92px 84px;gap:8px;padding:10px 0 8px;
+.lineas-enc{
+  display:grid;grid-template-columns:1fr 96px 84px;gap:8px;padding:10px 0 8px;
   font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
-  color:#9AA8BC;border-bottom:1px solid var(--linea)}
+  color:#9AA8BC;border-bottom:1px solid var(--linea);
+}
 .lineas-enc span:nth-child(2){text-align:center}
 .lineas-enc span:last-child{text-align:right}
-.linea{display:grid;grid-template-columns:1fr 92px 84px;gap:8px;align-items:center;
+.linea{display:grid;grid-template-columns:1fr 96px 84px;gap:8px;align-items:center;
   padding:11px 0;border-bottom:1px solid var(--fondo)}
 .linea-nom{font-size:14px;font-weight:600;line-height:1.3}
 .linea-nom small{display:block;font-size:11px;color:var(--tenue);font-weight:500;margin-top:2px}
 .qty{display:flex;align-items:center;justify-content:center;gap:2px}
-.qty button{width:26px;height:26px;border-radius:8px;background:var(--fondo);font-size:15px;
-  font-weight:700;color:var(--tenue);line-height:1}
-.qty span{width:30px;text-align:center;font-family:var(--num);font-weight:600;font-size:14px}
+.qty button{width:30px;height:30px;border-radius:8px;background:var(--fondo);
+  font-size:16px;font-weight:700;color:var(--tenue);line-height:1}
+.qty button:active{background:var(--linea)}
+.qty span{width:32px;text-align:center;font-family:var(--num);font-weight:600;font-size:14px}
 .linea-total{text-align:right;font-family:var(--num);font-weight:600;font-size:14px}
-.vacio{padding:56px 20px;text-align:center;color:#9AA8BC}
-.vacio div{font-size:40px;margin-bottom:12px;opacity:.5}
-.vacio p{font-size:14px;line-height:1.5}
 .totales{padding:14px 16px;border-top:1px solid var(--linea);background:#FCFDFE}
 .tot{display:flex;justify-content:space-between;align-items:center;padding:5px 0;
   font-size:14px;color:var(--tenue)}
@@ -179,27 +92,24 @@ input,select{font:inherit;color:inherit}
 .tot.grande{padding-top:11px;margin-top:7px;border-top:1px dashed var(--linea);
   font-size:16px;color:var(--tinta);font-weight:700}
 .tot.grande b{font-size:24px;font-weight:700}
-.btn-cobrar{width:100%;height:60px;border-radius:var(--r-md);background:var(--verde);color:#fff;
-  display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:17px;
-  font-weight:800;margin-top:12px;box-shadow:0 6px 18px -6px rgba(18,161,80,.6)}
+.btn-cobrar{
+  width:100%;height:60px;border-radius:var(--r-md);background:var(--verde);color:#fff;
+  display:flex;align-items:center;justify-content:space-between;padding:0 20px;
+  font-size:17px;font-weight:800;margin-top:12px;
+  box-shadow:0 6px 18px -6px rgba(18,161,80,.6);
+}
 .btn-cobrar:disabled{background:#CBD5E1;box-shadow:none}
 .btn-cobrar b{font-family:var(--num);font-size:20px}
 .movil{display:none}
+.cerrar-ticket{display:none}
 
-/* ---------- cobro ---------- */
-.velo{position:fixed;inset:0;z-index:60;background:rgba(15,23,41,.55);display:grid;
-  place-items:center;padding:20px;backdrop-filter:blur(3px);overflow-y:auto}
-.hoja{background:var(--panel);border-radius:var(--r-lg);width:100%;max-width:420px;padding:22px;
-  box-shadow:0 24px 60px -18px rgba(15,23,41,.5);animation:subir .22s cubic-bezier(.2,.8,.3,1)}
-@keyframes subir{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
-.hoja h2{font-size:18px;margin-bottom:3px}
-.hoja .sub{font-size:13px;color:var(--tenue);margin-bottom:18px}
+/* cobro */
 .a-cobrar{background:var(--tinta);color:#fff;border-radius:var(--r-md);padding:16px 18px;
   margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
-.a-cobrar small{font-size:12px;color:#8A99B3;font-weight:600}
+.a-cobrar small{font-size:12px;color:var(--claro);font-weight:600}
 .a-cobrar b{font-family:var(--num);font-size:28px;font-weight:700}
 .metodos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
-.metodo{padding:12px 6px;border-radius:var(--r-sm);border:1.5px solid var(--linea);
+.metodo{padding:13px 6px;border-radius:var(--r-sm);border:1.5px solid var(--linea);
   font-size:12.5px;font-weight:700;color:var(--tenue);text-align:center}
 .metodo.activo{border-color:var(--azul);background:var(--azul-suave);color:var(--azul)}
 .rotulo{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
@@ -208,17 +118,13 @@ input,select{font:inherit;color:inherit}
   padding:0 16px;font-family:var(--num);font-size:24px;font-weight:600;text-align:right;outline:none}
 .recibido:focus{border-color:var(--azul)}
 .rapidos{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:10px 0 16px}
-.rapido{padding:11px 4px;border-radius:var(--r-sm);background:var(--fondo);
+.rapido{padding:12px 4px;border-radius:var(--r-sm);background:var(--fondo);
   font-family:var(--num);font-size:13px;font-weight:600}
 .cambio{display:flex;justify-content:space-between;align-items:center;background:#E7F7EE;
-  color:var(--verde-oscuro);border-radius:var(--r-md);padding:14px 18px;margin-bottom:16px;font-weight:700}
+  color:var(--verde-oscuro);border-radius:var(--r-md);padding:14px 18px;margin-bottom:16px;
+  font-weight:700}
 .cambio b{font-family:var(--num);font-size:22px}
 .cambio.falta{background:#FFEDF1;color:var(--rojo)}
-.acciones{display:grid;grid-template-columns:1fr 1.6fr;gap:10px}
-.btn-2{height:54px;border-radius:var(--r-md);background:var(--fondo);font-weight:700;color:var(--tenue)}
-.btn-1{height:54px;border-radius:var(--r-md);background:var(--verde);color:#fff;
-  font-weight:800;font-size:16px}
-.btn-1:disabled{background:#CBD5E1}
 .fiscal{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--azul-suave);
   border-radius:var(--r-sm);margin-bottom:16px;font-size:13px;font-weight:600;color:#1E40AF}
 .switch{margin-left:auto;width:44px;height:25px;border-radius:999px;background:#C7D2FE;
@@ -239,54 +145,51 @@ input,select{font:inherit;color:inherit}
 .entregar small{display:block;font-size:12px;font-weight:800;color:#5C4200;
   text-transform:uppercase;margin-bottom:3px}
 .entregar b{font-family:var(--num);font-size:32px;color:#2E2100}
-.aviso{font-size:12.5px;color:var(--tenue);margin-bottom:16px;line-height:1.5}
-.error-caja{background:#FFEDF1;color:#9F1239;border-radius:var(--r-sm);padding:12px 14px;
-  font-size:13px;font-weight:600;margin-bottom:14px;line-height:1.45}
 
-@media (max-width:1000px){.cuerpo{grid-template-columns:1fr 330px}
-  .grid{grid-template-columns:repeat(auto-fill,minmax(118px,1fr))}}
-@media (max-width:760px){
+@media (max-width:1100px){
+  .cuerpo{grid-template-columns:1fr 330px}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(124px,1fr))}
+  .etq-camara{display:none}
+}
+@media (max-width:820px){
   .cuerpo{grid-template-columns:1fr}
-  .ticket{position:fixed;inset:0;z-index:50;border-left:none;transform:translateY(100%);
-    transition:transform .28s cubic-bezier(.2,.8,.3,1)}
+  .ticket{
+    position:fixed;inset:0;z-index:70;border-left:none;
+    transform:translateY(100%);transition:transform .28s cubic-bezier(.2,.8,.3,1);
+  }
   .ticket.abierto{transform:none}
   .ticket-top{display:flex;align-items:center;gap:12px}
-  .cerrar-ticket{display:grid!important;place-items:center;width:38px;height:38px;
+  .cerrar-ticket{display:grid;place-items:center;width:40px;height:40px;
     border-radius:11px;background:var(--fondo);font-size:18px;flex:0 0 auto}
-  .grid{padding-bottom:96px}
-  .movil{display:flex;align-items:center;gap:12px;position:fixed;left:0;right:0;bottom:0;
-    z-index:40;padding:12px 14px calc(12px + env(safe-area-inset-bottom));background:var(--panel);
-    border-top:1px solid var(--linea)}
-  .movil-btn{flex:1;height:56px;border-radius:999px;background:var(--tinta);color:#fff;
+  .catalogo{padding:12px 14px 0}
+  .grid{padding-bottom:100px;grid-template-columns:repeat(auto-fill,minmax(112px,1fr))}
+  .movil{
+    display:flex;align-items:center;gap:12px;position:fixed;left:0;right:0;bottom:0;z-index:60;
+    padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+    background:var(--panel);border-top:1px solid var(--linea);
+  }
+  .movil-btn{
+    flex:1;height:56px;border-radius:999px;background:var(--tinta);color:#fff;
     display:flex;align-items:center;justify-content:space-between;padding:0 22px;
-    font-weight:800;font-size:15px}
+    font-weight:800;font-size:15px;
+  }
   .movil-btn b{font-family:var(--num);font-size:17px}
   .movil-btn:disabled{background:#CBD5E1}
   .movil-conteo{width:26px;height:26px;border-radius:50%;background:var(--verde);
     display:grid;place-items:center;font-size:12px;font-family:var(--num);font-weight:700}
-  .barra{padding:10px 14px}
-  .logo span,.turno small{display:none}
-  .tecla{height:60px}
 }
-.cerrar-ticket{display:none}
 </style>
 </head>
 <body>
 
-<!-- ============ CONFIGURACIÓN FALTANTE ============ -->
 <div class="oscura oculto" id="p-config">
   <div class="tarjeta-oscura">
     <div class="marca"><span>◧</span> Configuración</div>
     <div class="titulo-o">Falta conectar el proyecto</div>
-    <p class="sub-o">Abra este archivo en un editor y ponga la URL y la llave
-      <b>publishable</b> de su proyecto de Supabase en el bloque
-      <b>CONFIGURACIÓN</b>, arriba del script.</p>
-    <p class="pie-o">Las encuentra en Supabase → Project Settings → API.<br>
-      Use la llave publishable (o anon), nunca la service_role.</p>
+    <p class="sub-o">Ponga la URL y la llave publishable en <b>config.js</b>.</p>
   </div>
 </div>
 
-<!-- ============ SESIÓN ============ -->
 <div class="oscura oculto" id="p-sesion">
   <div class="tarjeta-oscura">
     <div class="marca"><span>◧</span> Punto de venta</div>
@@ -299,34 +202,30 @@ input,select{font:inherit;color:inherit}
   </div>
 </div>
 
-<!-- ============ ELEGIR CAJA / ABRIR TURNO ============ -->
 <div class="oscura oculto" id="p-turno">
   <div class="tarjeta-oscura">
     <div class="marca"><span>◧</span> <span id="t-org">Negocio</span></div>
-    <div class="avatar" id="t-iniciales">··</div>
+    <div class="avatar-o" id="t-iniciales">··</div>
     <div class="titulo-o" id="t-titulo">Elija su caja</div>
     <p class="sub-o" id="t-sub">Hola <b id="t-nombre">—</b></p>
-
     <div class="lista-o" id="t-cajas"></div>
-
     <div id="t-apertura" class="oculto">
       <div class="rotulo" style="color:#7C8CA8;text-align:left;margin-bottom:6px">Fondo de caja</div>
       <input class="campo-o num" id="t-monto" inputmode="decimal" value="0.00" style="text-align:right">
       <div class="rotulo" style="color:#7C8CA8;text-align:left;margin:10px 0 6px">Su PIN de 5 dígitos</div>
-      <input class="campo-o num" id="t-pin" inputmode="numeric" maxlength="5" placeholder="•••••" style="text-align:center;letter-spacing:.5em">
+      <input class="campo-o num" id="t-pin" inputmode="numeric" maxlength="5" placeholder="•••••"
+             style="text-align:center;letter-spacing:.5em">
     </div>
-
     <div class="error-o" id="t-error"></div>
     <button class="btn-o" id="t-continuar" disabled>Continuar</button>
     <button class="btn-o fantasma" id="t-salir" style="margin-top:8px">Cerrar sesión</button>
   </div>
 </div>
 
-<!-- ============ BLOQUEO POR PIN ============ -->
 <div class="oscura oculto" id="p-bloqueo">
   <div class="tarjeta-oscura">
     <div class="marca"><span>◧</span> <span id="b-caja">Caja</span></div>
-    <div class="avatar" id="b-iniciales">··</div>
+    <div class="avatar-o" id="b-iniciales">··</div>
     <div class="titulo-o">Caja bloqueada</div>
     <p class="sub-o">Turno de <b id="b-cajero">—</b> · digite su PIN</p>
     <div class="puntos" id="b-puntos">
@@ -342,65 +241,77 @@ input,select{font:inherit;color:inherit}
       <button class="tecla">0</button>
       <button class="tecla plana" data-accion="borrar">Borrar</button>
     </div>
-    <div class="pie-o" id="b-pie">La caja se bloquea después de cada cobro.</div>
+    <div class="pie-o">La caja se bloquea después de cada cobro.</div>
   </div>
 </div>
 
-<!-- ============ POS ============ -->
-<div id="caja" class="oculto">
-  <header class="barra">
-    <div class="logo"><i>◧</i><span id="h-org">Negocio</span></div>
-    <div class="barra-sep"></div>
-    <div class="turno">
-      <b id="h-cajero">—</b>
-      <small id="h-caja">—</small>
+<!-- ================= CAJA ================= -->
+<div class="armazon oculto" id="app">
+  <aside id="menu"></aside>
+
+  <div class="principal">
+    <header class="barra">
+      <button class="hamburguesa" id="abrir-menu" aria-label="Menú">
+        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="barra-titulo">
+        <b id="h-cajero">—</b>
+        <small id="h-caja">—</small>
+      </div>
+      <div class="barra-fin">
+        <span class="pill online" id="h-red">En línea</span>
+        <span class="pill num" id="h-ventas">0 ventas</span>
+        <button class="pill" id="h-bloquear" style="background:var(--tinta);color:#fff">Bloquear</button>
+      </div>
+    </header>
+
+    <div class="cuerpo">
+      <section class="catalogo">
+        <div class="buscador">
+          <label class="campo">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input id="buscar" placeholder="Buscar producto o escanear código" autocomplete="off">
+          </label>
+          <button class="btn-camara oculto" id="btn-camara">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/>
+            </svg>
+            <span class="etq-camara">Escanear</span>
+          </button>
+        </div>
+        <div class="grid" id="grid"></div>
+      </section>
+
+      <aside class="ticket" id="ticket">
+        <div class="ticket-top">
+          <button class="cerrar-ticket" id="cerrar-ticket">✕</button>
+          <button class="cliente" id="btn-cliente"><i>+</i> Cliente sin registrar <span>›</span></button>
+        </div>
+        <div class="lineas" id="lineas"></div>
+        <div class="totales">
+          <div class="tot"><span>Subtotal</span><b class="num" id="t-sub2">—</b></div>
+          <div class="tot"><span>Impuesto</span><b class="num" id="t-isv">—</b></div>
+          <div class="tot grande"><span>Total</span><b class="num" id="t-total">—</b></div>
+          <button class="btn-cobrar" id="btn-cobrar" disabled>
+            <span>Cobrar</span><b class="num" id="btn-total">—</b>
+          </button>
+        </div>
+      </aside>
     </div>
-    <div class="barra-fin">
-      <span class="pill online" id="h-red">En línea</span>
-      <span class="pill num" id="h-ventas">0 ventas</span>
-      <a class="pill oculto" id="h-compras" href="compras.html">Compras</a>
-      <button class="btn-bloquear" id="h-bloquear">Bloquear</button>
+
+    <div class="movil">
+      <button class="movil-btn" id="movil-ver" disabled>
+        <span class="movil-conteo num" id="movil-conteo">0</span>
+        <span>Ver ticket</span><b class="num" id="movil-total">—</b>
+      </button>
     </div>
-  </header>
-
-  <div class="cuerpo">
-    <section class="catalogo">
-      <div class="buscador">
-        <label class="campo">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <input id="buscar" placeholder="Buscar producto o escanear código" autocomplete="off">
-        </label>
-      </div>
-      <div class="chips" id="chips"></div>
-      <div class="grid" id="grid"></div>
-    </section>
-
-    <aside class="ticket" id="ticket">
-      <div class="ticket-top">
-        <button class="cerrar-ticket" id="cerrar-ticket">✕</button>
-        <button class="cliente" id="btn-cliente"><i>+</i> Cliente sin registrar <span>›</span></button>
-      </div>
-      <div class="lineas" id="lineas"></div>
-      <div class="totales">
-        <div class="tot"><span>Subtotal</span><b class="num" id="t-sub2">—</b></div>
-        <div class="tot"><span id="et-isv">Impuesto</span><b class="num" id="t-isv">—</b></div>
-        <div class="tot grande"><span>Total</span><b class="num" id="t-total">—</b></div>
-        <button class="btn-cobrar" id="btn-cobrar" disabled>
-          <span>Cobrar</span><b class="num" id="btn-total">—</b>
-        </button>
-      </div>
-    </aside>
-  </div>
-
-  <div class="movil">
-    <button class="movil-btn" id="movil-ver" disabled>
-      <span class="movil-conteo num" id="movil-conteo">0</span>
-      <span>Ver ticket</span><b class="num" id="movil-total">—</b>
-    </button>
   </div>
 </div>
 
-<!-- ============ COBRO ============ -->
+<!-- ================= COBRO ================= -->
 <div class="velo oculto" id="velo-cobro">
   <div class="hoja">
     <div id="paso-cobro">
@@ -423,10 +334,10 @@ input,select{font:inherit;color:inherit}
         <div class="rapidos" id="rapidos"></div>
       </div>
       <div class="cambio" id="cambio-caja"><span>Cambio</span><b class="num" id="cambio">—</b></div>
-      <div class="error-caja oculto" id="cobro-error"></div>
+      <div class="aviso malo oculto" id="cobro-error"></div>
       <div class="acciones">
-        <button class="btn-2" id="cancelar-cobro">Volver</button>
-        <button class="btn-1" id="confirmar-cobro">Confirmar cobro</button>
+        <button class="btn secundario" id="cancelar-cobro">Volver</button>
+        <button class="btn principal-b" id="confirmar-cobro">Confirmar cobro</button>
       </div>
     </div>
 
@@ -438,67 +349,65 @@ input,select{font:inherit;color:inherit}
         <div class="entregar" id="caja-entregar">
           <small>Entregar de cambio</small><b class="num" id="listo-cambio">—</b>
         </div>
-        <p class="aviso" id="listo-aviso">La caja se bloqueó. Para la siguiente venta hay que digitar el PIN otra vez.</p>
-        <button class="btn-1" style="width:100%" id="btn-terminar">Listo</button>
+        <p class="sub" id="listo-aviso"></p>
+        <button class="btn principal-b" style="width:100%" id="btn-terminar">Listo</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ============ SINCRONIZAR VENTAS OFFLINE ============ -->
 <div class="velo oculto" id="velo-sync">
   <div class="hoja">
     <h2>Ventas por enviar</h2>
     <p class="sub" id="sync-sub">—</p>
-    <div class="error-caja oculto" id="sync-error"></div>
-    <p class="aviso">Cada venta guardada sin internet necesita su PIN al enviarse,
-      igual que si la hubiera cobrado en línea. Digítelo una vez y se envían todas.</p>
+    <div class="aviso malo oculto" id="sync-error"></div>
+    <p class="sub">Cada venta guardada sin internet necesita su PIN al enviarse, igual que si la
+      hubiera cobrado en línea. Digítelo una vez y se envían todas.</p>
     <input class="recibido num" id="sync-pin" inputmode="numeric" maxlength="5"
            placeholder="•••••" style="text-align:center;letter-spacing:.4em">
     <div class="acciones" style="margin-top:16px">
-      <button class="btn-2" id="sync-luego">Después</button>
-      <button class="btn-1" id="sync-enviar">Enviar</button>
+      <button class="btn secundario" id="sync-luego">Después</button>
+      <button class="btn principal-b" id="sync-enviar">Enviar</button>
     </div>
   </div>
 </div>
 
 <script type="module">
-/* La configuración vive en config.js para no tocar este archivo al
-   cambiar de proyecto (producción, pruebas, otro cliente). */
 const CFG = window.SUPABASE_CONFIG || {};
-const SUPABASE_URL      = CFG.url || 'PEGUE_AQUI_LA_URL';
-const SUPABASE_ANON_KEY = CFG.key || 'PEGUE_AQUI_LA_LLAVE';
-
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+const SUPABASE_URL = CFG.url || 'PEGUE_AQUI_LA_URL';
+const SUPABASE_KEY = CFG.key || 'PEGUE_AQUI_LA_LLAVE';
 
 const $ = s => document.querySelector(s);
-const ver = (id, si=true) => $(id).classList.toggle('oculto', !si);
+const ver = (id, si = true) => $(id).classList.toggle('oculto', !si);
 
-if (SUPABASE_URL.startsWith('PEGUE')) {
-  ver('#p-config'); throw new Error('Falta configurar Supabase');
-}
+if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin configurar'); }
 
-const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { montarMenu, iniciales, escapar } from './menu.js';
+import { escanear, hayCamara } from './escaner.js';
+
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth:{ persistSession:true, autoRefreshToken:true }
 });
 
-/* ==========================================================================
-   ESTADO
-   ========================================================================== */
 const S = {
-  ctx:null, sucursal:null, caja:null, turno:null, cajero:null,
+  ctx:null, sucursal:null, caja:null, turno:null, cajero:null, menu:null,
   desbloqueo:null, catalogo:[], categorias:[], ticket:[],
   categoria:'todas', busqueda:'', metodo:'efectivo', fiscal:false, recibido:0,
-  ventas:0, acumulado:0, pin:'', intentos:0, moneda:'L', enLinea:navigator.onLine
+  ventas:0, acumulado:0, pin:'', moneda:'L', enLinea:navigator.onLine
 };
 
 const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
   {minimumFractionDigits:2, maximumFractionDigits:2});
-const iniciales = n => (n||'··').split(' ').slice(0,2).map(x=>x[0]||'').join('').toUpperCase();
 
-/* ==========================================================================
-   COLA OFFLINE (IndexedDB)
-   ========================================================================== */
+function limpiarError(e){
+  const m = (e?.message || String(e)).replace(/^.*?:\s*/, '');
+  if (/JWT|token/i.test(m)) return 'La sesión venció. Vuelva a entrar.';
+  if (/Failed to fetch|NetworkError/i.test(m)) return 'Sin conexión con el servidor';
+  return m;
+}
+
+/* ================= cola sin internet ================= */
 const DB = {
   db:null,
   async abrir(){
@@ -523,10 +432,10 @@ const DB = {
         tx.oncomplete = () => ok(req?.result);
         tx.onerror = () => fail(tx.error);
       });
-    }catch(e){ console.warn('IndexedDB no disponible', e); return null; }
+    }catch(e){ return null; }
   },
   encolar(v){ return this._tx('cola','readwrite', s => s.add(v)); },
-  pendientes(){ return this._tx('cola','readonly', s => s.getAll()) || []; },
+  async pendientes(){ return (await this._tx('cola','readonly', s => s.getAll())) || []; },
   borrar(id){ return this._tx('cola','readwrite', s => s.delete(id)); },
   guardarCatalogo(clave, datos){ return this._tx('catalogo','readwrite', s => s.put({clave, datos})); },
   async leerCatalogo(clave){
@@ -535,44 +444,32 @@ const DB = {
   }
 };
 
-/* ==========================================================================
-   RED
-   ========================================================================== */
 function pintarRed(){
   const p = $('#h-red');
   p.className = 'pill ' + (S.enLinea ? 'online' : 'offline');
   p.textContent = S.enLinea ? 'En línea' : 'Sin internet';
 }
-window.addEventListener('online',  async () => { S.enLinea = true;  pintarRed(); await revisarCola(); });
+window.addEventListener('online',  async () => { S.enLinea = true; pintarRed(); await revisarCola(); });
 window.addEventListener('offline', () => { S.enLinea = false; pintarRed(); });
 
-/* ==========================================================================
-   SESIÓN
-   ========================================================================== */
+/* ================= sesión ================= */
 $('#s-entrar').addEventListener('click', async () => {
-  const b = $('#s-entrar'), err = $('#s-error');
-  err.textContent = ''; b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+  const b = $('#s-entrar');
+  $('#s-error').textContent = '';
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
   const { error } = await sb.auth.signInWithPassword({
-    email: $('#s-email').value.trim(), password: $('#s-clave').value
-  });
+    email:$('#s-email').value.trim(), password:$('#s-clave').value });
   b.disabled = false; b.textContent = 'Entrar';
-  if (error){ err.textContent = 'Correo o contraseña incorrectos'; return; }
+  if (error){ $('#s-error').textContent = 'Correo o contraseña incorrectos'; return; }
   await arrancar();
 });
 $('#s-clave').addEventListener('keydown', e => { if (e.key === 'Enter') $('#s-entrar').click(); });
+$('#t-salir').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
 
-$('#t-salir').addEventListener('click', async () => {
-  await sb.auth.signOut();
-  location.reload();
-});
-
-/* ==========================================================================
-   ARRANQUE
-   ========================================================================== */
+/* ================= arranque ================= */
 async function arrancar(){
   const { data:{ session } } = await sb.auth.getSession();
   if (!session){ ver('#p-sesion'); return; }
-
   ver('#p-sesion', false);
 
   const { data, error } = await sb.rpc('fn_pos_contexto');
@@ -588,61 +485,45 @@ async function arrancar(){
   S.moneda = data.organizacion.moneda === 'HNL' ? 'L' : data.organizacion.moneda;
 
   $('#t-org').textContent = data.organizacion.nombre;
-  $('#h-org').textContent = data.organizacion.nombre;
   $('#t-nombre').textContent = data.usuario.nombre;
   $('#t-iniciales').textContent = iniciales(data.usuario.nombre);
   $('#b-iniciales').textContent = iniciales(data.usuario.nombre);
   $('#b-cajero').textContent = data.usuario.nombre;
   $('#h-cajero').textContent = data.usuario.nombre;
   ver('#caja-fiscal', data.organizacion.factura_fiscal);
-  ver('#h-compras', data.usuario.nivel >= 2);   // supervisor en adelante
 
-  if (data.usuario.rol === 'repartidor'){
-    ver('#p-turno');
-    $('#t-titulo').textContent = 'Esta app no es para su rol';
-    $('#t-sub').innerHTML = 'Un repartidor entra por la app de entregas.';
-    $('#t-cajas').innerHTML = '';
-    return;
-  }
-  if (data.sin_sucursal){
-    ver('#p-turno');
-    $('#t-titulo').textContent = 'Sin sucursal asignada';
-    $('#t-sub').innerHTML = 'Pídale a su gerente que lo asigne a una sucursal para poder vender.';
-    $('#t-cajas').innerHTML = '';
-    return;
-  }
-  if (!data.cajas.length){
-    ver('#p-turno');
-    $('#t-titulo').textContent = 'No hay cajas configuradas';
-    $('#t-sub').innerHTML = 'El gerente debe crear al menos una caja en esta sucursal.';
-    $('#t-cajas').innerHTML = '';
-    return;
-  }
-  if (!data.usuario.tiene_pin){
-    ver('#p-turno');
-    $('#t-titulo').textContent = 'Falta su PIN';
-    $('#t-sub').innerHTML = 'Pídale a su gerente que le asigne un PIN de 5 dígitos.';
-    $('#t-cajas').innerHTML = '';
-    return;
-  }
+  const problema =
+    data.usuario.rol === 'repartidor' ? ['Esta app no es para su rol',
+      'Un repartidor entra por la app de entregas.'] :
+    data.sin_sucursal ? ['Sin sucursal asignada',
+      'Pídale a su gerente que lo asigne a una sucursal para poder vender.'] :
+    !data.cajas.length ? ['No hay cajas configuradas',
+      'El gerente debe crear al menos una caja en esta sucursal.'] :
+    !data.usuario.tiene_pin ? ['Falta su PIN',
+      'Pídale a su gerente que le asigne un PIN de 5 dígitos.'] : null;
 
+  if (problema){
+    ver('#p-turno');
+    $('#t-titulo').textContent = problema[0];
+    $('#t-sub').textContent = problema[1];
+    $('#t-cajas').innerHTML = '';
+    return;
+  }
   elegirCaja();
 }
 
-/* ---------- elegir caja y abrir turno ---------- */
 let cajaSel = null;
 
 function elegirCaja(){
   ver('#p-turno');
-  const cajas = S.ctx.cajas;
-  $('#t-cajas').innerHTML = cajas.map(c => `
+  $('#t-cajas').innerHTML = S.ctx.cajas.map(c => `
     <button class="opcion-o" data-caja="${c.caja_id}">
       <div>
-        <b>${c.caja}</b>
+        <b>${escapar(c.caja)}</b>
         <small>${c.turno_id
           ? (c.cajero_id === S.cajero.id
               ? 'Su turno · ' + c.ventas_turno + ' ventas'
-              : 'Ocupada por ' + c.cajero)
+              : 'Ocupada por ' + escapar(c.cajero))
           : 'Libre · sin turno abierto'}</small>
       </div>
       <span class="marca-sel oculto">✓</span>
@@ -652,7 +533,6 @@ function elegirCaja(){
 $('#t-cajas').addEventListener('click', e => {
   const b = e.target.closest('[data-caja]'); if (!b) return;
   const c = S.ctx.cajas.find(x => x.caja_id === b.dataset.caja);
-
   if (c.turno_id && c.cajero_id !== S.cajero.id){
     $('#t-error').textContent = 'Esa caja tiene el turno de ' + c.cajero;
     return;
@@ -679,68 +559,67 @@ $('#t-continuar').addEventListener('click', async () => {
     if (!/^\d{5}$/.test(pin)){ err.textContent = 'El PIN son 5 dígitos'; return; }
     b.disabled = true; b.innerHTML = '<span class="girando"></span>';
     const { data, error } = await sb.rpc('fn_abrir_turno', {
-      p_caja_id: cajaSel.caja_id,
-      p_cajero_id: S.cajero.id,
-      p_pin: pin,
-      p_monto_inicial: parseFloat($('#t-monto').value) || 0
-    });
+      p_caja_id: cajaSel.caja_id, p_cajero_id: S.cajero.id, p_pin: pin,
+      p_monto_inicial: parseFloat($('#t-monto').value) || 0 });
     b.disabled = false; b.textContent = 'Abrir turno';
     if (error){ err.textContent = limpiarError(error); return; }
     S.turno = data;
-  } else {
-    S.turno = cajaSel.turno_id;
-  }
+  } else S.turno = cajaSel.turno_id;
 
   S.caja = cajaSel;
   S.sucursal = cajaSel.sucursal_id;
   $('#h-caja').textContent = cajaSel.caja + ' · turno abierto';
   $('#b-caja').textContent = cajaSel.caja;
   $('#t-pin').value = '';
-
   ver('#p-turno', false);
+
+  S.menu = montarMenu({
+    contenedor:'#menu', modulo:'caja', ctx:S.ctx,
+    alSalir: async () => { await sb.auth.signOut(); location.reload(); }
+  });
+  S.menu.alElegir(v => { S.categoria = v; pintarGrid(); });
+  $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
+
+  ver('#btn-camara', hayCamara());
   await cargarCatalogo();
   bloquear();
 });
 
-/* ==========================================================================
-   CATÁLOGO
-   ========================================================================== */
+/* ================= catálogo ================= */
 async function cargarCatalogo(){
   const clave = 'cat-' + S.sucursal;
   if (S.enLinea){
-    const { data, error } = await sb
-      .from('v_pos_catalogo')
+    const { data, error } = await sb.from('v_pos_catalogo')
       .select('producto_id,sku,nombre,imagen_url,categoria_id,categoria,precio,existencia,stock_bajo,vence_el,codigos,tasa_impuesto')
-      .eq('sucursal_id', S.sucursal)
-      .order('nombre');
-    if (!error && data){
-      S.catalogo = data;
-      await DB.guardarCatalogo(clave, data);
-    }
+      .eq('sucursal_id', S.sucursal).order('nombre');
+    if (!error && data){ S.catalogo = data; await DB.guardarCatalogo(clave, data); }
   }
-  if (!S.catalogo.length){
-    S.catalogo = (await DB.leerCatalogo(clave)) || [];
-  }
-  S.categorias = [...new Map(S.catalogo
-    .filter(p => p.categoria_id)
+  if (!S.catalogo.length) S.catalogo = (await DB.leerCatalogo(clave)) || [];
+
+  S.categorias = [...new Map(S.catalogo.filter(p => p.categoria_id)
     .map(p => [p.categoria_id, p.categoria])).entries()];
-  pintarChips(); pintar();
+
+  pintarMenuCategorias();
+  pintar();
 }
 
-function pintarChips(){
-  const total = S.catalogo.length;
-  $('#chips').innerHTML =
-    `<button class="chip ${S.categoria==='todas'?'activo':''}" data-c="todas">Todos<b>${total}</b></button>` +
-    S.categorias.map(([id,nom]) => {
-      const n = S.catalogo.filter(p => p.categoria_id === id).length;
-      return `<button class="chip ${S.categoria===id?'activo':''}" data-c="${id}">${nom}<b>${n}</b></button>`;
-    }).join('');
+function pintarMenuCategorias(){
+  if (!S.menu) return;
+  S.menu.actualizar([{
+    id:'categorias', titulo:'Categorías',
+    items:[
+      { valor:'todas', nombre:'Todos los productos', icono:'todos',
+        cuenta:S.catalogo.length, activo:S.categoria === 'todas' },
+      ...S.categorias.map(([id,nom]) => ({
+        valor:id, nombre:nom, icono:'etiqueta',
+        cuenta:S.catalogo.filter(p => p.categoria_id === id).length,
+        activo:S.categoria === id
+      }))
+    ]
+  }]);
 }
 
-function diasPara(fecha){
-  if (!fecha) return null;
-  return Math.round((new Date(fecha) - new Date()) / 86400000);
-}
+const diasPara = f => f ? Math.round((new Date(f) - new Date()) / 86400000) : null;
 
 function pintarGrid(){
   const q = S.busqueda.toLowerCase().trim();
@@ -751,7 +630,7 @@ function pintarGrid(){
 
   if (!lista.length){
     $('#grid').innerHTML = `<div class="vacio" style="grid-column:1/-1"><div>🔍</div>
-      <p>${S.catalogo.length ? 'Sin resultados' : 'No hay productos con precio y existencia en esta sucursal'}</p></div>`;
+      <p>${S.catalogo.length ? 'Sin resultados' : 'No hay productos en esta sucursal'}</p></div>`;
     return;
   }
 
@@ -762,12 +641,12 @@ function pintarGrid(){
     if (p.existencia <= 0)          etq = '<span class="etiqueta bajo">Agotado</span>';
     else if (d !== null && d <= 15) etq = `<span class="etiqueta vence">Vence en ${Math.max(d,0)}d</span>`;
     else if (p.stock_bajo)          etq = '<span class="etiqueta bajo">Stock bajo</span>';
-    const fondo = p.imagen_url ? `style="background-image:url('${p.imagen_url}')"` : '';
+    const fondo = p.imagen_url ? `style="background-image:url('${escapar(p.imagen_url)}')"` : '';
     return `<button class="prod ${p.existencia<=0?'agotado':''}" data-p="${p.producto_id}">
       ${etq}${t ? `<span class="en-ticket">${t.cantidad}</span>` : ''}
-      <div class="prod-img" ${fondo}>${p.imagen_url ? '' : (p.nombre[0]||'·')}</div>
+      <div class="prod-img" ${fondo}>${p.imagen_url ? '' : escapar(p.nombre[0]||'·')}</div>
       <div class="prod-txt">
-        <div class="prod-nom">${p.nombre}</div>
+        <div class="prod-nom">${escapar(p.nombre)}</div>
         <div class="prod-fila">
           <span class="prod-precio">${p.precio ? money(p.precio) : 'Sin precio'}</span>
           <span class="prod-stock">${Number(p.existencia).toFixed(0)}</span>
@@ -776,39 +655,56 @@ function pintarGrid(){
   }).join('');
 }
 
-$('#chips').addEventListener('click', e => {
-  const c = e.target.closest('.chip'); if (!c) return;
-  S.categoria = c.dataset.c; pintarChips(); pintarGrid();
-});
 $('#grid').addEventListener('click', e => {
   const b = e.target.closest('.prod'); if (!b) return;
   agregar(b.dataset.p);
 });
-
-// Un lector de código de barras teclea rápido y termina en Enter
-let bufer = '', ultimo = 0;
 $('#buscar').addEventListener('input', e => { S.busqueda = e.target.value; pintarGrid(); });
+
+/* lector de pistola: teclea rápido y termina en Enter */
+let bufer = '', ultimoT = 0;
 $('#buscar').addEventListener('keydown', e => {
   const ahora = Date.now();
-  if (ahora - ultimo > 120) bufer = '';
-  ultimo = ahora;
+  if (ahora - ultimoT > 120) bufer = '';
+  ultimoT = ahora;
   if (e.key === 'Enter'){
     const cod = (bufer || e.target.value).trim();
-    const p = S.catalogo.find(x => (x.codigos||[]).includes(cod) || x.sku === cod);
-    if (p){ agregar(p.producto_id); e.target.value = ''; S.busqueda = ''; pintarGrid(); }
+    if (porCodigo(cod)){ e.target.value = ''; S.busqueda = ''; pintarGrid(); }
     bufer = '';
   } else if (e.key.length === 1) bufer += e.key;
 });
 
-/* ==========================================================================
-   TICKET
-   ========================================================================== */
+function porCodigo(cod){
+  const p = S.catalogo.find(x => (x.codigos||[]).includes(cod) || x.sku === cod);
+  if (p){ agregar(p.producto_id); return true; }
+  return false;
+}
+
+/* ================= cámara ================= */
+$('#btn-camara').addEventListener('click', async () => {
+  await escanear({
+    continuo:true,
+    titulo:'Escanear productos',
+    pista:'Cada código leído se agrega al ticket',
+    alLeer: async (cod) => {
+      const p = S.catalogo.find(x => (x.codigos||[]).includes(cod) || x.sku === cod);
+      if (!p) return { ok:false, texto:'Código no encontrado: ' + cod };
+      if (p.existencia <= 0) return { ok:false, texto:p.nombre + ' está agotado' };
+      if (!p.precio) return { ok:false, texto:p.nombre + ' no tiene precio' };
+      agregar(p.producto_id);
+      const l = S.ticket.find(x => x.producto_id === p.producto_id);
+      return { ok:true, texto:p.nombre, cuenta:'x' + l.cantidad };
+    }
+  });
+});
+
+/* ================= ticket ================= */
 function agregar(id){
   const p = S.catalogo.find(x => x.producto_id === id);
   if (!p || p.existencia <= 0 || !p.precio) return;
   const l = S.ticket.find(x => x.producto_id === id);
   if (l){ if (l.cantidad < p.existencia) l.cantidad++; }
-  else S.ticket.push({producto_id:id, cantidad:1});
+  else S.ticket.push({ producto_id:id, cantidad:1 });
   pintar();
 }
 function cambiarCant(id, d){
@@ -827,7 +723,7 @@ function totales(){
     bruto += linea;
     imp += linea - linea / (1 + Number(p.tasa_impuesto || 0));
   });
-  return { sub: bruto - imp, imp, total: bruto };
+  return { sub:bruto - imp, imp, total:bruto };
 }
 function pintarTicket(){
   const cont = $('#lineas');
@@ -839,7 +735,7 @@ function pintarTicket(){
       S.ticket.map(l => {
         const p = S.catalogo.find(x => x.producto_id === l.producto_id);
         return `<div class="linea">
-          <div class="linea-nom">${p.nombre}<small class="num">${money(p.precio)} c/u</small></div>
+          <div class="linea-nom">${escapar(p.nombre)}<small class="num">${money(p.precio)} c/u</small></div>
           <div class="qty">
             <button data-menos="${p.producto_id}">−</button>
             <span class="num">${l.cantidad}</span>
@@ -850,8 +746,8 @@ function pintarTicket(){
       }).join('');
   }
   const t = totales();
-  $('#t-sub2').textContent  = money(t.sub);
-  $('#t-isv').textContent   = money(t.imp);
+  $('#t-sub2').textContent = money(t.sub);
+  $('#t-isv').textContent = money(t.imp);
   $('#t-total').textContent = money(t.total);
   $('#btn-total').textContent = money(t.total);
   $('#btn-cobrar').disabled = !S.ticket.length;
@@ -869,13 +765,11 @@ $('#lineas').addEventListener('click', e => {
 $('#movil-ver').addEventListener('click', () => $('#ticket').classList.add('abierto'));
 $('#cerrar-ticket').addEventListener('click', () => $('#ticket').classList.remove('abierto'));
 
-/* ==========================================================================
-   BLOQUEO POR PIN
-   ========================================================================== */
+/* ================= bloqueo ================= */
 function bloquear(){
   S.desbloqueo = null; S.pin = ''; pintarPuntos();
   $('#b-error').textContent = '';
-  ver('#caja', false);
+  $('#app').classList.add('oculto');
   ver('#p-bloqueo');
 }
 function pintarPuntos(){
@@ -889,19 +783,11 @@ function digitar(d){
 }
 async function verificarPin(){
   const err = $('#b-error');
-
-  if (!S.enLinea){
-    // Sin internet no se puede validar contra el servidor. Se permite vender
-    // y la venta viaja en la cola; el PIN se exige de nuevo al sincronizar.
-    S.desbloqueo = 'offline';
-    abrirPOS();
-    return;
-  }
+  if (!S.enLinea){ S.desbloqueo = 'offline'; abrirPOS(); return; }
 
   err.textContent = 'Verificando…';
-  const { data, error } = await sb.rpc('fn_desbloquear_caja', {
-    p_turno_id: S.turno, p_pin: S.pin
-  });
+  const { data, error } = await sb.rpc('fn_desbloquear_caja',
+    { p_turno_id:S.turno, p_pin:S.pin });
   S.pin = ''; pintarPuntos();
 
   if (error){
@@ -916,11 +802,10 @@ async function verificarPin(){
 }
 function abrirPOS(){
   ver('#p-bloqueo', false);
-  ver('#caja');
-  pintarRed();
-  pintar();
+  $('#app').classList.remove('oculto');
+  pintarRed(); pintar();
 }
-$('#b-teclado').addEventListener('click', async e => {
+$('#b-teclado').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   const a = b.dataset.accion;
   if (a === 'borrar'){ S.pin = S.pin.slice(0,-1); pintarPuntos(); }
@@ -938,19 +823,15 @@ async function cerrarTurno(){
   const declarado = prompt('¿Cuánto efectivo hay en la caja?');
   if (declarado === null) return;
   const { data, error } = await sb.rpc('fn_cerrar_turno', {
-    p_turno_id: S.turno, p_monto_declarado: parseFloat(declarado) || 0, p_notas: null
-  });
+    p_turno_id:S.turno, p_monto_declarado:parseFloat(declarado) || 0, p_notas:null });
   if (error){ $('#b-error').textContent = limpiarError(error); return; }
-  alert(`Turno cerrado
-Esperado: ${money(data.esperado)}
-Declarado: ${money(data.declarado)}
-Diferencia: ${money(data.diferencia)}`);
+  alert('Turno cerrado\nEsperado: ' + money(data.esperado) +
+        '\nDeclarado: ' + money(data.declarado) +
+        '\nDiferencia: ' + money(data.diferencia));
   location.reload();
 }
 
-/* ==========================================================================
-   COBRO
-   ========================================================================== */
+/* ================= cobro ================= */
 $('#btn-cobrar').addEventListener('click', () => {
   if (!S.ticket.length) return;
   const t = totales();
@@ -961,8 +842,7 @@ $('#btn-cobrar').addEventListener('click', () => {
   $('#recibido').value = '0.00';
   $('#sw-fiscal').classList.remove('on');
   document.querySelectorAll('.metodo').forEach(m => m.classList.toggle('activo', m.dataset.m === 'efectivo'));
-  ver('#bloque-efectivo');
-  ver('#cobro-error', false);
+  ver('#bloque-efectivo'); ver('#cobro-error', false);
   pintarRapidos(t.total); pintarCambio();
   ver('#paso-cobro'); ver('#paso-listo', false);
   ver('#velo-cobro');
@@ -1009,52 +889,41 @@ $('#cancelar-cobro').addEventListener('click', () => ver('#velo-cobro', false));
 
 $('#confirmar-cobro').addEventListener('click', async () => {
   const b = $('#confirmar-cobro'), t = totales();
-  const items = S.ticket.map(l => ({producto_id:l.producto_id, cantidad:l.cantidad}));
-  const pagos = [{
-    metodo: S.metodo, monto: Number(t.total.toFixed(2)),
-    recibido: S.metodo === 'efectivo' ? S.recibido : null
-  }];
+  const items = S.ticket.map(l => ({ producto_id:l.producto_id, cantidad:l.cantidad }));
+  const pagos = [{ metodo:S.metodo, monto:Number(t.total.toFixed(2)),
+                   recibido:S.metodo === 'efectivo' ? S.recibido : null }];
 
   ver('#cobro-error', false);
   b.disabled = true; b.innerHTML = '<span class="girando"></span>';
 
   if (!S.enLinea){
-    await DB.encolar({items, pagos, fiscal:S.fiscal, sucursal:S.sucursal,
-                      turno:S.turno, creada:new Date().toISOString()});
+    await DB.encolar({ items, pagos, fiscal:S.fiscal, sucursal:S.sucursal,
+                       turno:S.turno, creada:new Date().toISOString() });
     descontarLocal();
-    mostrarListo({ offline:true, cambio: Math.max(S.recibido - t.total, 0) });
+    mostrarListo({ offline:true, cambio:Math.max(S.recibido - t.total, 0) });
     b.disabled = false; b.textContent = 'Confirmar cobro';
     return;
   }
 
   const { data, error } = await sb.rpc('fn_registrar_venta', {
-    p_desbloqueo_id: S.desbloqueo,
-    p_items: items,
-    p_pagos: pagos,
-    p_cliente_id: null,
-    p_fiscal: S.fiscal
-  });
+    p_desbloqueo_id:S.desbloqueo, p_items:items, p_pagos:pagos,
+    p_cliente_id:null, p_fiscal:S.fiscal });
   b.disabled = false; b.textContent = 'Confirmar cobro';
 
   if (error){
     const msg = limpiarError(error);
     $('#cobro-error').textContent = msg;
     ver('#cobro-error');
-    // Si el desbloqueo se perdió, hay que volver a pedir el PIN
-    if (/desbloqueo|bloqueada|expir/i.test(msg)){
+    if (/desbloqueo|bloqueada|expir/i.test(msg))
       setTimeout(() => { ver('#velo-cobro', false); bloquear(); }, 1800);
-    }
     return;
   }
 
   S.ventas++; S.acumulado += Number(data.total);
   $('#h-ventas').textContent = S.ventas + ' venta' + (S.ventas===1?'':'s') + ' · ' + money(S.acumulado);
   descontarLocal();
-  mostrarListo({
-    documento: data.documento,
-    numero: data.numero_fiscal || data.numero,
-    cambio: Number(data.cambio)
-  });
+  mostrarListo({ documento:data.documento, numero:data.numero_fiscal || data.numero,
+                 cambio:Number(data.cambio) });
 });
 
 function descontarLocal(){
@@ -1064,11 +933,10 @@ function descontarLocal(){
   });
 }
 
-function mostrarListo({documento, numero, cambio, offline}){
+function mostrarListo({ documento, numero, cambio, offline }){
   $('#listo-icono').textContent = offline ? '⏳' : '✓';
   $('#listo-icono').classList.toggle('espera', !!offline);
-  $('#listo-titulo').textContent = offline
-    ? 'Venta guardada sin internet'
+  $('#listo-titulo').textContent = offline ? 'Venta guardada sin internet'
     : (documento === 'factura' ? 'Factura emitida' : 'Venta registrada');
   $('#listo-doc').textContent = offline ? 'Se enviará al recuperar la señal' : numero;
   ver('#caja-entregar', cambio > 0);
@@ -1084,16 +952,14 @@ $('#btn-terminar').addEventListener('click', async () => {
   ver('#velo-cobro', false);
   $('#ticket').classList.remove('abierto');
   pintar();
-  bloquear();                       // ← la regla del negocio
+  bloquear();
   if (S.enLinea) await revisarCola();
 });
 
-/* ==========================================================================
-   SINCRONIZACIÓN DE LA COLA
-   ========================================================================== */
+/* ================= sincronizar ================= */
 async function revisarCola(){
   const pend = await DB.pendientes();
-  if (!pend || !pend.length) return;
+  if (!pend.length) return;
   $('#sync-sub').textContent = pend.length === 1
     ? '1 venta se cobró sin internet y falta enviarla'
     : pend.length + ' ventas se cobraron sin internet y faltan enviarlas';
@@ -1113,23 +979,19 @@ $('#sync-enviar').addEventListener('click', async () => {
 
   for (const v of pend){
     const { data:desb, error:e1 } = await sb.rpc('fn_desbloquear_caja',
-      { p_turno_id: v.turno, p_pin: pin });
+      { p_turno_id:v.turno, p_pin:pin });
     if (e1){ fallo = limpiarError(e1); break; }
-
     const { error:e2 } = await sb.rpc('fn_registrar_venta', {
-      p_desbloqueo_id: desb, p_items: v.items, p_pagos: v.pagos,
-      p_cliente_id: null, p_fiscal: v.fiscal
-    });
+      p_desbloqueo_id:desb, p_items:v.items, p_pagos:v.pagos,
+      p_cliente_id:null, p_fiscal:v.fiscal });
     if (e2){ fallo = limpiarError(e2); break; }
-
     await DB.borrar(v.id);
     enviadas++;
   }
-
   b.disabled = false; b.textContent = 'Enviar';
 
   if (fallo){
-    err.textContent = `Se enviaron ${enviadas} de ${pend.length}. Se detuvo en: ${fallo}`;
+    err.textContent = 'Se enviaron ' + enviadas + ' de ' + pend.length + '. Se detuvo en: ' + fallo;
     ver('#sync-error');
     return;
   }
@@ -1137,23 +999,9 @@ $('#sync-enviar').addEventListener('click', async () => {
   await cargarCatalogo();
 });
 
-/* ==========================================================================
-   UTILIDADES
-   ========================================================================== */
-function limpiarError(e){
-  const m = (e?.message || String(e)).replace(/^.*?:\s*/, '');
-  if (/JWT|token/i.test(m)) return 'La sesión venció. Vuelva a entrar.';
-  if (/Failed to fetch|NetworkError/i.test(m)) return 'Sin conexión con el servidor';
-  return m;
-}
-
-/* ==========================================================================
-   INICIO
-   ========================================================================== */
-if ('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js').catch(()=>{});
-}
-sb.auth.onAuthStateChange((evento) => { if (evento === 'SIGNED_OUT') location.reload(); });
+/* ================= inicio ================= */
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT') location.reload(); });
 arrancar();
 </script>
 </body>

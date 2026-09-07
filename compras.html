@@ -13,97 +13,19 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ui.css">
 <style>
-:root{
-  --tinta:#0F1729;--panel:#FFFFFF;--fondo:#F2F5F9;--linea:#E3E9F2;
-  --azul:#2563EB;--azul-suave:#EFF4FF;--verde:#12A150;--verde-oscuro:#0E8443;
-  --ambar:#F5B301;--rojo:#E11D48;--tenue:#6B7A90;
-  --r-sm:10px;--r-md:16px;--r-lg:22px;
-  --sombra:0 1px 2px rgba(15,23,41,.06),0 8px 24px -12px rgba(15,23,41,.18);
-  --ui:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
-  --num:'IBM Plex Mono',ui-monospace,monospace;
-}
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%}
-body{font-family:var(--ui);background:var(--fondo);color:var(--tinta);font-size:15px;
-  overflow:hidden}
-button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
-input,select,textarea{font:inherit;color:inherit}
-.num{font-family:var(--num);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-:focus-visible{outline:3px solid var(--azul);outline-offset:2px}
-.oculto{display:none!important}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-
-/* ---------- pantallas oscuras ---------- */
-.oscura{position:fixed;inset:0;z-index:100;background:var(--tinta);display:grid;
-  place-items:center;padding:24px;overflow-y:auto;
-  background-image:radial-gradient(circle at 50% 0%,#1E2B45 0%,var(--tinta) 60%)}
-.tarjeta-oscura{width:100%;max-width:360px;text-align:center;color:#fff}
-.marca{display:inline-flex;align-items:center;gap:9px;font-weight:800;font-size:13px;
-  letter-spacing:.14em;text-transform:uppercase;color:#7C8CA8;margin-bottom:26px}
-.marca span{width:26px;height:26px;border-radius:8px;background:var(--verde);
-  display:grid;place-items:center;color:#fff;font-size:14px}
-.titulo-o{font-size:20px;font-weight:700;margin-bottom:4px}
-.sub-o{font-size:14px;color:#8A99B3;margin-bottom:26px;line-height:1.5}
-.campo-o{width:100%;height:52px;border-radius:14px;background:rgba(255,255,255,.07);
-  border:1px solid rgba(255,255,255,.12);color:#fff;padding:0 16px;margin-bottom:10px;
-  font-size:15px;outline:none}
-.campo-o::placeholder{color:#6B7A96}
-.campo-o:focus{border-color:var(--azul)}
-.btn-o{width:100%;height:52px;border-radius:14px;background:var(--verde);color:#fff;
-  font-weight:700;font-size:15px;margin-top:6px}
-.btn-o:disabled{background:#3B4A66;color:#8A99B3}
-.btn-o.fantasma{background:transparent;border:1px solid rgba(255,255,255,.15);color:#B9C6DA}
-.error-o{min-height:20px;font-size:13px;color:#FF8095;font-weight:600;margin:8px 0}
-.girando{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);
-  border-top-color:#fff;border-radius:50%;animation:girar .7s linear infinite;vertical-align:-3px}
-@keyframes girar{to{transform:rotate(360deg)}}
-
-/* ---------- estructura ---------- */
-#app{display:flex;flex-direction:column;height:100%}
-.barra{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--panel);
-  border-bottom:1px solid var(--linea);flex:0 0 auto}
-.logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:15px;white-space:nowrap}
-.logo i{width:30px;height:30px;border-radius:9px;background:var(--verde);color:#fff;
-  display:grid;place-items:center;font-style:normal;font-size:15px}
-.barra-sep{width:1px;height:26px;background:var(--linea)}
-.donde{display:flex;flex-direction:column;line-height:1.25;min-width:0}
-.donde b{font-size:13px;font-weight:700}
-.donde small{font-size:11px;color:var(--tenue)}
-.barra-fin{margin-left:auto;display:flex;align-items:center;gap:8px}
-.enlace-pos{padding:8px 14px;border-radius:11px;background:var(--fondo);
-  font-size:13px;font-weight:700;color:var(--tenue)}
-.enlace-pos:hover{background:var(--linea)}
-
-.pestanas{display:flex;gap:4px;padding:12px 16px 0;background:var(--panel);
-  border-bottom:1px solid var(--linea)}
-.pestana{padding:11px 18px;border-radius:12px 12px 0 0;font-size:14px;font-weight:700;
-  color:var(--tenue);border-bottom:3px solid transparent;margin-bottom:-1px}
-.pestana.activa{color:var(--tinta);border-bottom-color:var(--verde)}
-
-.contenido{flex:1;overflow-y:auto;padding:16px;padding-bottom:120px}
+/* ---------- propio de compras ---------- */
+.contenido{flex:1;overflow-y:auto;padding:16px;padding-bottom:132px}
 .limite{max-width:1000px;margin:0 auto}
 
-.tarjeta{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);
-  padding:16px;margin-bottom:14px;box-shadow:var(--sombra)}
-.tarjeta h3{font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
-  color:#9AA8BC;margin-bottom:14px}
-
-.rejilla{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
-.campo-g{display:flex;flex-direction:column;gap:6px}
-.campo-g label{font-size:12px;font-weight:700;color:var(--tenue)}
-.entrada{height:46px;border:1.5px solid var(--linea);border-radius:var(--r-sm);
-  padding:0 12px;background:var(--panel);outline:none;width:100%}
-.entrada:focus{border-color:var(--azul)}
-.entrada.num{text-align:right}
-select.entrada{cursor:pointer}
-
-/* buscador de producto */
-.buscar-caja{position:relative}
-.resultados{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:30;
-  background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);
-  box-shadow:0 16px 40px -12px rgba(15,23,41,.3);max-height:320px;overflow-y:auto}
-.res{display:flex;align-items:center;gap:12px;padding:12px 14px;width:100%;text-align:left;
+.buscar-caja{position:relative;display:flex;gap:10px}
+.resultados{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:30;background:var(--panel);
+  border:1px solid var(--linea);border-radius:var(--r-md);
+  box-shadow:0 16px 40px -12px rgba(15,23,41,.3);max-height:330px;overflow-y:auto;
+}
+.res{display:flex;align-items:center;gap:12px;padding:13px 14px;width:100%;text-align:left;
   border-bottom:1px solid var(--fondo)}
 .res:hover{background:var(--azul-suave)}
 .res-info{flex:1;min-width:0}
@@ -113,16 +35,15 @@ select.entrada{cursor:pointer}
 .res-datos b{font-family:var(--num);font-size:13px;display:block}
 .res-datos small{font-size:11px;color:var(--tenue);font-family:var(--num)}
 
-/* líneas */
 .linea-c{border:1px solid var(--linea);border-radius:var(--r-md);padding:14px;
   margin-bottom:10px;background:var(--panel)}
 .linea-enc{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px}
 .linea-enc b{flex:1;font-size:14.5px;font-weight:700;line-height:1.3}
 .linea-enc small{display:block;font-size:12px;color:var(--tenue);font-weight:500;margin-top:2px}
-.quitar{width:30px;height:30px;border-radius:9px;background:var(--fondo);color:var(--tenue);
+.quitar{width:32px;height:32px;border-radius:9px;background:var(--fondo);color:var(--tenue);
   font-size:15px;flex:0 0 auto}
 .quitar:hover{background:#FFEDF1;color:var(--rojo)}
-.linea-campos{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
+.linea-campos{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
 .linea-pie{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px;
   padding-top:12px;border-top:1px dashed var(--linea);font-size:12.5px}
 .dato{color:var(--tenue)}
@@ -132,14 +53,11 @@ select.entrada{cursor:pointer}
 .margen.flojo{background:#FFF4E0;color:#8A5A00}
 .margen.perdida{background:#FFEDF1;color:var(--rojo)}
 
-.vacio{text-align:center;padding:40px 20px;color:#9AA8BC}
-.vacio div{font-size:38px;margin-bottom:10px;opacity:.5}
-.vacio p{font-size:14px;line-height:1.5}
-
-/* barra de totales fija */
-.totales-fijo{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--panel);
+.totales-fijo{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--panel);
   border-top:1px solid var(--linea);padding:12px 16px calc(12px + env(safe-area-inset-bottom));
-  box-shadow:0 -8px 24px -16px rgba(15,23,41,.3)}
+  box-shadow:0 -8px 24px -16px rgba(15,23,41,.3);
+}
 .totales-int{max-width:1000px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .tot-grupo{display:flex;gap:18px;flex:1;min-width:200px}
 .tot-item{display:flex;flex-direction:column}
@@ -147,54 +65,28 @@ select.entrada{cursor:pointer}
 .tot-item b{font-family:var(--num);font-size:17px;font-weight:700}
 .tot-item.grande b{font-size:24px}
 .botones{display:flex;gap:10px}
-.btn{height:50px;padding:0 22px;border-radius:var(--r-md);font-weight:800;font-size:15px}
-.btn.principal{background:var(--verde);color:#fff;box-shadow:0 6px 18px -6px rgba(18,161,80,.6)}
-.btn.secundario{background:var(--fondo);color:var(--tenue)}
-.btn:disabled{background:#CBD5E1;color:#fff;box-shadow:none;cursor:not-allowed}
 
-/* historial */
 .compra{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--panel);
-  border:1px solid var(--linea);border-radius:var(--r-md);margin-bottom:10px;width:100%;text-align:left}
+  border:1px solid var(--linea);border-radius:var(--r-md);margin-bottom:10px;width:100%;
+  text-align:left}
 .compra:hover{border-color:#C9D6E8}
 .compra-info{flex:1;min-width:0}
 .compra-info b{font-size:14.5px;font-weight:700;display:block}
 .compra-info small{font-size:12.5px;color:var(--tenue)}
 .compra-fin{text-align:right;flex:0 0 auto}
 .compra-fin b{font-family:var(--num);font-size:15px;font-weight:700;display:block}
-.sello{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800;
-  text-transform:uppercase;margin-top:3px}
-.sello.borrador{background:#FFF4E0;color:#8A5A00}
-.sello.confirmado{background:#E7F7EE;color:var(--verde-oscuro)}
-.sello.anulado{background:#FFEDF1;color:var(--rojo)}
-.sello.debe{background:var(--azul-suave);color:var(--azul)}
-
-/* modal */
-.velo{position:fixed;inset:0;z-index:60;background:rgba(15,23,41,.55);display:grid;
-  place-items:center;padding:20px;backdrop-filter:blur(3px);overflow-y:auto}
-.hoja{background:var(--panel);border-radius:var(--r-lg);width:100%;max-width:520px;padding:22px;
-  box-shadow:0 24px 60px -18px rgba(15,23,41,.5);animation:subir .22s cubic-bezier(.2,.8,.3,1);
-  max-height:90vh;overflow-y:auto}
-@keyframes subir{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
-.hoja h2{font-size:19px;margin-bottom:4px}
-.hoja .sub{font-size:13px;color:var(--tenue);margin-bottom:18px}
-.aviso{border-radius:var(--r-sm);padding:12px 14px;font-size:13px;font-weight:600;
-  margin-bottom:14px;line-height:1.45}
-.aviso.malo{background:#FFEDF1;color:#9F1239}
-.aviso.bueno{background:#E7F7EE;color:var(--verde-oscuro)}
-.aviso.ojo{background:#FFF4E0;color:#8A5A00}
-.acciones{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
 .det-linea{display:flex;justify-content:space-between;gap:12px;padding:10px 0;
   border-bottom:1px solid var(--fondo);font-size:13.5px}
 .det-linea span{color:var(--tenue);font-size:12px;display:block}
 .det-linea .der{text-align:right;font-family:var(--num);white-space:nowrap}
 
-@media (max-width:700px){
-  .contenido{padding:12px;padding-bottom:150px}
-  .logo span{display:none}
+@media (max-width:820px){
+  .contenido{padding:12px;padding-bottom:160px}
   .tot-grupo{width:100%}
   .botones{width:100%}
-  .btn{flex:1;padding:0 12px}
+  .botones .btn{flex:1;padding:0 10px;font-size:14px}
   .acciones{grid-template-columns:1fr}
+  .etq-camara{display:none}
 }
 </style>
 </head>
@@ -225,119 +117,122 @@ select.entrada{cursor:pointer}
     <div class="marca"><span>◧</span> Compras</div>
     <div class="titulo-o" id="bl-titulo">Sin permiso</div>
     <p class="sub-o" id="bl-texto"></p>
-    <a class="btn-o" href="index.html" style="display:block;line-height:52px;text-decoration:none">Ir a la caja</a>
+    <a class="btn-o" href="index.html" style="display:block;line-height:52px">Ir a la caja</a>
     <button class="btn-o fantasma" id="bl-salir">Cerrar sesión</button>
   </div>
 </div>
 
-<div id="app" class="oculto">
-  <header class="barra">
-    <div class="logo"><i>◧</i><span id="h-org">Negocio</span></div>
-    <div class="barra-sep"></div>
-    <div class="donde">
-      <b id="h-usuario">—</b>
-      <small id="h-sucursal">—</small>
-    </div>
-    <div class="barra-fin">
-      <a class="enlace-pos" href="index.html">Ir a la caja</a>
-    </div>
-  </header>
+<div class="armazon oculto" id="app">
+  <aside id="menu"></aside>
 
-  <nav class="pestanas">
-    <button class="pestana activa" data-t="nueva">Nueva entrada</button>
-    <button class="pestana" data-t="historial">Historial</button>
-  </nav>
+  <div class="principal">
+    <header class="barra">
+      <button class="hamburguesa" id="abrir-menu" aria-label="Menú">
+        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="barra-titulo">
+        <b id="h-titulo">Nueva entrada</b>
+        <small id="h-sucursal">—</small>
+      </div>
+      <div class="barra-fin">
+        <span class="pill" id="h-usuario">—</span>
+      </div>
+    </header>
 
-  <div class="contenido">
-    <!-- ====== NUEVA ENTRADA ====== -->
-    <div class="limite" id="t-nueva">
-      <div class="tarjeta">
-        <h3>Documento del proveedor</h3>
-        <div class="rejilla">
-          <div class="campo-g">
-            <label for="f-prov">Proveedor</label>
-            <select class="entrada" id="f-prov"></select>
-          </div>
-          <div class="campo-g">
-            <label for="f-num">Nº de factura</label>
-            <input class="entrada" id="f-num" placeholder="000-001-01-00000123">
-          </div>
-          <div class="campo-g">
-            <label for="f-fecha">Fecha</label>
-            <input class="entrada" id="f-fecha" type="date">
-          </div>
-          <div class="campo-g">
-            <label for="f-vence">Vence el pago</label>
-            <input class="entrada" id="f-vence" type="date">
+    <div class="contenido">
+      <!-- ====== NUEVA ENTRADA ====== -->
+      <div class="limite" id="t-nueva">
+        <div class="tarjeta">
+          <h3>Documento del proveedor</h3>
+          <div class="rejilla">
+            <div class="campo-g">
+              <label for="f-prov">Proveedor</label>
+              <select class="entrada" id="f-prov"></select>
+            </div>
+            <div class="campo-g">
+              <label for="f-num">Nº de factura</label>
+              <input class="entrada" id="f-num" placeholder="000-001-01-00000123">
+            </div>
+            <div class="campo-g">
+              <label for="f-fecha">Fecha</label>
+              <input class="entrada" id="f-fecha" type="date">
+            </div>
+            <div class="campo-g">
+              <label for="f-vence">Vence el pago</label>
+              <input class="entrada" id="f-vence" type="date">
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="tarjeta">
-        <h3>Productos que entran</h3>
-        <div class="buscar-caja">
-          <input class="entrada" id="f-buscar" autocomplete="off"
-                 placeholder="Buscar por nombre, código interno o escanear">
-          <div class="resultados oculto" id="f-resultados"></div>
+        <div class="tarjeta">
+          <h3>Productos que entran</h3>
+          <div class="buscar-caja">
+            <input class="entrada" id="f-buscar" autocomplete="off"
+                   placeholder="Buscar por nombre, código interno o escanear">
+            <button class="btn-camara oculto" id="btn-camara" style="height:46px">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/>
+              </svg>
+              <span class="etq-camara">Escanear</span>
+            </button>
+            <div class="resultados oculto" id="f-resultados"></div>
+          </div>
         </div>
+
+        <div id="f-lineas"></div>
       </div>
 
-      <div id="f-lineas"></div>
-    </div>
-
-    <!-- ====== HISTORIAL ====== -->
-    <div class="limite oculto" id="t-historial">
-      <div id="h-lista"></div>
-    </div>
-  </div>
-
-  <div class="totales-fijo" id="barra-totales">
-    <div class="totales-int">
-      <div class="tot-grupo">
-        <div class="tot-item"><small>Subtotal</small><b class="num" id="t-sub">L 0.00</b></div>
-        <div class="tot-item"><small>Impuesto</small><b class="num" id="t-imp">L 0.00</b></div>
-        <div class="tot-item grande"><small>Total</small><b class="num" id="t-tot">L 0.00</b></div>
+      <!-- ====== HISTORIAL ====== -->
+      <div class="limite oculto" id="t-historial">
+        <div id="h-lista"></div>
       </div>
-      <div class="botones">
-        <button class="btn secundario" id="b-borrador" disabled>Guardar borrador</button>
-        <button class="btn principal" id="b-confirmar" disabled>Confirmar entrada</button>
+    </div>
+
+    <div class="totales-fijo" id="barra-totales">
+      <div class="totales-int">
+        <div class="tot-grupo">
+          <div class="tot-item"><small>Subtotal</small><b class="num" id="t-sub">L 0.00</b></div>
+          <div class="tot-item"><small>Impuesto</small><b class="num" id="t-imp">L 0.00</b></div>
+          <div class="tot-item grande"><small>Total</small><b class="num" id="t-tot">L 0.00</b></div>
+        </div>
+        <div class="botones">
+          <button class="btn secundario" id="b-borrador" disabled>Guardar borrador</button>
+          <button class="btn principal-b" id="b-confirmar" disabled>Confirmar entrada</button>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ====== MODAL ====== -->
-<div class="velo oculto" id="velo">
-  <div class="hoja" id="hoja"></div>
-</div>
+<div class="velo oculto" id="velo"><div class="hoja" id="hoja"></div></div>
 
 <script type="module">
 const CFG = window.SUPABASE_CONFIG || {};
 const SUPABASE_URL = CFG.url || 'PEGUE_AQUI_LA_URL';
 const SUPABASE_KEY = CFG.key || 'PEGUE_AQUI_LA_LLAVE';
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
 const $ = s => document.querySelector(s);
 const ver = (id, si = true) => $(id).classList.toggle('oculto', !si);
 
-if (SUPABASE_URL.startsWith('PEGUE')) { ver('#p-config'); throw new Error('sin configurar'); }
+if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin configurar'); }
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { montarMenu, escapar } from './menu.js';
+import { escanear, hayCamara } from './escaner.js';
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true }
+  auth:{ persistSession:true, autoRefreshToken:true }
 });
 
-const S = {
-  ctx:null, sucursal:null, moneda:'L',
-  catalogo:[], proveedores:[], lineas:[], guardando:false
-};
+const S = { ctx:null, sucursal:null, moneda:'L', menu:null,
+            catalogo:[], proveedores:[], lineas:[], guardando:false, vista:'nueva' };
 
 const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
   {minimumFractionDigits:2, maximumFractionDigits:2});
 const num = v => { const n = parseFloat(String(v).replace(/[^0-9.\-]/g,'')); return isNaN(n) ? 0 : n; };
 const hoy = () => new Date().toISOString().slice(0,10);
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
-  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 function limpiarError(e){
   const m = (e?.message || String(e)).replace(/^.*?:\s*/, '');
@@ -354,8 +249,7 @@ $('#s-entrar').addEventListener('click', async () => {
   $('#s-error').textContent = '';
   b.disabled = true; b.innerHTML = '<span class="girando"></span>';
   const { error } = await sb.auth.signInWithPassword({
-    email: $('#s-email').value.trim(), password: $('#s-clave').value
-  });
+    email:$('#s-email').value.trim(), password:$('#s-clave').value });
   b.disabled = false; b.textContent = 'Entrar';
   if (error){ $('#s-error').textContent = 'Correo o contraseña incorrectos'; return; }
   arrancar();
@@ -379,12 +273,11 @@ async function arrancar(){
   S.ctx = data;
   S.moneda = data.organizacion.moneda === 'HNL' ? 'L' : data.organizacion.moneda;
 
-  // recibir mercadería es de supervisor para arriba
   if (data.usuario.nivel < 2){
     ver('#p-bloqueado');
     $('#bl-titulo').textContent = 'Esta pantalla no es para su rol';
     $('#bl-texto').innerHTML = 'Recibir mercadería lo hace un supervisor o el gerente. ' +
-      'Usted entró como <b>' + esc(data.usuario.rol) + '</b>.';
+      'Usted entró como <b>' + escapar(data.usuario.rol) + '</b>.';
     return;
   }
   if (data.sin_sucursal || !data.sucursales.length){
@@ -395,24 +288,48 @@ async function arrancar(){
   }
 
   S.sucursal = data.sucursales[0].id;
-  $('#h-org').textContent = data.organizacion.nombre;
   $('#h-usuario').textContent = data.usuario.nombre;
   $('#h-sucursal').textContent = data.sucursales[0].nombre;
   $('#f-fecha').value = hoy();
 
-  ver('#app');
+  $('#app').classList.remove('oculto');
+
+  S.menu = montarMenu({
+    contenedor:'#menu', modulo:'compras', ctx:S.ctx,
+    alSalir: async () => { await sb.auth.signOut(); location.reload(); },
+    secciones:[{
+      id:'vistas', titulo:'Compras',
+      items:[
+        { valor:'nueva',     nombre:'Nueva entrada', icono:'compras', activo:true },
+        { valor:'historial', nombre:'Historial',     icono:'reportes' }
+      ]
+    }]
+  });
+  S.menu.alElegir(cambiarVista);
+  $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
+
+  ver('#btn-camara', hayCamara());
   await Promise.all([cargarProveedores(), cargarCatalogo()]);
   pintarLineas();
 }
 
+function cambiarVista(v){
+  S.vista = v;
+  const nueva = v === 'nueva';
+  ver('#t-nueva', nueva);
+  ver('#t-historial', !nueva);
+  ver('#barra-totales', nueva);
+  $('#h-titulo').textContent = nueva ? 'Nueva entrada' : 'Historial de compras';
+  if (!nueva) cargarHistorial();
+}
+
 async function cargarProveedores(){
   const { data } = await sb.from('proveedores')
-    .select('id,nombre,dias_credito,dias_entrega')
-    .eq('activo', true).order('nombre');
+    .select('id,nombre,dias_credito,dias_entrega').eq('activo', true).order('nombre');
   S.proveedores = data || [];
   $('#f-prov').innerHTML = S.proveedores.length
     ? '<option value="">Elija el proveedor…</option>' +
-      S.proveedores.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('')
+      S.proveedores.map(p => `<option value="${p.id}">${escapar(p.nombre)}</option>`).join('')
     : '<option value="">No hay proveedores dados de alta</option>';
 }
 
@@ -424,7 +341,6 @@ async function cargarCatalogo(){
   S.catalogo = data || [];
 }
 
-/* al elegir proveedor, la fecha de pago se calcula sola */
 $('#f-prov').addEventListener('change', e => {
   const p = S.proveedores.find(x => x.id === e.target.value);
   if (p && p.dias_credito > 0){
@@ -440,28 +356,25 @@ const caja = $('#f-buscar'), lista = $('#f-resultados');
 caja.addEventListener('input', () => {
   const q = caja.value.toLowerCase().trim();
   if (!q){ ver('#f-resultados', false); return; }
-
   const r = S.catalogo.filter(p =>
     p.nombre.toLowerCase().includes(q) ||
     (p.sku||'').toLowerCase().includes(q) ||
     (p.codigos||[]).some(c => c.toLowerCase() === q)).slice(0, 8);
 
-  if (!r.length){
-    lista.innerHTML = `<div style="padding:16px;color:var(--tenue);font-size:13.5px">
-      Sin resultados. El producto debe existir en el catálogo antes de recibirlo.</div>`;
-  } else {
-    lista.innerHTML = r.map(p => `
+  lista.innerHTML = r.length
+    ? r.map(p => `
       <button class="res" data-p="${p.producto_id}">
         <div class="res-info">
-          <b>${esc(p.nombre)}</b>
-          <small>${esc(p.sku)} · existencia ${Number(p.existencia).toFixed(0)} ${esc(p.unidad_base)}</small>
+          <b>${escapar(p.nombre)}</b>
+          <small>${escapar(p.sku)} · existencia ${Number(p.existencia).toFixed(0)} ${escapar(p.unidad_base)}</small>
         </div>
         <div class="res-datos">
           <b>${p.precio_venta ? money(p.precio_venta) : 'sin precio'}</b>
           <small>últ. costo ${money(p.ultimo_costo)}</small>
         </div>
-      </button>`).join('');
-  }
+      </button>`).join('')
+    : `<div style="padding:16px;color:var(--tenue);font-size:13.5px">
+        Sin resultados. El producto debe existir en el catálogo antes de recibirlo.</div>`;
   ver('#f-resultados');
 });
 
@@ -478,110 +391,99 @@ lista.addEventListener('click', e => {
   const b = e.target.closest('.res'); if (!b) return;
   agregar(b.dataset.p);
 });
-
 document.addEventListener('click', e => {
   if (!e.target.closest('.buscar-caja')) ver('#f-resultados', false);
+});
+
+/* ================= cámara ================= */
+$('#btn-camara').addEventListener('click', async () => {
+  await escanear({
+    continuo:true,
+    titulo:'Escanear mercadería',
+    pista:'Cada código leído se agrega a la entrada',
+    alLeer: async (cod) => {
+      const p = S.catalogo.find(x => (x.codigos||[]).includes(cod) || x.sku === cod);
+      if (!p) return { ok:false, texto:'No está en el catálogo: ' + cod };
+      agregar(p.producto_id);
+      const l = S.lineas.find(x => x.producto_id === p.producto_id);
+      return { ok:true, texto:p.nombre, cuenta:'x' + l.cantidad };
+    }
+  });
 });
 
 /* ================= líneas ================= */
 function agregar(id){
   const p = S.catalogo.find(x => x.producto_id === id);
   if (!p) return;
-
   caja.value = ''; ver('#f-resultados', false);
 
   const ya = S.lineas.find(l => l.producto_id === id);
   if (ya){ ya.cantidad = num(ya.cantidad) + 1; pintarLineas(); return; }
 
-  // por omisión, la presentación marcada como de compra
-  const pres = (p.presentaciones||[]);
+  const pres = p.presentaciones || [];
   const elegida = pres.find(x => x.es_compra) || null;
   const factor = elegida ? Number(elegida.factor) : 1;
 
   S.lineas.push({
-    producto_id: id,
-    nombre: p.nombre,
-    sku: p.sku,
-    unidad_base: p.unidad_base,
-    tasa: Number(p.tasa_impuesto || 0),
-    precio_venta: Number(p.precio_venta || 0),
-    presentaciones: pres,
-    presentacion_id: elegida ? elegida.id : '',
-    factor,
-    cantidad: 1,
-    // el último costo viene por unidad base: se lleva a la presentación
-    costo: p.ultimo_costo ? +(Number(p.ultimo_costo) * factor).toFixed(4) : 0,
-    lote: '',
-    vence: '',
-    pide_vencimiento: p.controla_vencimiento || p.controla_lote
+    producto_id:id, nombre:p.nombre, sku:p.sku, unidad_base:p.unidad_base,
+    tasa:Number(p.tasa_impuesto || 0), precio_venta:Number(p.precio_venta || 0),
+    presentaciones:pres, presentacion_id:elegida ? elegida.id : '', factor,
+    cantidad:1,
+    costo:p.ultimo_costo ? +(Number(p.ultimo_costo) * factor).toFixed(4) : 0,
+    lote:'', vence:'',
+    pide_vencimiento:p.controla_vencimiento || p.controla_lote
   });
   pintarLineas();
 }
 
+function calcMargen(l){
+  const costoBase = num(l.factor) > 0 ? num(l.costo) / num(l.factor) : 0;
+  if (!(l.precio_venta > 0 && costoBase > 0)) return null;
+  const netoVenta = l.precio_venta / (1 + l.tasa);
+  const pct = ((netoVenta - costoBase) / netoVenta) * 100;
+  return { pct, clase: pct < 0 ? 'perdida' : pct < 15 ? 'flojo' : 'bien',
+           texto: pct < 0 ? 'Vendería con pérdida' : 'Margen ' + pct.toFixed(0) + '%' };
+}
+
 function pintarLineas(){
   const cont = $('#f-lineas');
-
   if (!S.lineas.length){
     cont.innerHTML = `<div class="tarjeta"><div class="vacio"><div>📦</div>
-      <p>Busque arriba los productos que vienen en la factura<br>
-      del proveedor y agréguelos uno por uno</p></div></div>`;
+      <p>Busque o escanee los productos que vienen<br>en la factura del proveedor</p></div></div>`;
   } else {
     cont.innerHTML = S.lineas.map((l, i) => {
       const cantBase = num(l.cantidad) * num(l.factor);
       const costoBase = num(l.factor) > 0 ? num(l.costo) / num(l.factor) : 0;
       const total = num(l.cantidad) * num(l.costo);
-
-      let margen = '';
-      if (l.precio_venta > 0 && costoBase > 0){
-        const netoVenta = l.precio_venta / (1 + l.tasa);
-        const pct = ((netoVenta - costoBase) / netoVenta) * 100;
-        const clase = pct < 0 ? 'perdida' : pct < 15 ? 'flojo' : 'bien';
-        const texto = pct < 0
-          ? 'Vendería con pérdida'
-          : 'Margen ' + pct.toFixed(0) + '%';
-        margen = `<span class="margen ${clase}">${texto}</span>`;
-      }
-
-      const opciones = ['<option value="">Unidad (' + esc(l.unidad_base) + ')</option>']
+      const m = calcMargen(l);
+      const opciones = ['<option value="">Unidad (' + escapar(l.unidad_base) + ')</option>']
         .concat((l.presentaciones||[]).map(p =>
-          `<option value="${p.id}" ${p.id === l.presentacion_id ? 'selected' : ''}
-           >${esc(p.nombre)} × ${Number(p.factor)}</option>`)).join('');
+          `<option value="${p.id}" ${p.id === l.presentacion_id ? 'selected' : ''}>${escapar(p.nombre)} × ${Number(p.factor)}</option>`)).join('');
 
-      return `
-      <div class="linea-c" data-i="${i}">
+      return `<div class="linea-c" data-i="${i}">
         <div class="linea-enc">
-          <b>${esc(l.nombre)}<small>${esc(l.sku)}</small></b>
+          <b>${escapar(l.nombre)}<small>${escapar(l.sku)}</small></b>
           <button class="quitar" data-quitar="${i}" aria-label="Quitar">✕</button>
         </div>
         <div class="linea-campos">
-          <div class="campo-g">
-            <label>Presentación</label>
-            <select class="entrada" data-c="presentacion_id">${opciones}</select>
-          </div>
-          <div class="campo-g">
-            <label>Cantidad</label>
-            <input class="entrada num" data-c="cantidad" inputmode="decimal" value="${l.cantidad}">
-          </div>
-          <div class="campo-g">
-            <label>Costo por presentación</label>
-            <input class="entrada num" data-c="costo" inputmode="decimal" value="${l.costo}">
-          </div>
+          <div class="campo-g"><label>Presentación</label>
+            <select class="entrada" data-c="presentacion_id">${opciones}</select></div>
+          <div class="campo-g"><label>Cantidad</label>
+            <input class="entrada num" data-c="cantidad" inputmode="decimal" value="${l.cantidad}"></div>
+          <div class="campo-g"><label>Costo por presentación</label>
+            <input class="entrada num" data-c="costo" inputmode="decimal" value="${l.costo}"></div>
           ${l.pide_vencimiento ? `
-          <div class="campo-g">
-            <label>Lote</label>
-            <input class="entrada" data-c="lote" value="${esc(l.lote)}" placeholder="opcional">
-          </div>
-          <div class="campo-g">
-            <label>Vence</label>
-            <input class="entrada" data-c="vence" type="date" value="${l.vence}">
-          </div>` : ''}
+          <div class="campo-g"><label>Lote</label>
+            <input class="entrada" data-c="lote" value="${escapar(l.lote)}" placeholder="opcional"></div>
+          <div class="campo-g"><label>Vence</label>
+            <input class="entrada" data-c="vence" type="date" value="${l.vence}"></div>` : ''}
         </div>
         <div class="linea-pie">
-          <span class="dato">Entran <b>${cantBase.toFixed(2)} ${esc(l.unidad_base)}</b></span>
+          <span class="dato">Entran <b>${cantBase.toFixed(2)} ${escapar(l.unidad_base)}</b></span>
           <span class="dato">Costo unitario <b>${money(costoBase)}</b></span>
           ${l.precio_venta ? `<span class="dato">Se vende a <b>${money(l.precio_venta)}</b></span>` : ''}
           <span class="dato">Importe <b>${money(total)}</b></span>
-          ${margen}
+          ${m ? `<span class="margen ${m.clase}">${m.texto}</span>` : ''}
         </div>
       </div>`;
     }).join('');
@@ -598,7 +500,6 @@ $('#f-lineas').addEventListener('input', e => {
     l.presentacion_id = e.target.value;
     const p = (l.presentaciones||[]).find(x => x.id === e.target.value);
     const nuevo = p ? Number(p.factor) : 1;
-    // el costo se reescala para mantener el mismo costo unitario
     if (num(l.factor) > 0 && num(l.costo) > 0)
       l.costo = +((num(l.costo) / num(l.factor)) * nuevo).toFixed(4);
     l.factor = nuevo;
@@ -607,24 +508,16 @@ $('#f-lineas').addEventListener('input', e => {
   }
   l[campo] = e.target.value;
 
-  // se repinta solo el pie para no perder el foco mientras se escribe
   if (campo === 'cantidad' || campo === 'costo'){
     const fila = e.target.closest('.linea-c');
     const cantBase = num(l.cantidad) * num(l.factor);
     const costoBase = num(l.factor) > 0 ? num(l.costo) / num(l.factor) : 0;
-    const pie = fila.querySelector('.linea-pie');
-    const partes = pie.querySelectorAll('.dato b');
+    const partes = fila.querySelectorAll('.linea-pie .dato b');
     partes[0].textContent = cantBase.toFixed(2) + ' ' + l.unidad_base;
     partes[1].textContent = money(costoBase);
     partes[partes.length-1].textContent = money(num(l.cantidad) * num(l.costo));
-
-    const etiqueta = pie.querySelector('.margen');
-    if (etiqueta && l.precio_venta > 0 && costoBase > 0){
-      const netoVenta = l.precio_venta / (1 + l.tasa);
-      const pct = ((netoVenta - costoBase) / netoVenta) * 100;
-      etiqueta.className = 'margen ' + (pct < 0 ? 'perdida' : pct < 15 ? 'flojo' : 'bien');
-      etiqueta.textContent = pct < 0 ? 'Vendería con pérdida' : 'Margen ' + pct.toFixed(0) + '%';
-    }
+    const etq = fila.querySelector('.margen'), m = calcMargen(l);
+    if (etq && m){ etq.className = 'margen ' + m.clase; etq.textContent = m.texto; }
     totales();
   }
 });
@@ -637,19 +530,13 @@ $('#f-lineas').addEventListener('click', e => {
 
 function totales(){
   let sub = 0, imp = 0;
-  S.lineas.forEach(l => {
-    const t = num(l.cantidad) * num(l.costo);
-    sub += t;
-    imp += t * l.tasa;
-  });
+  S.lineas.forEach(l => { const t = num(l.cantidad) * num(l.costo); sub += t; imp += t * l.tasa; });
   $('#t-sub').textContent = money(sub);
   $('#t-imp').textContent = money(imp);
   $('#t-tot').textContent = money(sub + imp);
-
   const listo = S.lineas.length > 0 && !S.guardando;
   $('#b-borrador').disabled = !listo;
   $('#b-confirmar').disabled = !listo;
-  return { sub, imp, total: sub + imp };
 }
 
 /* ================= guardar ================= */
@@ -658,10 +545,9 @@ function validar(){
   if (!$('#f-num').value.trim()) return 'Escriba el número de factura del proveedor';
   if (!$('#f-fecha').value) return 'Indique la fecha';
   if (!S.lineas.length) return 'Agregue al menos un producto';
-
   for (const l of S.lineas){
-    if (num(l.cantidad) <= 0) return `La cantidad de ${l.nombre} debe ser mayor a cero`;
-    if (num(l.costo) <= 0)    return `Falta el costo de ${l.nombre}`;
+    if (num(l.cantidad) <= 0) return 'La cantidad de ' + l.nombre + ' debe ser mayor a cero';
+    if (num(l.costo) <= 0)    return 'Falta el costo de ' + l.nombre;
   }
   return null;
 }
@@ -670,116 +556,77 @@ async function guardar(confirmar){
   const problema = validar();
   if (problema){ modalAviso('Falta algo', problema, 'malo'); return; }
 
-  const bajoCosto = S.lineas.filter(l => {
-    const costoBase = num(l.factor) > 0 ? num(l.costo) / num(l.factor) : 0;
-    return l.precio_venta > 0 && costoBase > (l.precio_venta / (1 + l.tasa));
-  });
-
+  const bajoCosto = S.lineas.filter(l => { const m = calcMargen(l); return m && m.pct < 0; });
   if (confirmar && bajoCosto.length){
-    const seguir = await modalConfirmar(
-      'Quedaría vendiendo con pérdida',
-      `El costo de ${bajoCosto.length === 1 ? 'este producto supera' : 'estos productos supera'}
-       su precio de venta:<br><br><b>${bajoCosto.map(l => esc(l.nombre)).join('<br>')}</b><br><br>
-       Puede continuar y ajustar los precios después.`,
-      'Continuar de todos modos');
+    const seguir = await modalConfirmar('Quedaría vendiendo con pérdida',
+      'El costo de ' + (bajoCosto.length === 1 ? 'este producto supera' : 'estos productos supera') +
+      ' su precio de venta:<br><br><b>' + bajoCosto.map(l => escapar(l.nombre)).join('<br>') +
+      '</b><br><br>Puede continuar y ajustar los precios después.', 'Continuar de todos modos');
     if (!seguir) return;
   }
 
   S.guardando = true; totales();
   const b = confirmar ? $('#b-confirmar') : $('#b-borrador');
-  const textoPrevio = b.textContent;
+  const previo = b.textContent;
   b.innerHTML = '<span class="girando"></span>';
 
   try{
-    const { data: fac, error: e1 } = await sb.from('facturas_compra').insert({
-      organizacion_id: S.ctx.organizacion.id,
-      sucursal_id: S.sucursal,
-      proveedor_id: $('#f-prov').value,
-      numero: $('#f-num').value.trim(),
-      fecha: $('#f-fecha').value,
-      fecha_vencimiento: $('#f-vence').value || null,
-      creada_por: S.ctx.usuario.id
+    const { data:fac, error:e1 } = await sb.from('facturas_compra').insert({
+      organizacion_id:S.ctx.organizacion.id, sucursal_id:S.sucursal,
+      proveedor_id:$('#f-prov').value, numero:$('#f-num').value.trim(),
+      fecha:$('#f-fecha').value, fecha_vencimiento:$('#f-vence').value || null,
+      creada_por:S.ctx.usuario.id
     }).select('id').single();
     if (e1) throw e1;
 
-    const detalle = S.lineas.map(l => ({
-      organizacion_id: S.ctx.organizacion.id,
-      factura_compra_id: fac.id,
-      producto_id: l.producto_id,
-      presentacion_id: l.presentacion_id || null,
-      cantidad: num(l.cantidad),
-      costo_unitario: num(l.costo),
-      tasa_impuesto: l.tasa,
-      lote_codigo: l.lote || null,
-      fecha_vencimiento: l.vence || null
-    }));
-
-    const { error: e2 } = await sb.from('factura_compra_detalle').insert(detalle);
+    const { error:e2 } = await sb.from('factura_compra_detalle').insert(
+      S.lineas.map(l => ({
+        organizacion_id:S.ctx.organizacion.id, factura_compra_id:fac.id,
+        producto_id:l.producto_id, presentacion_id:l.presentacion_id || null,
+        cantidad:num(l.cantidad), costo_unitario:num(l.costo), tasa_impuesto:l.tasa,
+        lote_codigo:l.lote || null, fecha_vencimiento:l.vence || null })));
     if (e2) throw e2;
 
     if (confirmar){
-      const { error: e3 } = await sb.rpc('fn_confirmar_factura_compra', { p_factura_id: fac.id });
+      const { error:e3 } = await sb.rpc('fn_confirmar_factura_compra', { p_factura_id:fac.id });
       if (e3) throw e3;
     }
 
-    limpiarFormulario();
+    S.lineas = []; $('#f-num').value = ''; $('#f-vence').value = '';
+    pintarLineas();
     await cargarCatalogo();
 
-    modalAviso(
-      confirmar ? 'Mercadería ingresada' : 'Borrador guardado',
-      confirmar
-        ? 'El inventario ya está actualizado y el costo promedio recalculado.'
-        : 'Quedó pendiente de confirmar. Búsquelo en el historial cuando quiera ingresarlo.',
+    modalAviso(confirmar ? 'Mercadería ingresada' : 'Borrador guardado',
+      confirmar ? 'El inventario ya está actualizado y el costo promedio recalculado.'
+                : 'Quedó pendiente de confirmar. Búsquelo en el historial cuando quiera ingresarlo.',
       'bueno');
   }catch(err){
     modalAviso('No se pudo guardar', limpiarError(err), 'malo');
   }finally{
-    S.guardando = false;
-    b.textContent = textoPrevio;
-    totales();
+    S.guardando = false; b.textContent = previo; totales();
   }
-}
-
-function limpiarFormulario(){
-  S.lineas = [];
-  $('#f-num').value = '';
-  $('#f-vence').value = '';
-  pintarLineas();
 }
 
 $('#b-confirmar').addEventListener('click', () => guardar(true));
 $('#b-borrador').addEventListener('click', () => guardar(false));
 
 /* ================= historial ================= */
-document.querySelectorAll('.pestana').forEach(p => {
-  p.addEventListener('click', () => {
-    document.querySelectorAll('.pestana').forEach(x => x.classList.toggle('activa', x === p));
-    const nueva = p.dataset.t === 'nueva';
-    ver('#t-nueva', nueva);
-    ver('#t-historial', !nueva);
-    ver('#barra-totales', nueva);
-    if (!nueva) cargarHistorial();
-  });
-});
-
 async function cargarHistorial(){
-  $('#h-lista').innerHTML = `<div class="vacio"><p>Cargando…</p></div>`;
+  $('#h-lista').innerHTML = '<div class="vacio"><p>Cargando…</p></div>';
   const { data, error } = await sb.from('v_compras')
-    .select('id,numero,fecha,proveedor,estado,total,saldo,lineas,creada_por_nombre')
-    .order('creada_en', { ascending: false }).limit(50);
+    .select('id,numero,fecha,proveedor,estado,total,saldo,lineas')
+    .order('creada_en', { ascending:false }).limit(50);
 
-  if (error){ $('#h-lista').innerHTML = `<div class="vacio"><p>${esc(limpiarError(error))}</p></div>`; return; }
+  if (error){ $('#h-lista').innerHTML = `<div class="vacio"><p>${escapar(limpiarError(error))}</p></div>`; return; }
   if (!data.length){
-    $('#h-lista').innerHTML = `<div class="vacio"><div>🧾</div>
-      <p>Todavía no hay compras registradas</p></div>`;
+    $('#h-lista').innerHTML = `<div class="vacio"><div>🧾</div><p>Todavía no hay compras registradas</p></div>`;
     return;
   }
-
   $('#h-lista').innerHTML = data.map(c => `
     <button class="compra" data-c="${c.id}">
       <div class="compra-info">
-        <b>${esc(c.proveedor)}</b>
-        <small>${esc(c.numero)} · ${c.fecha} · ${c.lineas} ${c.lineas === 1 ? 'producto' : 'productos'}</small>
+        <b>${escapar(c.proveedor)}</b>
+        <small>${escapar(c.numero)} · ${c.fecha} · ${c.lineas} ${c.lineas === 1 ? 'producto' : 'productos'}</small>
       </div>
       <div class="compra-fin">
         <b>${money(c.total)}</b>
@@ -796,17 +643,17 @@ $('#h-lista').addEventListener('click', e => {
 });
 
 async function verCompra(id){
-  const { data: c } = await sb.from('v_compras').select('*').eq('id', id).single();
-  const { data: det } = await sb.from('factura_compra_detalle')
+  const { data:c } = await sb.from('v_compras').select('*').eq('id', id).single();
+  const { data:det } = await sb.from('factura_compra_detalle')
     .select('cantidad,costo_unitario,lote_codigo,fecha_vencimiento,productos(nombre,unidad_base),presentaciones(nombre,factor)')
     .eq('factura_compra_id', id);
 
   const filas = (det||[]).map(d => {
     const f = d.presentaciones ? Number(d.presentaciones.factor) : 1;
     return `<div class="det-linea">
-      <div>${esc(d.productos?.nombre || '—')}
-        <span>${Number(d.cantidad)} ${d.presentaciones ? esc(d.presentaciones.nombre) : esc(d.productos?.unidad_base||'')}
-        ${f > 1 ? '= ' + (Number(d.cantidad)*f).toFixed(0) + ' ' + esc(d.productos?.unidad_base||'') : ''}
+      <div>${escapar(d.productos?.nombre || '—')}
+        <span>${Number(d.cantidad)} ${d.presentaciones ? escapar(d.presentaciones.nombre) : escapar(d.productos?.unidad_base||'')}
+        ${f > 1 ? '= ' + (Number(d.cantidad)*f).toFixed(0) + ' ' + escapar(d.productos?.unidad_base||'') : ''}
         ${d.fecha_vencimiento ? ' · vence ' + d.fecha_vencimiento : ''}</span>
       </div>
       <div class="der">${money(Number(d.cantidad) * Number(d.costo_unitario))}</div>
@@ -814,29 +661,22 @@ async function verCompra(id){
   }).join('');
 
   const acciones = [];
-  if (c.estado === 'borrador')
-    acciones.push(`<button class="btn principal" id="m-confirmar">Confirmar entrada</button>`);
-  if (c.estado === 'confirmado' && Number(c.saldo) > 0)
-    acciones.push(`<button class="btn principal" id="m-pagar">Registrar pago</button>`);
-  if (c.estado !== 'anulado')
-    acciones.push(`<button class="btn secundario" id="m-anular">Anular</button>`);
-  acciones.push(`<button class="btn secundario" id="m-cerrar">Cerrar</button>`);
+  if (c.estado === 'borrador') acciones.push('<button class="btn principal-b" id="m-confirmar">Confirmar entrada</button>');
+  if (c.estado === 'confirmado' && Number(c.saldo) > 0) acciones.push('<button class="btn principal-b" id="m-pagar">Registrar pago</button>');
+  if (c.estado !== 'anulado') acciones.push('<button class="btn secundario" id="m-anular">Anular</button>');
+  acciones.push('<button class="btn secundario" id="m-cerrar">Cerrar</button>');
 
   $('#hoja').innerHTML = `
-    <h2>${esc(c.proveedor)}</h2>
-    <p class="sub">${esc(c.numero)} · ${c.fecha} · <span class="sello ${c.estado}">${c.estado}</span></p>
-    ${c.estado === 'borrador'
-      ? `<div class="aviso ojo">Todavía no entró al inventario. Al confirmar se crean los
-         lotes, se mueve el kardex y se recalcula el costo promedio.</div>` : ''}
-    ${c.estado === 'anulado'
-      ? `<div class="aviso malo">Anulada. ${esc(c.motivo_anulacion || '')}</div>` : ''}
+    <h2>${escapar(c.proveedor)}</h2>
+    <p class="sub">${escapar(c.numero)} · ${c.fecha} · <span class="sello ${c.estado}">${c.estado}</span></p>
+    ${c.estado === 'borrador' ? `<div class="aviso ojo">Todavía no entró al inventario. Al confirmar
+      se crean los lotes, se mueve el kardex y se recalcula el costo promedio.</div>` : ''}
+    ${c.estado === 'anulado' ? `<div class="aviso malo">Anulada. ${escapar(c.motivo_anulacion || '')}</div>` : ''}
     <div style="margin-bottom:16px">${filas}</div>
     <div class="det-linea"><div><b>Total</b></div><div class="der"><b>${money(c.total)}</b></div></div>
-    ${c.estado === 'confirmado'
-      ? `<div class="det-linea"><div>Saldo pendiente</div>
-         <div class="der">${money(c.saldo)}</div></div>` : ''}
+    ${c.estado === 'confirmado' ? `<div class="det-linea"><div>Saldo pendiente</div>
+      <div class="der">${money(c.saldo)}</div></div>` : ''}
     <div class="acciones" style="margin-top:18px">${acciones.join('')}</div>`;
-
   ver('#velo');
 
   $('#m-cerrar').onclick = () => ver('#velo', false);
@@ -844,7 +684,7 @@ async function verCompra(id){
   const bc = $('#m-confirmar');
   if (bc) bc.onclick = async () => {
     bc.innerHTML = '<span class="girando"></span>';
-    const { error } = await sb.rpc('fn_confirmar_factura_compra', { p_factura_id: id });
+    const { error } = await sb.rpc('fn_confirmar_factura_compra', { p_factura_id:id });
     if (error){ modalAviso('No se pudo confirmar', limpiarError(error), 'malo'); return; }
     ver('#velo', false);
     await Promise.all([cargarHistorial(), cargarCatalogo()]);
@@ -856,11 +696,9 @@ async function verCompra(id){
     const motivo = await modalTexto('Anular compra',
       c.estado === 'confirmado'
         ? 'Se devolverá todo con un movimiento contrario en el kardex. Si la mercadería ya se vendió, no se podrá.'
-        : 'El borrador quedará marcado como anulado.',
-      'Motivo');
+        : 'El borrador quedará marcado como anulado.', 'Motivo');
     if (motivo === null) return;
-    const { error } = await sb.rpc('fn_anular_factura_compra',
-      { p_factura_id: id, p_motivo: motivo });
+    const { error } = await sb.rpc('fn_anular_factura_compra', { p_factura_id:id, p_motivo:motivo });
     if (error){ modalAviso('No se pudo anular', limpiarError(error), 'malo'); return; }
     ver('#velo', false);
     await Promise.all([cargarHistorial(), cargarCatalogo()]);
@@ -868,18 +706,14 @@ async function verCompra(id){
 
   const bp = $('#m-pagar');
   if (bp) bp.onclick = async () => {
-    const monto = await modalTexto('Registrar pago',
-      'Saldo pendiente: ' + money(c.saldo), 'Monto', 'decimal', c.saldo);
+    const monto = await modalTexto('Registrar pago', 'Saldo pendiente: ' + money(c.saldo),
+                                   'Monto', 'decimal', c.saldo);
     if (monto === null) return;
     const m = num(monto);
     if (m <= 0){ modalAviso('Monto inválido', 'Escriba un monto mayor a cero', 'malo'); return; }
     const { error } = await sb.from('pagos_compra').insert({
-      organizacion_id: S.ctx.organizacion.id,
-      factura_compra_id: id,
-      monto: m,
-      metodo: 'efectivo',
-      registrado_por: S.ctx.usuario.id
-    });
+      organizacion_id:S.ctx.organizacion.id, factura_compra_id:id,
+      monto:m, metodo:'efectivo', registrado_por:S.ctx.usuario.id });
     if (error){ modalAviso('No se pudo registrar', limpiarError(error), 'malo'); return; }
     ver('#velo', false);
     await cargarHistorial();
@@ -888,43 +722,36 @@ async function verCompra(id){
 
 /* ================= modales ================= */
 function modalAviso(titulo, texto, tono){
-  $('#hoja').innerHTML = `
-    <h2>${esc(titulo)}</h2>
+  $('#hoja').innerHTML = `<h2>${escapar(titulo)}</h2>
     <div class="aviso ${tono}" style="margin-top:14px">${texto}</div>
-    <button class="btn principal" style="width:100%" id="ok">Entendido</button>`;
+    <button class="btn principal-b" style="width:100%" id="ok">Entendido</button>`;
   ver('#velo');
   $('#ok').onclick = () => ver('#velo', false);
 }
-
 function modalConfirmar(titulo, texto, etiquetaSi){
   return new Promise(resolver => {
-    $('#hoja').innerHTML = `
-      <h2>${esc(titulo)}</h2>
+    $('#hoja').innerHTML = `<h2>${escapar(titulo)}</h2>
       <div class="aviso ojo" style="margin-top:14px">${texto}</div>
       <div class="acciones">
         <button class="btn secundario" id="no">Volver</button>
-        <button class="btn principal" id="si">${esc(etiquetaSi)}</button>
+        <button class="btn principal-b" id="si">${escapar(etiquetaSi)}</button>
       </div>`;
     ver('#velo');
     $('#no').onclick = () => { ver('#velo', false); resolver(false); };
     $('#si').onclick = () => { ver('#velo', false); resolver(true); };
   });
 }
-
 function modalTexto(titulo, texto, etiqueta, modo, valor){
   return new Promise(resolver => {
-    $('#hoja').innerHTML = `
-      <h2>${esc(titulo)}</h2>
-      <p class="sub">${esc(texto)}</p>
-      <div class="campo-g">
-        <label>${esc(etiqueta)}</label>
+    $('#hoja').innerHTML = `<h2>${escapar(titulo)}</h2>
+      <p class="sub">${escapar(texto)}</p>
+      <div class="campo-g"><label>${escapar(etiqueta)}</label>
         <input class="entrada ${modo === 'decimal' ? 'num' : ''}" id="mt-valor"
                ${modo === 'decimal' ? 'inputmode="decimal"' : ''}
-               value="${valor !== undefined ? esc(valor) : ''}">
-      </div>
+               value="${valor !== undefined ? escapar(valor) : ''}"></div>
       <div class="acciones" style="margin-top:16px">
         <button class="btn secundario" id="mt-no">Cancelar</button>
-        <button class="btn principal" id="mt-si">Aceptar</button>
+        <button class="btn principal-b" id="mt-si">Aceptar</button>
       </div>`;
     ver('#velo');
     const campo = $('#mt-valor');
@@ -934,7 +761,6 @@ function modalTexto(titulo, texto, etiqueta, modo, valor){
     campo.onkeydown = e => { if (e.key === 'Enter') $('#mt-si').click(); };
   });
 }
-
 $('#velo').addEventListener('click', e => { if (e.target.id === 'velo') ver('#velo', false); });
 
 /* ================= inicio ================= */
