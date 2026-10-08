@@ -91,12 +91,15 @@ button{border:none;background:none;cursor:pointer}
   border:3px solid var(--rotulo);
 }
 .rotulo:active{background:var(--rotulo-hondo)}
+/* display:block en los tres: son <span> dentro de un <button>, y sin esto se
+   corren en una sola linea aunque esten estilados como bloques. */
 .rotulo-nombre{
+  display:block;
   font-family:'Archivo Black';font-size:26px;line-height:1.05;letter-spacing:-.025em;
   margin-bottom:3px;
 }
-.rotulo-suc{font-size:14px;font-weight:600;color:#B9CDE8}
-.rotulo-dir{font-size:13.5px;color:#9FB9D9;margin-top:7px}
+.rotulo-suc{display:block;font-size:14px;font-weight:600;color:#B9CDE8}
+.rotulo-dir{display:block;font-size:13.5px;color:#9FB9D9;margin-top:7px}
 .rotulo-datos{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px}
 .dato{background:rgba(255,255,255,.14);border-radius:8px;padding:5px 9px;
   font-size:13px;font-weight:600}
@@ -124,10 +127,12 @@ button{border:none;background:none;cursor:pointer}
 .mas:active{transform:scale(.92)}
 .renglon.agotado{opacity:.45}
 .renglon.agotado .mas{background:var(--linea);color:var(--gris);pointer-events:none}
+/* 40px, no 34: son los botones que mas se tocan y se usan con el pulgar,
+   muchas veces de pie y con una sola mano. */
 .cuantos{display:flex;align-items:center;gap:4px;flex:0 0 auto}
-.cuantos button{width:34px;height:34px;border-radius:50%;background:var(--muro);
-  font-size:19px;line-height:1;font-weight:600}
-.cuantos span{min-width:28px;text-align:center;font-weight:700}
+.cuantos button{width:40px;height:40px;border-radius:50%;background:var(--muro);
+  font-size:20px;line-height:1;font-weight:600}
+.cuantos span{min-width:26px;text-align:center;font-weight:700}
 
 /* ---------- barra del carrito: la unica pieza en mango ---------- */
 .carrito-barra{
@@ -799,6 +804,10 @@ async function enviarPedido(){
   const { data, error } = await sb.rpc('fn_crear_pedido', {
     p_items:S.carrito.map(l => ({ producto_id:l.producto_id, cantidad:l.cantidad })),
     p_sucursal_id:S.tienda.sucursal_id,
+    // Decir el origen es lo que hace que el pedido sea MIO. Sin esto, quien
+    // trabaja en una pulperia y pide desde aquí generaba un pedido sin dueño,
+    // que ni el mismo podía ver después.
+    p_origen:'app_cliente',
     p_tipo_entrega:S.entrega,
     p_direccion_texto:S.entrega === 'domicilio' ? dir : null,
     p_nombre_contacto:nombre,

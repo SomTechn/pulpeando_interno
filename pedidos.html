@@ -16,15 +16,21 @@
 <link rel="stylesheet" href="ui.css">
 <style>
 /* ---------- resumen ---------- */
+/* Son seis contadores de estado y se quieren de un vistazo. Antes era una
+   fila con scroll horizontal y la barra escondida: en un telefono se veian
+   tres y medio y nada indicaba que habia que deslizar. Ahora se acomodan en
+   rejilla y caben todos sin mover nada. */
 .resumen{
-  display:flex;gap:10px;padding:12px 16px;overflow-x:auto;flex:0 0 auto;
-  background:var(--panel);border-bottom:1px solid var(--linea);scrollbar-width:none;
+  display:grid;grid-template-columns:repeat(6, minmax(0,1fr));
+  gap:10px;padding:12px 16px;flex:0 0 auto;
+  background:var(--panel);border-bottom:1px solid var(--linea);
 }
-.resumen::-webkit-scrollbar{display:none}
 .dato-r{
-  flex:0 0 auto;min-width:104px;padding:10px 14px;border-radius:var(--r-sm);
+  min-width:0;padding:10px 12px;border-radius:var(--r-sm);
   background:var(--fondo);
 }
+.dato-r small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dato-r b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dato-r small{display:block;font-size:11px;font-weight:700;color:var(--tenue);
   text-transform:uppercase;margin-bottom:2px}
 .dato-r b{font-family:var(--num);font-size:19px;font-weight:700}
@@ -156,14 +162,19 @@
 
 @media (max-width:1180px){
   .tablero{grid-template-columns:repeat(2,minmax(230px,1fr))}
+  .resumen{grid-template-columns:repeat(3, minmax(0,1fr))}
 }
 @media (max-width:820px){
   .tablero{grid-template-columns:1fr;padding:12px}
   .columna{height:auto}
   .col-lista{overflow:visible}
-  .resumen{padding:10px 12px}
-  .dato-r{min-width:92px;padding:9px 12px}
+  .resumen{padding:10px 12px;gap:8px}
+  .dato-r{padding:9px 11px}
   .dato-r b{font-size:17px}
+}
+@media (max-width:560px){
+  .resumen{grid-template-columns:repeat(2, minmax(0,1fr))}
+  .dato-r small{font-size:10.5px}
 }
 </style>
 </head>

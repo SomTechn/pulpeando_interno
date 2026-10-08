@@ -408,6 +408,9 @@ console.log('\n=== MANDAR EL PEDIDO ===');
   const p = estado.llamadas.find(l => l.fn === 'fn_crear_pedido');
   chk('ahora sí lo manda', !!p);
   chk('con la sucursal elegida', p?.args?.p_sucursal_id === 's1');
+  // Esto es lo que hace que el pedido sea SUYO. Sin el origen, quien trabaja
+  // en una pulperia generaba un pedido sin dueno, invisible para el mismo.
+  chk('declarando que viene como cliente', p?.args?.p_origen === 'app_cliente');
   chk('con los dos arroces',
       p?.args?.p_items?.length === 1 && p.args.p_items[0].cantidad === 2);
   chk('manda solo producto y cantidad, no el precio',
