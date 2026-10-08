@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1729">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="icono-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icono-192.png">
+<title>Ventas · Pulpeando</title>
+<script src="config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ui.css">
+<style>
+.zona{flex:1;display:flex;flex-direction:column;min-height:0;padding:14px 16px 0}
+
+/* resumen del periodo */
+.tarjetas{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;
+  margin-bottom:14px;flex:0 0 auto}
+.tj{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);
+  padding:12px 14px;min-width:0}
+.tj small{display:block;font-size:11px;font-weight:800;letter-spacing:.04em;
+  text-transform:uppercase;color:#9AA8BC;margin-bottom:4px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tj b{display:block;font-family:var(--num);font-size:20px;font-weight:700;line-height:1.1;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tj.bien b{color:var(--verde-oscuro)}
+.tj.malo{background:#FFEDF1;border-color:#F6CBD6}
+.tj.malo b{color:var(--rojo)}
+
+/* filtros */
+.barra-busca{display:flex;gap:10px;margin-bottom:10px;flex:0 0 auto}
+.fechas{display:flex;gap:8px;align-items:center;flex:0 0 auto}
+.fechas input{height:50px;border:1.5px solid var(--linea);border-radius:var(--r-md);
+  padding:0 12px;outline:none;font-size:14px;background:var(--panel);min-width:0}
+.fechas input:focus{border-color:var(--azul)}
+.fechas span{color:var(--tenue);font-size:13px;flex:0 0 auto}
+.filtros{display:flex;gap:7px;margin-bottom:12px;flex:0 0 auto;overflow-x:auto;
+  scrollbar-width:none;padding-bottom:2px}
+.filtros::-webkit-scrollbar{display:none}
+.fl{padding:9px 14px;border-radius:999px;border:1.5px solid var(--linea);background:var(--panel);
+  font-size:13px;font-weight:700;color:var(--tenue);white-space:nowrap;flex:0 0 auto}
+.fl.activo{border-color:var(--azul);background:var(--azul-suave);color:var(--azul)}
+
+.lista{flex:1;overflow-y:auto;min-height:0;padding-bottom:24px}
+.conteo{font-size:12.5px;color:var(--tenue);margin-bottom:10px;flex:0 0 auto}
+
+/* una venta */
+.venta{
+  display:flex;align-items:center;gap:13px;width:100%;text-align:left;
+  background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);
+  padding:13px 15px;margin-bottom:9px;transition:border-color .15s;
+}
+.venta:hover{border-color:#C9D6E8}
+.venta:active{transform:scale(.995)}
+.venta-txt{flex:1;min-width:0}
+.venta-num{font-family:var(--num);font-size:13.5px;font-weight:600;letter-spacing:-.02em}
+.venta-sub{display:block;font-size:12.5px;color:var(--tenue);margin-top:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.venta-fin{text-align:right;flex:0 0 auto;display:flex;flex-direction:column;
+  align-items:flex-end;gap:3px}
+.venta-fin b{font-family:var(--num);font-size:16px;font-weight:700}
+.venta.anulada{background:#FDFBFC;border-color:#F0D8DE}
+.venta.anulada .venta-num,.venta.anulada .venta-fin b{text-decoration:line-through;
+  color:var(--tenue)}
+.sello-v{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;
+  font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em}
+.sello-v.anulada{background:#FFEDF1;color:#9F1239}
+.sello-v.fiado{background:#FFF4E0;color:#8A5A00}
+.sello-v.factura{background:var(--azul-suave);color:var(--azul)}
+
+.vacio{text-align:center;padding:48px 20px;color:var(--tenue)}
+.vacio b{display:block;font-size:16px;color:var(--tinta);margin-bottom:6px}
+
+/* el ticket */
+.form-velo{position:fixed;inset:0;z-index:95;background:rgba(15,23,41,.55);
+  display:flex;justify-content:flex-end;backdrop-filter:blur(3px)}
+.cajon{width:min(460px,100%);background:var(--panel);height:100%;display:flex;
+  flex-direction:column;box-shadow:-20px 0 60px -20px rgba(15,23,41,.5);
+  animation:entrar-der .24s cubic-bezier(.2,.8,.3,1)}
+@keyframes entrar-der{from{transform:translateX(100%)}to{transform:none}}
+.cajon-enc{display:flex;align-items:center;gap:12px;padding:16px;
+  border-bottom:1px solid var(--linea);flex:0 0 auto}
+.cajon-enc h2{flex:1;font-size:18px;font-family:var(--num);letter-spacing:-.02em}
+.cajon-cuerpo{flex:1;overflow-y:auto;min-height:0;padding:16px}
+.cajon-pie{padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--linea);display:flex;gap:10px;flex:0 0 auto}
+.cajon-pie .btn{flex:1}
+.cerrar-x{width:38px;height:38px;border-radius:11px;background:var(--fondo);
+  color:var(--tenue);font-size:17px;flex:0 0 auto}
+
+/* el ticket se imprime, asi que se dibuja como un ticket */
+.ticket{font-family:var(--num);font-size:13px;line-height:1.5}
+.ticket-enc{text-align:center;margin-bottom:14px;padding-bottom:12px;
+  border-bottom:1px dashed var(--linea)}
+.ticket-enc b{display:block;font-family:var(--ui);font-size:16px;font-weight:800;
+  margin-bottom:2px}
+.ticket-enc small{display:block;font-size:11.5px;color:var(--tenue)}
+.ticket-dato{display:flex;justify-content:space-between;gap:10px;font-size:12px;
+  color:var(--tenue)}
+/* el numero no se parte a la mitad; lo que cede es el dato de la derecha */
+.ticket-dato span:first-child{white-space:nowrap;flex:0 0 auto}
+.ticket-dato span:last-child{text-align:right;min-width:0}
+.ticket-lineas{margin:14px 0;padding:12px 0;border-top:1px dashed var(--linea);
+  border-bottom:1px dashed var(--linea)}
+.tl{display:flex;justify-content:space-between;gap:10px;padding:4px 0}
+.tl-nom{flex:1;min-width:0;font-family:var(--ui);font-size:13.5px}
+.tl-nom small{display:block;color:var(--tenue);font-family:var(--num);font-size:11.5px}
+.tl b{flex:0 0 auto;font-weight:600}
+.ticket-tot{display:flex;justify-content:space-between;padding:3px 0;font-size:13px}
+.ticket-tot.gordo{font-size:17px;font-weight:700;padding-top:9px;margin-top:6px;
+  border-top:1px solid var(--linea)}
+.ticket-pagos{margin-top:12px;padding-top:12px;border-top:1px dashed var(--linea)}
+.ticket-pie{text-align:center;margin-top:16px;font-size:11.5px;color:var(--tenue)}
+.anulado-sello{background:#FFEDF1;color:#9F1239;border-radius:var(--r-sm);
+  padding:11px 13px;margin-bottom:14px;font-family:var(--ui);font-size:13px;
+  font-weight:600;line-height:1.45}
+
+@media (max-width:1180px){ .tarjetas{grid-template-columns:repeat(3,minmax(0,1fr))} }
+@media (max-width:820px){
+  .zona{padding:12px 14px 0}
+  .cajon{width:100%}
+  .barra-busca{flex-wrap:wrap}
+  .fechas{width:100%}
+  .fechas input{flex:1}
+  .tj b{font-size:17px}
+}
+@media (max-width:560px){ .tarjetas{grid-template-columns:repeat(2,minmax(0,1fr))} }
+
+@media print{
+  body *{visibility:hidden}
+  #cajon-cuerpo, #cajon-cuerpo *{visibility:visible}
+  #cajon-cuerpo{position:absolute;inset:0;padding:0;overflow:visible}
+  .form-velo{position:static;background:none;backdrop-filter:none}
+  .cajon{box-shadow:none;width:100%;animation:none}
+  .cajon-enc,.cajon-pie{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="oscura oculto" id="p-config">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Configuración</div>
+    <div class="titulo-o">Falta conectar el proyecto</div>
+    <p class="sub-o">Ponga la URL y la llave publishable en <b>config.js</b>.</p>
+  </div>
+</div>
+
+<div class="oscura oculto" id="p-sesion">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Ventas</div>
+    <div class="titulo-o">Iniciar sesión</div>
+    <p class="sub-o">Use el correo con el que su gerente lo dio de alta</p>
+    <input class="campo-o" id="s-email" type="email" placeholder="correo@negocio.hn" autocomplete="username">
+    <input class="campo-o" id="s-clave" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <div class="error-o" id="s-error"></div>
+    <button class="btn-o" id="s-entrar">Entrar</button>
+  </div>
+</div>
+
+<div class="oscura oculto" id="p-bloqueado">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Ventas</div>
+    <div class="titulo-o" id="bl-titulo">Sin permiso</div>
+    <p class="sub-o" id="bl-texto"></p>
+    <a class="btn-o" href="index.html" style="display:block;line-height:52px">Ir a la caja</a>
+    <button class="btn-o fantasma" id="bl-salir">Cerrar sesión</button>
+  </div>
+</div>
+
+<div class="armazon oculto" id="app">
+  <aside id="menu"></aside>
+
+  <div class="principal">
+    <header class="barra">
+      <button class="hamburguesa" id="abrir-menu" aria-label="Menú">
+        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="barra-titulo">
+        <b>Ventas</b>
+        <small id="h-sucursal">—</small>
+      </div>
+      <div class="barra-fin">
+        <span class="pill" id="h-usuario">—</span>
+      </div>
+    </header>
+
+    <div class="zona">
+      <div class="tarjetas" id="tarjetas"></div>
+
+      <div class="barra-busca">
+        <label class="campo">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="buscar" placeholder="Número de ticket o cliente" autocomplete="off">
+        </label>
+        <div class="fechas">
+          <input type="date" id="f-desde" aria-label="Desde">
+          <span>a</span>
+          <input type="date" id="f-hasta" aria-label="Hasta">
+        </div>
+      </div>
+
+      <div class="filtros" id="filtros">
+        <button class="fl activo" data-p="hoy">Hoy</button>
+        <button class="fl" data-p="ayer">Ayer</button>
+        <button class="fl" data-p="semana">Últimos 7 días</button>
+        <button class="fl" data-p="mes">Este mes</button>
+        <button class="fl" data-e="anulada">Solo anuladas</button>
+        <button class="fl" data-e="fiado">Solo fiadas</button>
+      </div>
+
+      <div class="conteo" id="conteo"></div>
+      <div class="lista" id="lista"></div>
+    </div>
+  </div>
+</div>
+
+<div class="form-velo oculto" id="form-velo">
+  <div class="cajon">
+    <div class="cajon-enc">
+      <h2 id="t-numero">—</h2>
+      <button class="cerrar-x" id="form-cerrar">✕</button>
+    </div>
+    <div class="cajon-cuerpo" id="cajon-cuerpo"></div>
+    <div class="cajon-pie">
+      <button class="btn secundario" id="btn-imprimir">Imprimir</button>
+      <button class="btn secundario oculto" id="btn-anular"
+              style="color:var(--rojo)">Anular</button>
+    </div>
+  </div>
+</div>
+
+<div class="velo oculto" id="velo"><div class="hoja" id="hoja"></div></div>
+
+<script type="module">
+const CFG = window.SUPABASE_CONFIG || {};
+const SUPABASE_URL = CFG.url || 'PEGUE_AQUI_LA_URL';
+const SUPABASE_KEY = CFG.key || 'PEGUE_AQUI_LA_LLAVE';
+
+const $ = s => document.querySelector(s);
+const ver = (id, si = true) => $(id).classList.toggle('oculto', !si);
+
+if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin configurar'); }
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { montarMenu, escapar } from './menu.js';
+
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth:{ persistSession:true, autoRefreshToken:true }
+});
+
+const S = {
+  ctx:null, sucursal:null, moneda:'L', menu:null, nivel:0,
+  ventas:[], resumen:{}, busqueda:'', estado:null, soloFiadas:false,
+  desde:null, hasta:null, periodo:'hoy', venta:null
+};
+
+const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
+  { minimumFractionDigits:2, maximumFractionDigits:2 });
+
+function limpiarError(e){
+  const m = (e?.message || String(e)).replace(/^.*?:\s*/, '');
+  if (/JWT|token/i.test(m)) return 'La sesión venció. Vuelva a entrar.';
+  if (/Failed to fetch|NetworkError/i.test(m)) return 'Sin conexión con el servidor';
+  return m;
+}
+
+function aviso(titulo, texto){
+  $('#hoja').innerHTML = `<h2>${escapar(titulo)}</h2>
+    <p class="sub">${escapar(texto)}</p>
+    <button class="btn principal-b" style="width:100%" id="ok">Entendido</button>`;
+  ver('#velo');
+  $('#ok').onclick = () => ver('#velo', false);
+}
+
+const iso = d => d.toISOString().slice(0,10);
+
+/* Los metodos vienen de la base en minuscula y sin tilde. En pantalla se leen
+   como palabras, no como valores de una tabla. */
+const METODO = { efectivo:'Efectivo', tarjeta:'Tarjeta', transferencia:'Transferencia',
+                 credito:'Fiado', otro:'Otro' };
+const comoPago = m => METODO[m] || m;
+
+/* ================= sesión ================= */
+$('#s-entrar').addEventListener('click', async () => {
+  const b = $('#s-entrar');
+  $('#s-error').textContent = '';
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+  const { error } = await sb.auth.signInWithPassword({
+    email:$('#s-email').value.trim(), password:$('#s-clave').value });
+  b.disabled = false; b.textContent = 'Entrar';
+  if (error){ $('#s-error').textContent = 'Correo o contraseña incorrectos'; return; }
+  arrancar();
+});
+$('#s-clave').addEventListener('keydown', e => { if (e.key === 'Enter') $('#s-entrar').click(); });
+$('#bl-salir').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
+
+/* ================= arranque ================= */
+async function arrancar(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session){ ver('#p-sesion'); return; }
+  ver('#p-sesion', false);
+
+  const { data, error } = await sb.rpc('fn_pos_contexto');
+  if (error){
+    ver('#p-sesion');
+    $('#s-error').textContent = 'Su usuario no tiene perfil en ningún negocio';
+    await sb.auth.signOut();
+    return;
+  }
+  S.ctx = data;
+  S.nivel = data.usuario.nivel;
+  S.moneda = data.organizacion.moneda === 'HNL' ? 'L' : data.organizacion.moneda;
+
+  if (S.nivel < 1){
+    ver('#p-bloqueado');
+    $('#bl-titulo').textContent = 'Esta pantalla no es para su rol';
+    $('#bl-texto').textContent = 'El historial de ventas es para el personal de la tienda.';
+    return;
+  }
+
+  S.sucursal = data.sucursales[0]?.id || null;
+  $('#h-usuario').textContent = data.usuario.nombre;
+  $('#h-sucursal').textContent = data.sucursales[0]?.nombre || '';
+  $('#app').classList.remove('oculto');
+
+  S.menu = montarMenu({
+    contenedor:'#menu', modulo:'ventas', ctx:S.ctx,
+    alSalir: async () => { await sb.auth.signOut(); location.reload(); }
+  });
+  $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
+
+  ponerPeriodo('hoy');
+}
+
+/* ================= periodo ================= */
+function ponerPeriodo(p){
+  S.periodo = p;
+  const hoy = new Date();
+  const d = new Date(hoy);
+  if (p === 'hoy'){ S.desde = iso(hoy); S.hasta = iso(hoy); }
+  else if (p === 'ayer'){ d.setDate(d.getDate()-1); S.desde = iso(d); S.hasta = iso(d); }
+  else if (p === 'semana'){ d.setDate(d.getDate()-6); S.desde = iso(d); S.hasta = iso(hoy); }
+  else if (p === 'mes'){ S.desde = iso(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+                         S.hasta = iso(hoy); }
+  $('#f-desde').value = S.desde || '';
+  $('#f-hasta').value = S.hasta || '';
+  cargar();
+}
+
+$('#filtros').addEventListener('click', e => {
+  const b = e.target.closest('.fl'); if (!b) return;
+  if (b.dataset.p){
+    S.estado = null; S.soloFiadas = false;
+    document.querySelectorAll('.fl').forEach(x => x.classList.toggle('activo', x === b));
+    ponerPeriodo(b.dataset.p);
+    return;
+  }
+  // los de estado se prenden y apagan sin tocar el periodo
+  const quieroAnuladas = b.dataset.e === 'anulada';
+  const yaEstaba = b.classList.contains('activo');
+  document.querySelectorAll('.fl[data-e]').forEach(x => x.classList.remove('activo'));
+  if (yaEstaba){ S.estado = null; S.soloFiadas = false; }
+  else {
+    b.classList.add('activo');
+    S.estado = quieroAnuladas ? 'anulada' : null;
+    S.soloFiadas = !quieroAnuladas;
+  }
+  cargar();
+});
+
+$('#f-desde').addEventListener('change', e => {
+  S.desde = e.target.value || null; S.periodo = null;
+  document.querySelectorAll('.fl[data-p]').forEach(x => x.classList.remove('activo'));
+  cargar();
+});
+$('#f-hasta').addEventListener('change', e => {
+  S.hasta = e.target.value || null; S.periodo = null;
+  document.querySelectorAll('.fl[data-p]').forEach(x => x.classList.remove('activo'));
+  cargar();
+});
+$('#buscar').addEventListener('input', e => {
+  S.busqueda = e.target.value;
+  clearTimeout($('#buscar')._t);
+  $('#buscar')._t = setTimeout(cargar, 320);
+});
+
+/* ================= cargar ================= */
+async function cargar(){
+  $('#lista').innerHTML = '<div class="vacio"><span class="girando"></span></div>';
+  const args = { p_desde:S.desde, p_hasta:S.hasta, p_sucursal_id:S.sucursal };
+
+  const [hist, res] = await Promise.all([
+    sb.rpc('fn_historial_ventas', { ...args, p_buscar:S.busqueda || null,
+                                    p_estado:S.estado, p_limite:300 }),
+    sb.rpc('fn_ventas_resumen', args)
+  ]);
+
+  if (hist.error){ aviso('No se pudo leer el historial', limpiarError(hist.error)); return; }
+  S.ventas = hist.data || [];
+  S.resumen = res.data || {};
+  pintarResumen();
+  pintar();
+}
+
+function pintarResumen(){
+  const r = S.resumen;
+  const ganancia = r.ganancia === null || r.ganancia === undefined
+    ? '' : `<div class="tj bien"><small>Ganancia</small><b>${money(r.ganancia)}</b></div>`;
+  $('#tarjetas').innerHTML = `
+    <div class="tj"><small>Vendido</small><b>${money(r.total)}</b></div>
+    <div class="tj"><small>Ventas</small><b>${r.ventas || 0}</b></div>
+    <div class="tj"><small>Efectivo</small><b>${money(r.efectivo)}</b></div>
+    <div class="tj"><small>Fiado</small><b>${money(r.fiado)}</b></div>
+    ${ganancia}
+    ${(r.anuladas || 0) > 0
+      ? `<div class="tj malo"><small>Anuladas</small><b>${r.anuladas}</b></div>` : ''}`;
+}
+
+function visibles(){
+  return S.soloFiadas ? S.ventas.filter(v => v.es_credito) : S.ventas;
+}
+
+function pintar(){
+  const l = visibles();
+  const buenas = l.filter(v => v.estado === 'completada');
+  const anuladas = l.length - buenas.length;
+  const suma = buenas.reduce((s,v) => s + Number(v.total||0), 0);
+  // Se cuenta lo que vale: las anuladas van aparte, no mezcladas en el mismo
+  // numero que el monto. Antes decia "8 ventas" junto a un monto de 7.
+  $('#conteo').textContent = l.length
+    ? `${buenas.length} venta${buenas.length === 1 ? '' : 's'} · ${money(suma)}`
+      + (anuladas ? ` · ${anuladas} anulada${anuladas === 1 ? '' : 's'} aparte` : '')
+    : '';
+
+  if (!l.length){
+    $('#lista').innerHTML = `<div class="vacio"><b>No hay ventas en ese periodo</b>
+      Pruebe con otras fechas o quite el filtro.</div>`;
+    return;
+  }
+
+  $('#lista').innerHTML = l.map(v => {
+    const hora = new Date(v.creada_en).toLocaleString('es-HN',
+      { day:'numeric', month:'short', hour:'numeric', minute:'2-digit' });
+    const sellos = [
+      v.estado === 'anulada' ? '<span class="sello-v anulada">Anulada</span>' : '',
+      v.es_credito ? '<span class="sello-v fiado">Fiado</span>' : '',
+      v.documento === 'factura' ? '<span class="sello-v factura">Factura</span>' : ''
+    ].filter(Boolean).join(' ');
+    const quien = [v.cliente, v.cajero].filter(Boolean).join(' · ');
+    return `
+      <button class="venta ${v.estado === 'anulada' ? 'anulada' : ''}"
+              data-id="${escapar(v.venta_id)}">
+        <span class="venta-txt">
+          <span class="venta-num">${escapar(v.numero_fiscal || v.numero)}</span>
+          <small class="venta-sub">${escapar(hora)}${quien ? ' · ' + escapar(quien) : ''}
+            · ${v.lineas} ${v.lineas === 1 ? 'producto' : 'productos'}</small>
+        </span>
+        <span class="venta-fin">
+          <b>${money(v.total)}</b>
+          ${sellos || `<small style="font-size:11.5px;color:var(--tenue)">${escapar(v.metodos || '')}</small>`}
+        </span>
+      </button>`;
+  }).join('');
+
+  $('#lista').querySelectorAll('[data-id]').forEach(x =>
+    x.addEventListener('click', () => abrirVenta(x.dataset.id)));
+}
+
+/* ================= el ticket ================= */
+async function abrirVenta(id){
+  $('#t-numero').textContent = '—';
+  $('#cajon-cuerpo').innerHTML = '<div class="vacio"><span class="girando"></span></div>';
+  ver('#btn-anular', false);
+  ver('#form-velo');
+
+  const { data, error } = await sb.rpc('fn_venta_completa', { p_venta_id:id });
+  if (error){
+    $('#cajon-cuerpo').innerHTML = `<div class="aviso malo">${escapar(limpiarError(error))}</div>`;
+    return;
+  }
+  S.venta = data;
+  pintarTicket();
+}
+
+function pintarTicket(){
+  const d = S.venta, v = d.venta;
+  const anulada = v.estado === 'anulada';
+  $('#t-numero').textContent = v.numero_fiscal || v.numero;
+
+  // Anular es de supervisor para arriba, y una venta anulada ya no se toca.
+  ver('#btn-anular', S.nivel >= 2 && !anulada);
+
+  const fecha = new Date(v.creada_en).toLocaleString('es-HN',
+    { day:'numeric', month:'short', year:'numeric',
+      hour:'numeric', minute:'2-digit' });
+
+  const lineas = (d.lineas || []).map(l => `
+    <div class="tl">
+      <span class="tl-nom">${escapar(l.producto)}
+        <small>${Number(l.cantidad)} × ${money(l.precio)}${
+          Number(l.descuento) > 0 ? ' − ' + money(l.descuento) : ''}</small></span>
+      <b>${money(l.total)}</b>
+    </div>`).join('');
+
+  const pagos = (d.pagos || []).map(p => `
+    <div class="ticket-tot">
+      <span>${escapar(comoPago(p.metodo))}${p.referencia ? ' · ' + escapar(p.referencia) : ''}</span>
+      <span>${money(p.monto)}</span>
+    </div>
+    ${Number(p.cambio) > 0
+      ? `<div class="ticket-tot"><span>Cambio entregado</span><span>${money(p.cambio)}</span></div>`
+      : ''}`).join('');
+
+  $('#cajon-cuerpo').innerHTML = `
+    ${anulada ? `<div class="anulado-sello">
+      Esta venta se anuló${v.anulada_por ? ' (' + escapar(v.anulada_por) + ')' : ''}.
+      ${v.motivo_anulacion ? 'Motivo: ' + escapar(v.motivo_anulacion) : ''}
+      <br>La mercadería volvió al inventario.</div>` : ''}
+
+    <div class="ticket">
+      <div class="ticket-enc">
+        <b>${escapar(d.negocio?.nombre || '')}</b>
+        <small>${escapar(d.sucursal?.nombre || '')}</small>
+        ${d.sucursal?.direccion ? `<small>${escapar(d.sucursal.direccion)}</small>` : ''}
+        ${d.sucursal?.telefono ? `<small>Tel. ${escapar(d.sucursal.telefono)}</small>` : ''}
+        ${d.negocio?.rtn ? `<small>RTN ${escapar(d.negocio.rtn)}</small>` : ''}
+      </div>
+
+      <div class="ticket-dato"><span>${escapar(v.numero_fiscal || v.numero)}</span>
+        <span>${escapar(fecha)}</span></div>
+      <div class="ticket-dato"><span>${escapar(d.caja || '')}</span>
+        <span>${escapar(d.cajero || '')}</span></div>
+      ${d.cliente?.nombre
+        ? `<div class="ticket-dato"><span>Cliente</span>
+            <span>${escapar(d.cliente.nombre)}</span></div>` : ''}
+      ${v.cai ? `<div class="ticket-dato"><span>CAI</span><span>${escapar(v.cai)}</span></div>` : ''}
+
+      <div class="ticket-lineas">${lineas}</div>
+
+      <div class="ticket-tot"><span>Subtotal</span><span>${money(v.subtotal)}</span></div>
+      ${Number(v.descuento) > 0
+        ? `<div class="ticket-tot"><span>Descuento</span><span>− ${money(v.descuento)}</span></div>` : ''}
+      <div class="ticket-tot"><span>Impuesto</span><span>${money(v.impuesto)}</span></div>
+      <div class="ticket-tot gordo"><span>Total</span><span>${money(v.total)}</span></div>
+
+      <div class="ticket-pagos">${pagos}</div>
+
+      ${v.costo !== null && v.costo !== undefined
+        ? `<div class="ticket-pagos">
+             <div class="ticket-tot"><span>Costo</span><span>${money(v.costo)}</span></div>
+             <div class="ticket-tot"><span>Ganancia</span>
+               <span>${money(Number(v.total) - Number(v.impuesto) - Number(v.costo))}</span></div>
+           </div>` : ''}
+
+      <div class="ticket-pie">¡Gracias por su compra!</div>
+    </div>`;
+}
+
+$('#form-cerrar').addEventListener('click', () => ver('#form-velo', false));
+$('#form-velo').addEventListener('click', e => {
+  if (e.target.id === 'form-velo') ver('#form-velo', false);
+});
+$('#btn-imprimir').addEventListener('click', () => window.print());
+
+/* ================= anular ================= */
+$('#btn-anular').addEventListener('click', () => {
+  const v = S.venta?.venta; if (!v) return;
+  $('#hoja').innerHTML = `
+    <h2>Anular ${escapar(v.numero)}</h2>
+    <p class="sub">La mercadería vuelve al inventario y, si hubo fiado, se le
+      descuenta al cliente. La venta no se borra: queda marcada como anulada.</p>
+    <div class="campo-g" style="margin-bottom:14px">
+      <label for="an-motivo">¿Por qué se anula?</label>
+      <input class="entrada" id="an-motivo" placeholder="Se cobró de más, producto equivocado…">
+    </div>
+    <div class="aviso malo oculto" id="an-error"></div>
+    <div class="acciones">
+      <button class="btn secundario" id="an-no">Mejor no</button>
+      <button class="btn principal-b" id="an-si" style="background:var(--rojo);
+        box-shadow:0 6px 18px -6px rgba(225,29,72,.6)">Anular la venta</button>
+    </div>`;
+  ver('#velo');
+  $('#an-no').onclick = () => ver('#velo', false);
+  $('#an-motivo').focus();
+  $('#an-si').onclick = async () => {
+    const b = $('#an-si'), err = $('#an-error');
+    const motivo = $('#an-motivo').value.trim();
+    err.classList.add('oculto');
+    if (!motivo){
+      err.textContent = 'Escriba por qué se anula. Queda apuntado.';
+      err.classList.remove('oculto'); return;
+    }
+    b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+    const { error } = await sb.rpc('fn_anular_venta',
+      { p_venta_id:v.id, p_motivo:motivo });
+    b.disabled = false; b.textContent = 'Anular la venta';
+    if (error){
+      err.textContent = limpiarError(error); err.classList.remove('oculto'); return;
+    }
+    ver('#velo', false);
+    await abrirVenta(v.id);
+    await cargar();
+  };
+});
+
+$('#velo').addEventListener('click', e => { if (e.target.id === 'velo') ver('#velo', false); });
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+arrancar();
+</script>
+</body>
+</html>
