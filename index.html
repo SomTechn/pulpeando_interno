@@ -17,7 +17,9 @@
 <style>
 /* ---------- propio de la caja ---------- */
 .cuerpo{flex:1;display:grid;grid-template-columns:1fr 392px;min-height:0}
-.catalogo{display:flex;flex-direction:column;min-width:0;padding:14px 16px 0}
+/* min-height:0 es obligatorio: sin eso el hijo con overflow no puede
+   encogerse, la cuadricula crece hasta su contenido y el scroll no aparece. */
+.catalogo{display:flex;flex-direction:column;min-width:0;min-height:0;padding:14px 16px 0}
 .buscador{display:flex;gap:10px;margin-bottom:14px}
 
 .grid{
