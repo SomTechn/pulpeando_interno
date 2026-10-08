@@ -43,6 +43,7 @@ const MODULOS = [
   { id:'ventas',  nombre:'Ventas',      url:'ventas.html',  icono:'reportes', nivel:1 },
   { id:'fiado',   nombre:'Fiado',       url:'fiado.html',   icono:'fiado',   nivel:1 },
   { id:'compras', nombre:'Compras',     url:'compras.html', icono:'compras', nivel:2 },
+  { id:'conteo',  nombre:'Conteo',      url:'conteo.html',  icono:'inventario', nivel:1 },
   { id:'catalogo', nombre:'Catálogos',  url:'catalogo.html', icono:'inventario', nivel:1 }
 ];
 
