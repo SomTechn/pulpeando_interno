@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12427A">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="../icono-192.png">
+<title>Pulpeando</title>
+<script src="../config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black&display=swap" rel="stylesheet">
+<style>
+/* ===========================================================================
+   Pulpeando · la app del cliente
+
+   El elemento mas caracteristico de una pulperia es el rotulo pintado sobre
+   la puerta: un tablero de color saturado con el nombre en letras blancas
+   gruesas. Esa es la pieza audaz de esta pantalla y la unica; lo demas se
+   queda callado. Los productos van en filas de pizarra de precios, no en
+   tarjetas, porque asi se escanean mas rapido y pesan menos en un telefono
+   de gama media.
+   =========================================================================== */
+:root{
+  --papel:#FFFFFF;
+  --muro:#F1F3F7;        /* bloque de concreto */
+  --rotulo:#12427A;      /* azul del rotulo pintado */
+  --rotulo-hondo:#0D3261;
+  --mango:#F2A33C;       /* el huacal de mangos en el mostrador */
+  --tinta:#0D1B2A;
+  --hoja:#1E7A4C;
+  --cereza:#C32A3B;
+  --gris:#5E6B7E;
+  --linea:#DFE4EC;
+
+  --r:14px;
+  --tope:640px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:'Archivo',system-ui,sans-serif;
+  font-variant-numeric:tabular-nums;
+  background:var(--muro);color:var(--tinta);
+  font-size:16px;line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+  min-height:100dvh;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{border:none;background:none;cursor:pointer}
+.oculto{display:none!important}
+:focus-visible{outline:3px solid var(--mango);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.marco{max-width:var(--tope);margin:0 auto;background:var(--papel);min-height:100dvh;
+  display:flex;flex-direction:column}
+
+/* ---------- barra ---------- */
+.barra{
+  position:sticky;top:0;z-index:30;background:var(--papel);
+  border-bottom:1px solid var(--linea);
+  padding:calc(12px + env(safe-area-inset-top)) 16px 12px;
+  display:flex;align-items:center;gap:12px;
+}
+.barra h1{font-family:'Archivo Black';font-size:19px;letter-spacing:-.02em;line-height:1}
+.atras{width:38px;height:38px;border-radius:50%;background:var(--muro);
+  display:grid;place-items:center;flex:0 0 auto;color:var(--tinta)}
+.barra-fin{margin-left:auto;display:flex;align-items:center;gap:6px}
+.icono-btn{width:38px;height:38px;border-radius:50%;background:var(--muro);
+  display:grid;place-items:center;flex:0 0 auto;position:relative;color:var(--tinta)}
+.globo{position:absolute;top:-2px;right:-2px;min-width:18px;height:18px;border-radius:9px;
+  background:var(--cereza);color:#fff;font-size:11px;font-weight:700;display:grid;
+  place-items:center;padding:0 5px}
+
+.cuerpo{flex:1;padding:16px 16px 28px}
+.cuerpo.con-barra-abajo{padding-bottom:104px}
+
+/* ---------- buscador ---------- */
+.busca{display:flex;align-items:center;gap:10px;background:var(--muro);
+  border-radius:var(--r);padding:12px 14px;margin-bottom:18px}
+.busca input{flex:1;border:none;background:none;outline:none;min-width:0;font-size:16px}
+.busca input::placeholder{color:var(--gris)}
+.busca svg{flex:0 0 auto;color:var(--gris)}
+
+/* ---------- EL ROTULO: una pulperia ---------- */
+.rotulo{
+  display:block;width:100%;text-align:left;background:var(--rotulo);color:#fff;
+  border-radius:var(--r);padding:18px 18px 16px;margin-bottom:12px;
+  border:3px solid var(--rotulo);
+}
+.rotulo:active{background:var(--rotulo-hondo)}
+.rotulo-nombre{
+  font-family:'Archivo Black';font-size:26px;line-height:1.05;letter-spacing:-.025em;
+  margin-bottom:3px;
+}
+.rotulo-suc{font-size:14px;font-weight:600;color:#B9CDE8}
+.rotulo-dir{font-size:13.5px;color:#9FB9D9;margin-top:7px}
+.rotulo-datos{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px}
+.dato{background:rgba(255,255,255,.14);border-radius:8px;padding:5px 9px;
+  font-size:13px;font-weight:600}
+.dato b{font-weight:700}
+/* Una pulperia que no lleva a domicilio se dibuja distinto, porque es
+   informacion y no adorno: el rotulo va en blanco con el borde pintado. */
+.rotulo.sin-envio{background:var(--papel);color:var(--rotulo)}
+.rotulo.sin-envio .rotulo-suc{color:var(--rotulo)}
+.rotulo.sin-envio .rotulo-dir{color:var(--gris)}
+.rotulo.sin-envio .dato{background:var(--muro);color:var(--rotulo)}
+.rotulo.sin-envio:active{background:var(--muro)}
+
+/* ---------- pizarra de precios ---------- */
+.rubro{font-size:13px;font-weight:700;color:var(--gris);margin:22px 0 6px;
+  padding-bottom:6px;border-bottom:2px solid var(--linea)}
+.rubro:first-child{margin-top:0}
+.renglon{display:flex;align-items:center;gap:12px;padding:13px 0;
+  border-bottom:1px solid var(--linea)}
+.renglon-txt{flex:1;min-width:0}
+.renglon-txt b{display:block;font-size:15.5px;font-weight:600;line-height:1.3}
+.renglon-txt small{display:block;font-size:13px;color:var(--gris);margin-top:2px}
+.precio{font-size:17px;font-weight:700;flex:0 0 auto}
+.mas{width:40px;height:40px;border-radius:50%;background:var(--rotulo);color:#fff;
+  flex:0 0 auto;display:grid;place-items:center;font-size:22px;line-height:1;font-weight:600}
+.mas:active{transform:scale(.92)}
+.renglon.agotado{opacity:.45}
+.renglon.agotado .mas{background:var(--linea);color:var(--gris);pointer-events:none}
+.cuantos{display:flex;align-items:center;gap:4px;flex:0 0 auto}
+.cuantos button{width:34px;height:34px;border-radius:50%;background:var(--muro);
+  font-size:19px;line-height:1;font-weight:600}
+.cuantos span{min-width:28px;text-align:center;font-weight:700}
+
+/* ---------- barra del carrito: la unica pieza en mango ---------- */
+.carrito-barra{
+  position:fixed;left:0;right:0;bottom:0;z-index:40;
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  background:linear-gradient(to top, var(--papel) 60%, rgba(255,255,255,0));
+}
+.carrito-barra-int{max-width:calc(var(--tope) - 32px);margin:0 auto}
+.carrito-btn{
+  width:100%;background:var(--mango);color:var(--tinta);border-radius:var(--r);
+  padding:15px 18px;display:flex;align-items:center;gap:12px;
+  font-size:16px;font-weight:700;box-shadow:0 8px 24px -8px rgba(242,163,60,.75);
+  animation:sube .22s cubic-bezier(.2,.9,.3,1);
+}
+@keyframes sube{from{transform:translateY(120%)}to{transform:none}}
+.carrito-btn .cuenta{background:var(--tinta);color:#fff;border-radius:7px;
+  padding:2px 8px;font-size:14px}
+.carrito-btn .total{margin-left:auto;font-size:18px;font-weight:700}
+
+/* ---------- formularios ---------- */
+.campo{margin-bottom:14px}
+.campo label{display:block;font-size:14px;font-weight:600;margin-bottom:6px}
+.campo input,.campo textarea,.campo select{
+  width:100%;border:2px solid var(--linea);border-radius:var(--r);
+  padding:13px 14px;outline:none;background:var(--papel);font-size:16px
+}
+.campo input:focus,.campo textarea:focus,.campo select:focus{border-color:var(--rotulo)}
+.campo textarea{resize:vertical;min-height:76px}
+.pista{font-size:13px;color:var(--gris);margin-top:5px}
+
+.opciones{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.opcion{border:2px solid var(--linea);border-radius:var(--r);padding:13px 12px;
+  text-align:left;font-size:14.5px;font-weight:600;line-height:1.3}
+.opcion small{display:block;font-size:12.5px;font-weight:500;color:var(--gris);margin-top:2px}
+.opcion.puesta{border-color:var(--rotulo);background:#EEF4FB;color:var(--rotulo-hondo)}
+.opcion.puesta small{color:var(--rotulo)}
+.opcion:disabled{opacity:.45}
+
+.btn{width:100%;border-radius:var(--r);padding:16px;font-size:16.5px;font-weight:700;
+  background:var(--rotulo);color:#fff}
+.btn:active{background:var(--rotulo-hondo)}
+.btn:disabled{background:var(--linea);color:var(--gris)}
+.btn.suave{background:var(--muro);color:var(--tinta)}
+.btn.peligro{background:var(--papel);color:var(--cereza);border:2px solid var(--linea)}
+
+.cuenta-lineas{border-top:2px solid var(--linea);margin-top:6px;padding-top:12px}
+.cl{display:flex;justify-content:space-between;padding:4px 0;font-size:15px;color:var(--gris)}
+.cl b{color:var(--tinta);font-weight:600}
+.cl.gorda{font-size:19px;color:var(--tinta);font-weight:700;padding-top:10px;margin-top:6px;
+  border-top:1px solid var(--linea)}
+.cl.gorda b{font-weight:700}
+
+/* ---------- pedidos ---------- */
+.pedido{border:2px solid var(--linea);border-radius:var(--r);padding:15px;margin-bottom:12px}
+.pedido-enc{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
+.pedido-enc b{font-family:'Archivo Black';font-size:17px;letter-spacing:-.02em}
+.pedido-enc span{margin-left:auto;font-size:17px;font-weight:700}
+.pedido-meta{font-size:13.5px;color:var(--gris)}
+/* El estado SI es una secuencia, asi que una pista llena/vacia dice la verdad. */
+.pista-estado{display:flex;gap:4px;margin:13px 0 9px}
+.tramo{flex:1;height:5px;border-radius:3px;background:var(--linea)}
+.tramo.hecho{background:var(--hoja)}
+.estado-dice{font-size:14.5px;font-weight:600;color:var(--hoja)}
+.estado-dice.frio{color:var(--gris)}
+.estado-dice.malo{color:var(--cereza)}
+
+/* ---------- avisos y vacios ---------- */
+.aviso{border-radius:var(--r);padding:13px 15px;font-size:14.5px;font-weight:500;
+  margin-bottom:14px;line-height:1.4}
+.aviso.malo{background:#FDECEE;color:#8E1F2D}
+.aviso.ojo{background:#FEF4E3;color:#7A4E07}
+.aviso.bien{background:#E8F6EE;color:#14593A}
+.vacio{text-align:center;padding:52px 20px}
+.vacio b{display:block;font-family:'Archivo Black';font-size:20px;margin-bottom:8px;
+  letter-spacing:-.02em}
+.vacio p{color:var(--gris);font-size:15px;max-width:34ch;margin:0 auto}
+
+.girando{width:17px;height:17px;border:2.5px solid rgba(255,255,255,.35);
+  border-top-color:#fff;border-radius:50%;display:inline-block;
+  animation:gira .7s linear infinite;vertical-align:-3px}
+@keyframes gira{to{transform:rotate(360deg)}}
+.cargando{text-align:center;padding:40px}
+.cargando i{width:22px;height:22px;border:3px solid var(--linea);
+  border-top-color:var(--rotulo);border-radius:50%;display:inline-block;
+  animation:gira .7s linear infinite}
+
+/* ---------- entrar ---------- */
+.portada{min-height:100dvh;display:flex;flex-direction:column;justify-content:center;
+  padding:28px 20px calc(28px + env(safe-area-inset-bottom));background:var(--rotulo);
+  color:#fff}
+.portada-int{max-width:420px;margin:0 auto;width:100%}
+.portada h1{font-family:'Archivo Black';font-size:44px;line-height:.95;letter-spacing:-.035em;
+  margin-bottom:10px}
+.portada .lema{font-size:16.5px;color:#BDD2EC;margin-bottom:30px;max-width:26ch}
+.portada input{width:100%;border:2px solid rgba(255,255,255,.22);border-radius:var(--r);
+  padding:14px;background:rgba(255,255,255,.1);color:#fff;outline:none;
+  margin-bottom:10px;font-size:16px}
+.portada input::placeholder{color:#8FAACD}
+.portada input:focus{border-color:var(--mango);background:rgba(255,255,255,.16)}
+.portada .btn{background:var(--mango);color:var(--tinta)}
+.portada .btn:active{background:#DE9231}
+.portada .cambiar{display:block;width:100%;text-align:center;margin-top:16px;
+  color:#BDD2EC;font-size:14.5px;font-weight:600;text-decoration:underline}
+.portada .error{min-height:22px;font-size:14px;color:#FFB3BE;font-weight:600;margin:4px 0 8px}
+</style>
+</head>
+<body>
+
+<!-- ===================== ENTRAR ===================== -->
+<div class="portada oculto" id="p-entrar">
+  <div class="portada-int">
+    <h1>Pulpeando</h1>
+    <p class="lema" id="lema">Pida de su pulpería y se lo llevan a la casa.</p>
+    <input id="e-correo" type="email" placeholder="Su correo" autocomplete="email">
+    <input id="e-clave" type="password" placeholder="Su contraseña" autocomplete="current-password">
+    <div class="error" id="e-error"></div>
+    <button class="btn" id="e-btn">Entrar</button>
+    <button class="cambiar" id="e-cambiar">No tengo cuenta, quiero crearla</button>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div class="marco oculto" id="app">
+  <header class="barra">
+    <button class="atras oculto" id="atras" aria-label="Regresar">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <h1 id="titulo">Pulpeando</h1>
+    <div class="barra-fin">
+      <button class="icono-btn" id="btn-pedidos" aria-label="Mis pedidos">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 3h6a1 1 0 0 1 1 1v2H8V4a1 1 0 0 1 1-1z"/>
+          <path d="M8 6H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-2"/>
+          <path d="M9 12h6M9 16h4"/></svg>
+        <span class="globo oculto" id="globo-pedidos">0</span>
+      </button>
+      <button class="icono-btn" id="btn-salir" aria-label="Cerrar sesión">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="cuerpo" id="vista"></main>
+
+  <div class="carrito-barra oculto" id="carrito-barra">
+    <div class="carrito-barra-int">
+      <button class="carrito-btn" id="carrito-btn">
+        <span class="cuenta" id="carrito-cuenta">0</span>
+        <span id="carrito-texto">Ver el pedido</span>
+        <span class="total" id="carrito-total">L 0.00</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+const CFG = window.SUPABASE_CONFIG || {};
+const URL_SB = CFG.url || 'PEGUE_AQUI_LA_URL';
+const KEY_SB = CFG.key || 'PEGUE_AQUI_LA_LLAVE';
+
+const $ = s => document.querySelector(s);
+const ver = (id, si = true) => $(id).classList.toggle('oculto', !si);
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+const sb = createClient(URL_SB, KEY_SB, { auth:{ persistSession:true, autoRefreshToken:true } });
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g,
+  c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const S = {
+  vista:'tiendas',          // tiendas · tienda · carrito · pedidos
+  modo:'entrar',            // entrar · crear
+  tiendas:[], buscaTienda:'',
+  tienda:null,              // la sucursal elegida
+  catalogo:[], buscaProd:'', cargandoCat:false,
+  // El carrito pertenece a una pulperia, no a la pantalla que se esta viendo.
+  // Se guarda aparte porque el cliente puede regresar al inicio y entrar a
+  // otra tienda con el carrito lleno, y ahi hay que avisarle.
+  carrito:[], carritoTienda:null,   // { producto_id, nombre, precio, cantidad }
+  pedidos:[],
+  entrega:'domicilio', metodo:'efectivo',
+  moneda:'L'
+};
+
+const plata = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
+  { minimumFractionDigits:2, maximumFractionDigits:2 });
+
+function mensaje(e){
+  const m = (e?.message || String(e)).replace(/^.*?:\s*/, '');
+  if (/JWT|token|session/i.test(m)) return 'Su sesión venció. Vuelva a entrar.';
+  if (/Failed to fetch|NetworkError|network/i.test(m))
+    return 'No hay conexión. Revise su internet y pruebe otra vez.';
+  if (/Invalid login/i.test(m)) return 'El correo o la contraseña no coinciden.';
+  if (/already registered|already been registered/i.test(m))
+    return 'Ese correo ya tiene cuenta. Entre con su contraseña.';
+  if (/Password should be/i.test(m)) return 'La contraseña necesita al menos 6 caracteres.';
+  return m;
+}
+
+/* ===================== entrar ===================== */
+$('#e-cambiar').addEventListener('click', () => {
+  S.modo = S.modo === 'entrar' ? 'crear' : 'entrar';
+  const crear = S.modo === 'crear';
+  $('#e-btn').textContent = crear ? 'Crear mi cuenta' : 'Entrar';
+  $('#e-cambiar').textContent = crear
+    ? 'Ya tengo cuenta, quiero entrar'
+    : 'No tengo cuenta, quiero crearla';
+  $('#lema').textContent = crear
+    ? 'Con una cuenta guarda sus pedidos y no repite su dirección cada vez.'
+    : 'Pida de su pulpería y se lo llevan a la casa.';
+  $('#e-clave').setAttribute('autocomplete', crear ? 'new-password' : 'current-password');
+  $('#e-error').textContent = '';
+});
+
+$('#e-btn').addEventListener('click', async () => {
+  const b = $('#e-btn'), err = $('#e-error');
+  const email = $('#e-correo').value.trim().toLowerCase();
+  const password = $('#e-clave').value;
+  err.textContent = '';
+
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ err.textContent = 'Escriba un correo válido.'; return; }
+  if (password.length < 6){ err.textContent = 'La contraseña necesita al menos 6 caracteres.'; return; }
+
+  const texto = b.textContent;
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+
+  const r = S.modo === 'crear'
+    ? await sb.auth.signUp({ email, password })
+    : await sb.auth.signInWithPassword({ email, password });
+
+  b.disabled = false; b.textContent = texto;
+
+  if (r.error){ err.textContent = mensaje(r.error); return; }
+
+  // Si el proyecto pide confirmar el correo, signUp no deja sesion abierta.
+  if (!r.data?.session){
+    err.textContent = '';
+    $('#lema').textContent = 'Le mandamos un correo para confirmar su cuenta. '
+      + 'Ábralo y después entre aquí con su contraseña.';
+    S.modo = 'entrar';
+    $('#e-btn').textContent = 'Entrar';
+    $('#e-cambiar').textContent = 'No tengo cuenta, quiero crearla';
+    return;
+  }
+  arrancar();
+});
+$('#e-clave').addEventListener('keydown', e => { if (e.key === 'Enter') $('#e-btn').click(); });
+
+$('#btn-salir').addEventListener('click', async () => {
+  await sb.auth.signOut();
+  location.reload();
+});
+
+/* ===================== arranque ===================== */
+async function arrancar(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session){ ver('#p-entrar'); ver('#app', false); return false; }
+  ver('#p-entrar', false); ver('#app');
+  irA('tiendas');
+  // Antes esto solo se llamaba al abrir la pagina, asi que quien acababa de
+  // entrar se quedaba viendo "todavia no hay pulperias".
+  cargarTiendas();
+  cargarPedidosEnSilencio();
+  return true;
+}
+
+/* ===================== navegacion ===================== */
+function irA(v){
+  S.vista = v;
+  ver('#atras', v !== 'tiendas');
+  $('#titulo').textContent =
+    v === 'tiendas' ? 'Pulpeando'
+    : v === 'tienda' ? (S.tienda?.negocio || 'Pulpería')
+    : v === 'carrito' ? 'Su pedido'
+    : 'Sus pedidos';
+  pintar();
+  window.scrollTo(0, 0);
+}
+
+$('#atras').addEventListener('click', () => {
+  // S.tienda NO se borra al regresar: el carrito sigue siendo de esa pulperia
+  // y hay que poder volver a ella desde el carrito.
+  if (S.vista === 'carrito' && S.tienda) irA('tienda');
+  else irA('tiendas');
+});
+$('#btn-pedidos').addEventListener('click', () => { cargarPedidos(); irA('pedidos'); });
+$('#carrito-btn').addEventListener('click', () => irA('carrito'));
+
+/* ===================== pintar ===================== */
+function pintar(){
+  pintarCarritoBarra();
+  if (S.vista === 'tiendas') return pintarTiendas();
+  if (S.vista === 'tienda')  return pintarTienda();
+  if (S.vista === 'carrito') return pintarCarrito();
+  if (S.vista === 'pedidos') return pintarPedidos();
+}
+
+function cargando(){ $('#vista').innerHTML = '<div class="cargando"><i></i></div>'; }
+
+/* ---------- las pulperias ---------- */
+async function cargarTiendas(){
+  cargando();
+  const { data, error } = await sb.rpc('fn_tiendas_disponibles',
+    { p_busqueda:S.buscaTienda || null });
+  if (error){
+    $('#vista').innerHTML = `<div class="aviso malo">${esc(mensaje(error))}</div>`;
+    return;
+  }
+  S.tiendas = data || [];
+  if (S.tiendas[0]?.moneda) S.moneda = S.tiendas[0].moneda === 'HNL' ? 'L' : S.tiendas[0].moneda;
+  pintarTiendas();
+}
+
+function pintarTiendas(){
+  const buscador = `
+    <div class="busca">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2.3" stroke-linecap="round"><circle cx="11" cy="11" r="7"/>
+        <path d="m20 20-3.5-3.5"/></svg>
+      <input id="b-tienda" placeholder="Buscar pulpería o colonia"
+             value="${esc(S.buscaTienda)}" autocomplete="off">
+    </div>`;
+
+  const lista = S.tiendas.length
+    ? S.tiendas.map(t => {
+        const envio = t.acepta_domicilio
+          ? `<span class="dato">Envío <b>${plata(t.costo_envio)}</b></span>`
+          : `<span class="dato">Solo para recoger</span>`;
+        const minimo = Number(t.pedido_minimo) > 0
+          ? `<span class="dato">Desde <b>${plata(t.pedido_minimo)}</b></span>` : '';
+        const conocida = t.ya_soy_cliente
+          ? `<span class="dato">Ya pidió aquí</span>` : '';
+        return `
+          <button class="rotulo ${t.acepta_domicilio ? '' : 'sin-envio'}"
+                  data-suc="${esc(t.sucursal_id)}">
+            <span class="rotulo-nombre">${esc(t.negocio)}</span>
+            ${t.sucursal && t.sucursal !== t.negocio
+              ? `<span class="rotulo-suc">${esc(t.sucursal)}</span>` : ''}
+            ${t.direccion ? `<span class="rotulo-dir">${esc(t.direccion)}</span>` : ''}
+            <span class="rotulo-datos">
+              ${envio}${minimo}
+              <span class="dato"><b>${t.productos}</b> productos</span>
+              ${conocida}
+            </span>
+          </button>`;
+      }).join('')
+    : `<div class="vacio"><b>${S.buscaTienda ? 'Ninguna con ese nombre' : 'Todavía no hay pulperías'}</b>
+        <p>${S.buscaTienda
+          ? 'Pruebe con otro nombre o con el de su colonia.'
+          : 'Cuando una pulpería de su zona empiece a usar Pulpeando, aparece aquí.'}</p></div>`;
+
+  $('#vista').innerHTML = buscador + lista;
+
+  const b = $('#b-tienda');
+  b.addEventListener('input', e => {
+    S.buscaTienda = e.target.value;
+    clearTimeout(b._t);
+    b._t = setTimeout(cargarTiendas, 320);
+  });
+  $('#vista').querySelectorAll('[data-suc]').forEach(x =>
+    x.addEventListener('click', () => abrirTienda(x.dataset.suc)));
+}
+
+/* ---------- una pulperia ---------- */
+async function abrirTienda(sucursalId){
+  const t = S.tiendas.find(x => x.sucursal_id === sucursalId);
+  if (!t) return;
+  // Cambiar de pulperia vacia el carrito: un pedido es de una sola tienda.
+  // Se compara contra la tienda DEL CARRITO, no contra la que se vio por
+  // ultima vez: regresar al inicio no borra el carrito.
+  if (S.carrito.length && S.carritoTienda && S.carritoTienda !== sucursalId){
+    const duena = S.tiendas.find(x => x.sucursal_id === S.carritoTienda);
+    if (!confirm('Su pedido es de ' + (duena?.negocio || 'otra pulpería')
+        + '. Si cambia de pulpería se vacía. ¿Cambiar?')) return;
+    S.carrito = []; S.carritoTienda = null;
+  }
+  S.tienda = t;
+  S.moneda = t.moneda === 'HNL' ? 'L' : t.moneda;
+  S.entrega = t.acepta_domicilio ? 'domicilio' : 'recoge_en_tienda';
+  S.buscaProd = '';
+  // Se limpia antes de pintar: si no, por un instante se veian los productos
+  // de la pulperia anterior bajo el nombre de la nueva.
+  S.catalogo = []; S.cargandoCat = true;
+  irA('tienda');
+  await cargarCatalogo();
+}
+
+async function cargarCatalogo(){
+  S.cargandoCat = true;
+  pintarTienda();
+  const { data, error } = await sb.rpc('fn_catalogo_cliente', {
+    p_sucursal_id:S.tienda.sucursal_id, p_busqueda:S.buscaProd || null });
+  S.cargandoCat = false;
+  if (error){
+    $('#vista').innerHTML = `<div class="aviso malo">${esc(mensaje(error))}</div>`;
+    return;
+  }
+  S.catalogo = data || [];
+  pintarTienda();
+}
+
+function enCarrito(id){ return S.carrito.find(l => l.producto_id === id); }
+
+function pintarTienda(){
+  const t = S.tienda;
+  const cabeza = `
+    <div class="aviso ${t.acepta_domicilio ? 'bien' : 'ojo'}">
+      ${t.acepta_domicilio
+        ? `Le llevan a domicilio por ${plata(t.costo_envio)}`
+          + (Number(t.pedido_minimo) > 0
+             ? `, en pedidos de ${plata(t.pedido_minimo)} o más.` : '.')
+        : 'Esta pulpería no lleva a domicilio. Puede pedir y pasar a traerlo.'}
+    </div>
+    <div class="busca">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2.3" stroke-linecap="round"><circle cx="11" cy="11" r="7"/>
+        <path d="m20 20-3.5-3.5"/></svg>
+      <input id="b-prod" placeholder="Buscar en ${esc(t.negocio)}"
+             value="${esc(S.buscaProd)}" autocomplete="off">
+    </div>`;
+
+  let cuerpo;
+  if (S.cargandoCat){
+    cuerpo = '<div class="cargando"><i></i></div>';
+  } else if (!S.catalogo.length){
+    cuerpo = `<div class="vacio"><b>${S.buscaProd ? 'No hay nada con ese nombre' : 'Sin productos todavía'}</b>
+      <p>${S.buscaProd ? 'Pruebe con otra palabra.'
+         : 'Esta pulpería aún no ha puesto su catálogo.'}</p></div>`;
+  } else {
+    let rubro = null, html = '';
+    for (const p of S.catalogo){
+      if (p.categoria !== rubro){
+        rubro = p.categoria;
+        html += `<div class="rubro">${esc(rubro)}</div>`;
+      }
+      const l = enCarrito(p.producto_id);
+      const control = !p.disponible
+        ? `<button class="mas" aria-label="Agotado">+</button>`
+        : l
+          ? `<span class="cuantos">
+               <button data-menos="${esc(p.producto_id)}" aria-label="Quitar uno">−</button>
+               <span>${l.cantidad}</span>
+               <button data-mas="${esc(p.producto_id)}" aria-label="Agregar uno">+</button>
+             </span>`
+          : `<button class="mas" data-mas="${esc(p.producto_id)}"
+                     aria-label="Agregar ${esc(p.nombre)}">+</button>`;
+      html += `
+        <div class="renglon ${p.disponible ? '' : 'agotado'}">
+          <span class="renglon-txt">
+            <b>${esc(p.nombre)}</b>
+            ${p.disponible ? '' : '<small>Se acabó por hoy</small>'}
+          </span>
+          <span class="precio">${plata(p.precio)}</span>
+          ${control}
+        </div>`;
+    }
+    cuerpo = html;
+  }
+
+  $('#vista').innerHTML = cabeza + cuerpo;
+  $('#vista').classList.toggle('con-barra-abajo', S.carrito.length > 0);
+
+  const b = $('#b-prod');
+  b.addEventListener('input', e => {
+    S.buscaProd = e.target.value;
+    clearTimeout(b._t);
+    b._t = setTimeout(cargarCatalogo, 320);
+  });
+  $('#vista').querySelectorAll('[data-mas]').forEach(x =>
+    x.addEventListener('click', () => sumar(x.dataset.mas, 1)));
+  $('#vista').querySelectorAll('[data-menos]').forEach(x =>
+    x.addEventListener('click', () => sumar(x.dataset.menos, -1)));
+}
+
+function sumar(id, delta){
+  const p = S.catalogo.find(x => x.producto_id === id);
+  if (!p) return;
+  const l = enCarrito(id);
+  if (l){
+    l.cantidad += delta;
+    if (l.cantidad <= 0) S.carrito = S.carrito.filter(x => x.producto_id !== id);
+  } else if (delta > 0){
+    S.carrito.push({ producto_id:id, nombre:p.nombre,
+                     precio:Number(p.precio), cantidad:1 });
+    S.carritoTienda = S.tienda.sucursal_id;
+  }
+  if (!S.carrito.length) S.carritoTienda = null;
+  if (S.vista === 'tienda') pintarTienda();
+  else if (S.vista === 'carrito') pintarCarrito();
+  pintarCarritoBarra();
+}
+
+function mercaderia(){
+  return S.carrito.reduce((s,l) => s + l.precio * l.cantidad, 0);
+}
+function piezas(){ return S.carrito.reduce((s,l) => s + l.cantidad, 0); }
+
+function pintarCarritoBarra(){
+  const hay = S.carrito.length > 0 && S.vista !== 'carrito';
+  ver('#carrito-barra', hay);
+  $('#vista').classList.toggle('con-barra-abajo', hay);
+  if (!hay) return;
+  $('#carrito-cuenta').textContent = piezas();
+  $('#carrito-total').textContent = plata(mercaderia());
+  $('#carrito-texto').textContent = 'Ver el pedido';
+}
+
+/* ---------- el pedido ---------- */
+function pintarCarrito(){
+  if (!S.carrito.length){
+    $('#vista').innerHTML = `<div class="vacio"><b>Su pedido está vacío</b>
+      <p>Agregue lo que necesita del catálogo de la pulpería.</p></div>`;
+    return;
+  }
+  const t = S.tienda;
+  const sub = mercaderia();
+  const envio = S.entrega === 'domicilio' ? Number(t.costo_envio) : 0;
+  const minimo = Number(t.pedido_minimo) || 0;
+  const falta = S.entrega === 'domicilio' && minimo > 0 && sub < minimo;
+
+  const lineas = S.carrito.map(l => `
+    <div class="renglon">
+      <span class="renglon-txt">
+        <b>${esc(l.nombre)}</b>
+        <small>${plata(l.precio)} cada uno</small>
+      </span>
+      <span class="precio">${plata(l.precio * l.cantidad)}</span>
+      <span class="cuantos">
+        <button data-menos="${esc(l.producto_id)}" aria-label="Quitar uno">−</button>
+        <span>${l.cantidad}</span>
+        <button data-mas="${esc(l.producto_id)}" aria-label="Agregar uno">+</button>
+      </span>
+    </div>`).join('');
+
+  $('#vista').innerHTML = `
+    <div class="aviso ${falta ? 'ojo' : 'bien'}">
+      ${falta
+        ? `Le faltan ${plata(minimo - sub)} para llegar al mínimo de ${plata(minimo)}
+           que ${esc(t.negocio)} pide para llevar a domicilio.`
+        : `Pedido de ${esc(t.negocio)}`}
+    </div>
+
+    ${lineas}
+
+    <div class="rubro">Cómo lo recibe</div>
+    <div class="opciones">
+      <button class="opcion ${S.entrega === 'domicilio' ? 'puesta' : ''}"
+              data-entrega="domicilio" ${t.acepta_domicilio ? '' : 'disabled'}>
+        Me lo llevan
+        <small>${t.acepta_domicilio ? plata(t.costo_envio) : 'No disponible'}</small>
+      </button>
+      <button class="opcion ${S.entrega === 'recoge_en_tienda' ? 'puesta' : ''}"
+              data-entrega="recoge_en_tienda">
+        Paso a traerlo
+        <small>Sin costo</small>
+      </button>
+    </div>
+
+    <div class="campo" style="margin-top:16px">
+      <label for="c-nombre">Su nombre</label>
+      <input id="c-nombre" placeholder="Como lo conocen en la pulpería"
+             autocomplete="name" value="${esc(recordado('nombre'))}">
+    </div>
+    <div class="campo">
+      <label for="c-tel">Su teléfono</label>
+      <input id="c-tel" inputmode="tel" placeholder="9999-9999"
+             autocomplete="tel" value="${esc(recordado('tel'))}">
+      <div class="pista">Para que le llamen si no encuentran la casa.</div>
+    </div>
+
+    <div class="campo ${S.entrega === 'domicilio' ? '' : 'oculto'}" id="caja-dir">
+      <label for="c-dir">A dónde lo llevan</label>
+      <textarea id="c-dir" placeholder="Colonia, calle, color de la casa, algún punto de referencia">${esc(recordado('dir'))}</textarea>
+    </div>
+
+    <div class="rubro">Cómo paga</div>
+    <div class="opciones">
+      <button class="opcion ${S.metodo === 'efectivo' ? 'puesta' : ''}" data-pago="efectivo">
+        Efectivo<small>Al recibirlo</small></button>
+      <button class="opcion ${S.metodo === 'transferencia' ? 'puesta' : ''}" data-pago="transferencia">
+        Transferencia<small>Le pasan el número</small></button>
+    </div>
+
+    <div class="campo ${S.metodo === 'efectivo' ? '' : 'oculto'}" id="caja-vuelto"
+         style="margin-top:14px">
+      <label for="c-paga">Paga con</label>
+      <input id="c-paga" inputmode="decimal" placeholder="Opcional">
+      <div class="pista">Si lo dice, le llevan el vuelto listo.</div>
+    </div>
+
+    <div class="campo">
+      <label for="c-notas">Algo más que deban saber</label>
+      <textarea id="c-notas" placeholder="Opcional"></textarea>
+    </div>
+
+    <div class="cuenta-lineas">
+      <div class="cl"><span>Mercadería</span><b>${plata(sub)}</b></div>
+      <div class="cl"><span>Envío</span><b>${envio > 0 ? plata(envio) : 'Sin costo'}</b></div>
+      <div class="cl gorda"><span>Total</span><b>${plata(sub + envio)}</b></div>
+    </div>
+
+    <div class="aviso malo oculto" id="c-error" style="margin-top:14px"></div>
+    <button class="btn" id="c-enviar" style="margin-top:16px"
+            ${falta ? 'disabled' : ''}>Hacer el pedido</button>
+    <button class="btn suave" id="c-seguir" style="margin-top:9px">Seguir agregando</button>`;
+
+  $('#vista').classList.remove('con-barra-abajo');
+
+  $('#vista').querySelectorAll('[data-mas]').forEach(x =>
+    x.addEventListener('click', () => sumar(x.dataset.mas, 1)));
+  $('#vista').querySelectorAll('[data-menos]').forEach(x =>
+    x.addEventListener('click', () => sumar(x.dataset.menos, -1)));
+  $('#vista').querySelectorAll('[data-entrega]').forEach(x =>
+    x.addEventListener('click', () => {
+      if (x.disabled) return;
+      guardarFormulario();
+      S.entrega = x.dataset.entrega; pintarCarrito();
+    }));
+  $('#vista').querySelectorAll('[data-pago]').forEach(x =>
+    x.addEventListener('click', () => {
+      guardarFormulario();
+      S.metodo = x.dataset.pago; pintarCarrito();
+    }));
+  $('#c-seguir').addEventListener('click', () => irA('tienda'));
+  $('#c-enviar').addEventListener('click', enviarPedido);
+}
+
+/* Lo que el cliente ya escribio no se pierde al cambiar de opcion ni entre
+   pedidos: se guarda en el aparato. Si el navegador lo tiene bloqueado, la
+   pantalla sigue funcionando igual, solo no recuerda. */
+function recordado(k){
+  try { return localStorage.getItem('pulpeando-' + k) || ''; } catch(e){ return ''; }
+}
+function recordar(k, v){
+  try { localStorage.setItem('pulpeando-' + k, v); } catch(e){}
+}
+function guardarFormulario(){
+  const n = $('#c-nombre'), t = $('#c-tel'), d = $('#c-dir');
+  if (n) recordar('nombre', n.value.trim());
+  if (t) recordar('tel', t.value.trim());
+  if (d) recordar('dir', d.value.trim());
+}
+
+async function enviarPedido(){
+  const b = $('#c-enviar'), err = $('#c-error');
+  const nombre = $('#c-nombre').value.trim();
+  const tel    = $('#c-tel').value.trim();
+  const dir    = $('#c-dir')?.value.trim() || '';
+  const paga   = parseFloat(($('#c-paga')?.value || '').replace(/[^0-9.]/g,'')) || null;
+  const notas  = $('#c-notas').value.trim() || null;
+
+  err.classList.add('oculto');
+  const falla = m => { err.textContent = m; err.classList.remove('oculto');
+                       err.scrollIntoView({ block:'center' }); };
+
+  if (!nombre) return falla('Escriba su nombre, para que sepan de quién es el pedido.');
+  if (!tel)    return falla('Escriba su teléfono, por si necesitan llamarle.');
+  if (S.entrega === 'domicilio' && !dir)
+    return falla('Escriba a dónde se lo llevan.');
+
+  guardarFormulario();
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+
+  const { data, error } = await sb.rpc('fn_crear_pedido', {
+    p_items:S.carrito.map(l => ({ producto_id:l.producto_id, cantidad:l.cantidad })),
+    p_sucursal_id:S.tienda.sucursal_id,
+    p_tipo_entrega:S.entrega,
+    p_direccion_texto:S.entrega === 'domicilio' ? dir : null,
+    p_nombre_contacto:nombre,
+    p_telefono_contacto:tel,
+    p_metodo_pago:S.metodo,
+    p_paga_con:S.metodo === 'efectivo' ? paga : null,
+    p_notas:notas
+  });
+
+  b.disabled = false; b.textContent = 'Hacer el pedido';
+
+  if (error) return falla(mensaje(error));
+
+  S.carrito = []; S.carritoTienda = null;
+  await cargarPedidos();
+  irA('pedidos');
+  $('#vista').insertAdjacentHTML('afterbegin',
+    `<div class="aviso bien">Su pedido ${esc(data.numero)} ya le llegó a
+      ${esc(data.negocio)}. Aquí mismo va a ver cuándo lo preparan y cuándo sale.</div>`);
+}
+
+/* ---------- sus pedidos ---------- */
+const ORDEN = ['nuevo','confirmado','preparando','listo','en_ruta','entregado'];
+const DICE = {
+  nuevo:'La pulpería ya lo vio',
+  confirmado:'Confirmado',
+  preparando:'Lo están armando',
+  listo:'Listo para salir',
+  en_ruta:'Ya va en camino',
+  entregado:'Entregado',
+  cancelado:'Cancelado'
+};
+
+async function cargarPedidos(){
+  const { data, error } = await sb.rpc('fn_mis_pedidos', { p_limite:30 });
+  if (!error) S.pedidos = data || [];
+  pintarGlobo();
+  if (S.vista === 'pedidos') pintarPedidos();
+}
+async function cargarPedidosEnSilencio(){ try { await cargarPedidos(); } catch(e){} }
+
+function pintarGlobo(){
+  const vivos = S.pedidos.filter(p => !['entregado','cancelado'].includes(p.estado)).length;
+  ver('#globo-pedidos', vivos > 0);
+  $('#globo-pedidos').textContent = vivos;
+}
+
+function pintarPedidos(){
+  if (!S.pedidos.length){
+    $('#vista').innerHTML = `<div class="vacio"><b>Todavía no ha pedido nada</b>
+      <p>Elija una pulpería y arme su pedido. Aquí va a poder seguirlo.</p></div>`;
+    return;
+  }
+  $('#vista').innerHTML = S.pedidos.map(p => {
+    const i = ORDEN.indexOf(p.estado);
+    const cancelado = p.estado === 'cancelado';
+    const pista = cancelado ? '' : `
+      <div class="pista-estado">
+        ${ORDEN.slice(0, 5).map((_, k) =>
+          `<span class="tramo ${k <= i ? 'hecho' : ''}"></span>`).join('')}
+      </div>`;
+    const cuando = new Date(p.creado_en).toLocaleString('es-HN',
+      { day:'numeric', month:'short', hour:'numeric', minute:'2-digit' });
+    return `
+      <div class="pedido">
+        <div class="pedido-enc">
+          <b>${esc(p.negocio)}</b>
+          <span>${plata(p.total)}</span>
+        </div>
+        <div class="pedido-meta">${esc(p.numero)} · ${esc(cuando)} ·
+          ${p.lineas} ${p.lineas === 1 ? 'producto' : 'productos'}</div>
+        ${pista}
+        <div class="estado-dice ${cancelado ? 'malo' : (i >= 5 ? 'frio' : '')}">
+          ${esc(DICE[p.estado] || p.estado)}${p.repartidor && p.estado === 'en_ruta'
+            ? ' con ' + esc(p.repartidor) : ''}
+        </div>
+        ${p.tipo_entrega === 'domicilio' && p.direccion
+          ? `<div class="pedido-meta" style="margin-top:6px">A ${esc(p.direccion)}</div>`
+          : p.tipo_entrega === 'recoge_en_tienda'
+            ? `<div class="pedido-meta" style="margin-top:6px">Lo pasa a traer</div>` : ''}
+        ${p.estado === 'nuevo'
+          ? `<button class="btn peligro" style="margin-top:12px"
+                     data-cancelar="${esc(p.pedido_id)}">Cancelar este pedido</button>`
+          : ''}
+      </div>`;
+  }).join('');
+
+  $('#vista').querySelectorAll('[data-cancelar]').forEach(x =>
+    x.addEventListener('click', () => cancelar(x.dataset.cancelar, x)));
+}
+
+async function cancelar(id, boton){
+  if (!confirm('¿Cancelar el pedido? Si ya lo empezaron a preparar no se puede.')) return;
+  boton.disabled = true; boton.innerHTML = '<span class="girando"></span>';
+  const { error } = await sb.rpc('fn_cancelar_mi_pedido',
+    { p_pedido_id:id, p_motivo:'Cancelado por el cliente' });
+  if (error){
+    boton.disabled = false; boton.textContent = 'Cancelar este pedido';
+    alert(mensaje(error));
+    await cargarPedidos();
+    return;
+  }
+  await cargarPedidos();
+}
+
+/* Al volver a la pantalla se refrescan los pedidos vivos: asi el cliente ve
+   que ya salio sin tener que hacer nada. */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && !$('#app').classList.contains('oculto'))
+    cargarPedidosEnSilencio();
+});
+
+/* ===================== inicio ===================== */
+if (URL_SB.startsWith('PEGUE')){
+  document.body.innerHTML = '<div class="portada"><div class="portada-int">'
+    + '<h1>Pulpeando</h1><p class="lema">Falta conectar el proyecto: '
+    + 'ponga la URL y la llave en config.js.</p></div></div>';
+} else {
+  if ('serviceWorker' in navigator)
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT') location.reload(); });
+  arrancar();
+}
+</script>
+</body>
+</html>
