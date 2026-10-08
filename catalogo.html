@@ -340,7 +340,7 @@ const ENTIDADES = {
 
   usuarios: {
     nombre:'Usuarios', singular:'Usuario', icono:'ajustes',
-    tabla:'perfiles', nivel:3, orden:'nombre', sinCrear:true,
+    tabla:'perfiles', nivel:3, orden:'nombre',
     columnas:'id,nombre,email,telefono,rol,activo,pin_pos',
     buscaEn:['nombre','email'],
     fila: r => ({ ini:iniciales(r.nombre), titulo:r.nombre,
@@ -354,6 +354,14 @@ const ENTIDADES = {
                   ['gerente','Gerente'],['repartidor','Repartidor']],
         ayuda:'Auxiliar vende. Supervisor además recibe mercadería y anula. Gerente todo.' },
       { k:'activo', e:'Activo', tipo:'si', def:true },
+      // El correo y la contraseña solo existen al crear: después el correo es
+      // su identidad para entrar y la contraseña la cambia él mismo.
+      { s:'Acceso', soloNuevo:true },
+      { k:'email', e:'Correo', tipo:'email', req:true, soloNuevo:true, ancho:true,
+        ayuda:'Con este correo entra a la app. No se puede cambiar después.' },
+      { k:'password', e:'Contraseña inicial', tipo:'clave', req:true, soloNuevo:true,
+        ancho:true, ayuda:'Mínimo 8 caracteres. Désela y que la cambie él.' },
+      { k:'__sucursales', e:'Sucursales', tipo:'sucursales', soloNuevo:true, ancho:true },
       { s:'PIN de caja' },
       { k:'__pin', tipo:'pin', ancho:true }
     ]
@@ -539,6 +547,8 @@ function abrirForm(fila){
 
   let html = '<div class="campos dos">';
   for (const c of e.campos){
+    // Campos que solo tienen sentido al crear (correo, contraseña, sucursales)
+    if (c.soloNuevo && fila) continue;
     if (c.s){ html += `<div class="seccion">${escapar(c.s)}</div>`; continue; }
     const cls = c.ancho ? 'campo-g ancho-total' : 'campo-g';
 
@@ -572,6 +582,26 @@ function abrirForm(fila){
       continue;
     }
 
+    if (c.tipo === 'sucursales'){
+      const suc = S.ctx?.sucursales || [];
+      html += `<div class="ancho-total">
+        <label style="font-size:12px;font-weight:700;color:var(--tenue);display:block;
+                      margin-bottom:7px">${escapar(c.e)}</label>
+        ${suc.length > 1 ? `
+          <div class="codigos">
+            ${suc.map(s => `
+              <label class="marca-check">
+                <input type="checkbox" data-sucursal="${escapar(s.id)}" checked>
+                <span>${escapar(s.nombre)}</span></label>`).join('')}
+          </div>
+          <div class="ayuda" style="margin-top:7px">Solo verá las sucursales que le
+            marque. Un gerente ve todas sin importar esto.</div>`
+        : `<div class="ayuda">Su negocio tiene una sola sucursal, así que no hay
+            nada que elegir.</div>`}
+      </div>`;
+      continue;
+    }
+
     if (c.tipo === 'pin'){
       html += `<div class="ancho-total">
         <div class="ayuda" style="margin-bottom:8px">
@@ -600,7 +630,8 @@ function abrirForm(fila){
     } else {
       const modo = c.tipo === 'decimal' || c.tipo === 'entero' ? 'inputmode="decimal"' :
                    c.tipo === 'tel' ? 'inputmode="tel"' :
-                   c.tipo === 'email' ? 'type="email"' : '';
+                   c.tipo === 'email' ? 'type="email" autocomplete="off"' :
+                   c.tipo === 'clave' ? 'type="password" autocomplete="new-password"' : '';
       const numCls = (c.tipo === 'decimal' || c.tipo === 'entero') ? ' num' : '';
       html += `<input class="entrada${numCls}" data-k="${c.k}" ${modo}
                  ${bloqueado ? 'disabled' : ''} value="${escapar(val(c.k))}">`;
@@ -706,6 +737,7 @@ $('#form-guardar').addEventListener('click', async () => {
     else if (c.tipo === 'decimal')  v = num(el.value);
     else if (c.tipo === 'entero')   v = Math.round(num(el.value));
     else if (c.tipo === 'lista')    v = el.value || null;
+    else if (c.tipo === 'clave')    v = el.value;   // la contraseña va tal cual
     else                            v = el.value.trim() || null;
 
     if (c.req && (v === null || v === '' || (c.tipo === 'decimal' && v <= 0))){
@@ -724,12 +756,18 @@ $('#form-guardar').addEventListener('click', async () => {
     let id = S.editando?.id;
 
     if (S.entidad === 'usuarios'){
-      // los usuarios no se crean aquí: solo se editan
-      const { error } = await sb.from('perfiles')
-        .update({ nombre:datos.nombre, telefono:datos.telefono,
-                  rol:datos.rol, activo:datos.activo })
-        .eq('id', id);
-      if (error) throw error;
+      if (id){
+        // Editar. El correo no se toca: es su identidad para entrar.
+        const { error } = await sb.from('perfiles')
+          .update({ nombre:datos.nombre, telefono:datos.telefono,
+                    rol:datos.rol, activo:datos.activo })
+          .eq('id', id);
+        if (error) throw error;
+      } else {
+        // Crear. Pasa por la Edge Function porque crear una cuenta de acceso
+        // exige la llave service_role, que no puede andar en el navegador.
+        id = await crearUsuario(datos);
+      }
 
       const pin = $('#pin-nuevo')?.value.trim();
       if (pin){
@@ -777,6 +815,42 @@ $('#form-guardar').addEventListener('click', async () => {
     b.disabled = false; b.textContent = 'Guardar';
   }
 });
+
+/* Alta de usuario por Edge Function.
+   Se manda el token de la sesión del gerente: la función saca de ahí quién
+   pide, de qué negocio es y con qué rol. Nada de eso viaja en el cuerpo, así
+   que no hay forma de pedirle que meta un usuario en otro negocio. */
+async function crearUsuario(datos){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session) throw new Error('La sesión venció. Vuelva a entrar.');
+
+  const marcadas = [...$('#form-cuerpo').querySelectorAll('[data-sucursal]:checked')]
+    .map(x => x.dataset.sucursal);
+  // Con una sola sucursal no se muestran casillas; se asigna la única que hay.
+  const sucursales = marcadas.length ? marcadas
+    : (S.ctx.sucursales || []).map(s => s.id);
+
+  const r = await fetch(SUPABASE_URL + '/functions/v1/crear-usuario', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json',
+              apikey:SUPABASE_KEY,
+              Authorization:'Bearer ' + session.access_token },
+    body:JSON.stringify({
+      nombre:datos.nombre, email:datos.email, password:datos.password,
+      rol:datos.rol, telefono:datos.telefono, sucursales })
+  });
+
+  let cuerpo = null;
+  try { cuerpo = await r.json(); } catch(e){}
+
+  if (!r.ok){
+    throw new Error(cuerpo?.error
+      || (r.status === 401 ? 'La sesión venció. Vuelva a entrar.'
+                           : 'No se pudo crear el usuario (' + r.status + ')'));
+  }
+  if (!cuerpo?.perfil_id) throw new Error('La función no devolvió el usuario creado');
+  return cuerpo.perfil_id;
+}
 
 async function guardarPrecio(productoId, precio){
   if (!precio || precio <= 0) return;
