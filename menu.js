@@ -26,6 +26,7 @@ const ICONOS = {
   reportes:  '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   ajustes:   '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>',
   etiqueta:  '<path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"/><circle cx="7.5" cy="7.5" r="1.3"/>',
+  fiado:     '<path d="M4 5h16a1 1 0 0 1 1 1v3H3V6a1 1 0 0 1 1-1z"/><path d="M3 9v9a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9"/><path d="M7 14h5"/>',
   todos:     '<path d="M4 6h16M4 12h16M4 18h16"/>',
   salir:     '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>'
 };
@@ -39,6 +40,7 @@ const svg = d => `<svg viewBox="0 0 24 24" width="19" height="19" fill="none"
 const MODULOS = [
   { id:'caja',    nombre:'Caja',        url:'index.html',   icono:'caja',    nivel:1 },
   { id:'pedidos', nombre:'Pedidos',     url:'pedidos.html', icono:'pedidos', nivel:1 },
+  { id:'fiado',   nombre:'Fiado',       url:'fiado.html',   icono:'fiado',   nivel:1 },
   { id:'compras', nombre:'Compras',     url:'compras.html', icono:'compras', nivel:2 },
   { id:'catalogo', nombre:'Catálogos',  url:'catalogo.html', icono:'inventario', nivel:1 }
 ];

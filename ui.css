@@ -320,6 +320,16 @@ select.entrada{cursor:pointer}
 .aviso.ojo{background:#FFF4E0;color:#8A5A00}
 .acciones{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
 
+/* paso final de una operación: venta cobrada, abono recibido */
+.listo{text-align:center}
+.marca-ok{width:66px;height:66px;border-radius:50%;background:#E7F7EE;color:var(--verde);
+  display:grid;place-items:center;margin:0 auto 16px;font-size:32px;
+  animation:brincar .45s cubic-bezier(.2,1.4,.4,1)}
+.marca-ok.espera{background:#FFF4E0;color:#8A5A00}
+@keyframes brincar{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+.listo h2{font-size:20px;margin-bottom:6px}
+.listo .doc{font-family:var(--num);font-size:13px;color:var(--tenue);margin-bottom:18px}
+
 .sello{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;
   font-weight:800;text-transform:uppercase}
 .sello.borrador{background:#FFF4E0;color:#8A5A00}

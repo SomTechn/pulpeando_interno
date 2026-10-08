@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1729">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="icono-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icono-192.png">
+<title>Fiado · Pulpeando</title>
+<script src="config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ui.css">
+<style>
+.zona{flex:1;display:flex;flex-direction:column;min-height:0;padding:14px 16px 0}
+
+/* resumen de arriba */
+.tarjetas{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;flex:0 0 auto}
+.tj{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);padding:13px 15px}
+.tj small{display:block;font-size:11px;font-weight:800;letter-spacing:.05em;
+  text-transform:uppercase;color:#9AA8BC;margin-bottom:5px}
+.tj b{font-family:var(--num);font-size:22px;font-weight:700;line-height:1.1}
+.tj.alerta{background:#FFF4E0;border-color:#F0DCB0}
+.tj.alerta b{color:#8A5A00}
+.tj.malo{background:#FFEDF1;border-color:#F6CBD6}
+.tj.malo b{color:var(--rojo)}
+
+.barra-busca{display:flex;gap:10px;margin-bottom:12px;flex:0 0 auto}
+.filtros{display:flex;gap:7px;margin-bottom:12px;flex:0 0 auto;overflow-x:auto;
+  scrollbar-width:none;padding-bottom:2px}
+.filtros::-webkit-scrollbar{display:none}
+.fl{padding:9px 14px;border-radius:999px;border:1.5px solid var(--linea);background:var(--panel);
+  font-size:13px;font-weight:700;color:var(--tenue);white-space:nowrap;flex:0 0 auto}
+.fl.activo{border-color:var(--azul);background:var(--azul-suave);color:var(--azul)}
+
+/* min-height:0 para que la lista pueda hacer scroll dentro de la columna */
+.lista{flex:1;overflow-y:auto;min-height:0;padding-bottom:24px}
+
+.fila{
+  display:flex;align-items:center;gap:13px;width:100%;text-align:left;
+  background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);
+  padding:13px 15px;margin-bottom:9px;transition:border-color .15s;
+}
+.fila:hover{border-color:#C9D6E8}
+.fila:active{transform:scale(.995)}
+.fila-ini{width:38px;height:38px;border-radius:11px;flex:0 0 auto;display:grid;place-items:center;
+  background:var(--fondo);font-weight:800;font-size:14px;color:#8A99B3}
+.fila-txt{flex:1;min-width:0}
+.fila-txt b{display:block;font-size:14.5px;font-weight:600;line-height:1.3}
+.fila-txt small{display:block;font-size:12.5px;color:var(--tenue);margin-top:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fila-fin{text-align:right;flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.fila-fin b{font-family:var(--num);font-size:16px;font-weight:700}
+.insignia{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;
+  font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em}
+.insignia.tope{background:#FFEDF1;color:#9F1239}
+.insignia.viejo{background:#FFF4E0;color:#8A5A00}
+.insignia.bien{background:#E7F7EE;color:var(--verde-oscuro)}
+
+.conteo{font-size:12.5px;color:var(--tenue);margin-bottom:10px;flex:0 0 auto}
+.vacio{text-align:center;padding:48px 20px;color:var(--tenue)}
+.vacio b{display:block;font-size:16px;color:var(--tinta);margin-bottom:6px}
+
+/* cajón del cliente */
+.form-velo{position:fixed;inset:0;z-index:95;background:rgba(15,23,41,.55);
+  display:flex;justify-content:flex-end;backdrop-filter:blur(3px)}
+.cajon{width:min(540px,100%);background:var(--panel);height:100%;display:flex;flex-direction:column;
+  box-shadow:-20px 0 60px -20px rgba(15,23,41,.5);
+  animation:entrar-der .24s cubic-bezier(.2,.8,.3,1)}
+@keyframes entrar-der{from{transform:translateX(100%)}to{transform:none}}
+.cajon-enc{display:flex;align-items:center;gap:12px;padding:16px;
+  border-bottom:1px solid var(--linea);flex:0 0 auto}
+.cajon-enc h2{flex:1;font-size:18px;line-height:1.25}
+.cajon-enc h2 small{display:block;font-size:12.5px;color:var(--tenue);font-weight:500;margin-top:2px}
+.cajon-cuerpo{flex:1;overflow-y:auto;min-height:0;padding:16px}
+.cajon-pie{padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--linea);display:flex;gap:10px;flex:0 0 auto}
+.cajon-pie .btn{flex:1}
+.cerrar-x{width:38px;height:38px;border-radius:11px;background:var(--fondo);
+  color:var(--tenue);font-size:17px;flex:0 0 auto}
+
+.deuda{background:var(--tinta);color:#fff;border-radius:var(--r-md);padding:16px 18px;
+  margin-bottom:16px}
+.deuda small{font-size:12px;color:var(--claro);font-weight:600}
+.deuda b{display:block;font-family:var(--num);font-size:30px;font-weight:700;margin:2px 0 10px}
+.deuda-pie{display:flex;gap:18px;font-size:12.5px;color:var(--claro)}
+.deuda-pie span b{display:inline;font-size:13px;color:#fff;margin:0}
+
+.rotulo{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  color:#9AA8BC;margin:18px 0 8px}
+.rotulo:first-child{margin-top:0}
+
+/* movimientos */
+.mov{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--fondo)}
+.mov-ico{width:30px;height:30px;border-radius:9px;flex:0 0 auto;display:grid;place-items:center;
+  font-size:14px;font-weight:800}
+.mov-ico.cargo{background:#FFEDF1;color:var(--rojo)}
+.mov-ico.abono{background:#E7F7EE;color:var(--verde-oscuro)}
+.mov-txt{flex:1;min-width:0}
+.mov-txt b{display:block;font-size:13.5px;font-weight:600}
+.mov-txt small{display:block;font-size:11.5px;color:var(--tenue);margin-top:1px}
+.mov-monto{font-family:var(--num);font-size:14px;font-weight:700;flex:0 0 auto}
+.mov-monto.cargo{color:var(--rojo)}
+.mov-monto.abono{color:var(--verde-oscuro)}
+.mov-anular{width:28px;height:28px;border-radius:8px;color:var(--tenue);font-size:13px;flex:0 0 auto}
+.mov-anular:hover{background:#FFEDF1;color:var(--rojo)}
+
+/* cobrar abono */
+.metodos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.metodo{padding:12px 6px;border-radius:var(--r-sm);border:1.5px solid var(--linea);
+  font-size:12.5px;font-weight:700;color:var(--tenue);text-align:center}
+.metodo.activo{border-color:var(--azul);background:var(--azul-suave);color:var(--azul)}
+.monto{width:100%;height:56px;border:1.5px solid var(--linea);border-radius:var(--r-md);
+  padding:0 16px;font-family:var(--num);font-size:24px;font-weight:600;text-align:right;outline:none}
+.monto:focus{border-color:var(--azul)}
+.rapidos{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:10px 0 0}
+.rapido{padding:12px 4px;border-radius:var(--r-sm);background:var(--fondo);
+  font-family:var(--num);font-size:13px;font-weight:600}
+.campo-txt{width:100%;height:48px;border:1.5px solid var(--linea);border-radius:var(--r-sm);
+  padding:0 14px;outline:none;font-size:14px}
+.campo-txt:focus{border-color:var(--azul)}
+
+@media (max-width:1180px){ .tarjetas{grid-template-columns:repeat(2,1fr)} }
+@media (max-width:820px){
+  .zona{padding:12px 14px 0}
+  .cajon{width:100%}
+  .tj b{font-size:19px}
+}
+</style>
+</head>
+<body>
+
+<div class="oscura oculto" id="p-config">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Configuración</div>
+    <div class="titulo-o">Falta conectar el proyecto</div>
+    <p class="sub-o">Ponga la URL y la llave publishable en <b>config.js</b>.</p>
+  </div>
+</div>
+
+<div class="oscura oculto" id="p-sesion">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Fiado</div>
+    <div class="titulo-o">Iniciar sesión</div>
+    <p class="sub-o">Use el correo con el que su gerente lo dio de alta</p>
+    <input class="campo-o" id="s-email" type="email" placeholder="correo@negocio.hn" autocomplete="username">
+    <input class="campo-o" id="s-clave" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <div class="error-o" id="s-error"></div>
+    <button class="btn-o" id="s-entrar">Entrar</button>
+  </div>
+</div>
+
+<div class="oscura oculto" id="p-bloqueado">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Fiado</div>
+    <div class="titulo-o" id="bl-titulo">Sin permiso</div>
+    <p class="sub-o" id="bl-texto"></p>
+    <a class="btn-o" href="index.html" style="display:block;line-height:52px">Ir a la caja</a>
+    <button class="btn-o fantasma" id="bl-salir">Cerrar sesión</button>
+  </div>
+</div>
+
+<div class="armazon oculto" id="app">
+  <aside id="menu"></aside>
+
+  <div class="principal">
+    <header class="barra">
+      <button class="hamburguesa" id="abrir-menu" aria-label="Menú">
+        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="barra-titulo">
+        <b>Fiado</b>
+        <small id="h-sucursal">—</small>
+      </div>
+      <div class="barra-fin">
+        <span class="pill" id="h-usuario">—</span>
+      </div>
+    </header>
+
+    <div class="zona">
+      <div class="tarjetas">
+        <div class="tj"><small>Le deben</small><b id="r-total">—</b></div>
+        <div class="tj"><small>Clientes</small><b id="r-clientes">—</b></div>
+        <div class="tj" id="tj-tope"><small>En su tope</small><b id="r-tope">—</b></div>
+        <div class="tj" id="tj-viejo"><small>Más de 30 días</small><b id="r-viejo">—</b></div>
+      </div>
+
+      <div class="barra-busca">
+        <label class="campo">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="buscar" placeholder="Buscar cliente" autocomplete="off">
+        </label>
+      </div>
+
+      <div class="filtros" id="filtros">
+        <button class="fl activo" data-f="todos">Todos</button>
+        <button class="fl" data-f="viejo">Más de 30 días</button>
+        <button class="fl" data-f="tope">En su tope</button>
+        <button class="fl" data-f="monto">Deben más</button>
+      </div>
+
+      <div class="conteo" id="conteo"></div>
+      <div class="lista" id="lista"></div>
+    </div>
+  </div>
+</div>
+
+<!-- cajón del cliente -->
+<div class="form-velo oculto" id="form-velo">
+  <div class="cajon">
+    <div class="cajon-enc">
+      <h2 id="c-nombre">—<small id="c-tel"></small></h2>
+      <button class="cerrar-x" id="form-cerrar">✕</button>
+    </div>
+    <div class="cajon-cuerpo" id="c-cuerpo"></div>
+    <div class="cajon-pie">
+      <button class="btn secundario oculto" id="btn-limite">Límite</button>
+      <button class="btn secundario" id="form-cancelar">Cerrar</button>
+      <button class="btn principal-b" id="btn-abonar">Recibir abono</button>
+    </div>
+  </div>
+</div>
+
+<!-- hoja de abono -->
+<div class="velo oculto" id="velo-abono">
+  <div class="hoja">
+    <div id="paso-abono">
+      <h2>Recibir abono</h2>
+      <p class="sub" id="ab-sub">—</p>
+      <div class="rotulo">Forma de pago</div>
+      <div class="metodos" id="ab-metodos">
+        <button class="metodo activo" data-m="efectivo">Efectivo</button>
+        <button class="metodo" data-m="transferencia">Transfer.</button>
+        <button class="metodo" data-m="tarjeta">Tarjeta</button>
+      </div>
+      <div class="rotulo">Cuánto abona</div>
+      <input class="monto num" id="ab-monto" inputmode="decimal" value="0.00">
+      <div class="rapidos" id="ab-rapidos"></div>
+      <div id="ab-caja-caja" class="oculto">
+        <div class="rotulo">A qué caja entra el efectivo</div>
+        <select class="campo-txt" id="ab-caja"></select>
+      </div>
+      <div id="ab-ref-caja" class="oculto">
+        <div class="rotulo">Referencia</div>
+        <input class="campo-txt" id="ab-ref" placeholder="Número de transferencia o recibo">
+      </div>
+      <div class="aviso ojo oculto" id="ab-ojo"></div>
+      <div class="aviso malo oculto" id="ab-error"></div>
+      <div class="acciones" style="margin-top:16px">
+        <button class="btn secundario" id="ab-cancelar">Volver</button>
+        <button class="btn principal-b" id="ab-confirmar">Registrar abono</button>
+      </div>
+    </div>
+
+    <div id="paso-listo" class="oculto">
+      <div class="listo">
+        <div class="marca-ok">✓</div>
+        <h2 id="li-titulo">Abono registrado</h2>
+        <p class="doc" id="li-doc">—</p>
+        <p class="sub" id="li-aviso"></p>
+        <button class="btn principal-b" style="width:100%" id="li-listo">Listo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- límite de fiado, solo supervisor -->
+<div class="velo oculto" id="velo-limite">
+  <div class="hoja">
+    <h2>Límite de fiado</h2>
+    <p class="sub" id="lm-sub">—</p>
+    <div class="rotulo">Hasta cuánto se le fía</div>
+    <input class="monto num" id="lm-monto" inputmode="decimal" value="0.00">
+    <p class="sub" style="margin:10px 0 0">En 0 no se le fía nada. Queda apuntado
+      quién lo cambió.</p>
+    <div class="aviso ojo oculto" id="lm-ojo"></div>
+    <div class="aviso malo oculto" id="lm-error"></div>
+    <div class="acciones" style="margin-top:16px">
+      <button class="btn secundario" id="lm-cancelar">Volver</button>
+      <button class="btn principal-b" id="lm-guardar">Guardar límite</button>
+    </div>
+  </div>
+</div>
+
+<div class="velo oculto" id="velo"><div class="hoja" id="hoja"></div></div>
+
+<script type="module">
+const CFG = window.SUPABASE_CONFIG || {};
+const SUPABASE_URL = CFG.url || 'PEGUE_AQUI_LA_URL';
+const SUPABASE_KEY = CFG.key || 'PEGUE_AQUI_LA_LLAVE';
+
+const $ = s => document.querySelector(s);
+const ver = (id, si = true) => $(id).classList.toggle('oculto', !si);
+
+if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin configurar'); }
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { montarMenu, escapar, iniciales } from './menu.js';
+
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth:{ persistSession:true, autoRefreshToken:true }
+});
+
+const S = {
+  ctx:null, sucursal:null, moneda:'L', menu:null, nivel:0, usuarioId:null,
+  fiados:[], filtro:'todos', busqueda:'',
+  cliente:null, movimientos:[], turnos:[], turno:null,
+  metodo:'efectivo', monto:0
+};
+
+const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
+  {minimumFractionDigits:2, maximumFractionDigits:2});
+
+function limpiarError(e){
+  const m = (e?.message || String(e)).replace(/^.*?:\s*/, '');
+  if (/JWT|token/i.test(m)) return 'La sesión venció. Vuelva a entrar.';
+  if (/Failed to fetch|NetworkError/i.test(m)) return 'Sin conexión con el servidor';
+  return m;
+}
+
+function aviso(titulo, texto){
+  $('#hoja').innerHTML = `<h2>${escapar(titulo)}</h2>
+    <p class="sub">${escapar(texto)}</p>
+    <button class="btn principal-b" style="width:100%" id="ok">Entendido</button>`;
+  ver('#velo');
+  $('#ok').onclick = () => ver('#velo', false);
+}
+
+/* ================= sesión ================= */
+$('#s-entrar').addEventListener('click', async () => {
+  const b = $('#s-entrar');
+  $('#s-error').textContent = '';
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+  const { error } = await sb.auth.signInWithPassword({
+    email:$('#s-email').value.trim(), password:$('#s-clave').value });
+  b.disabled = false; b.textContent = 'Entrar';
+  if (error){ $('#s-error').textContent = 'Correo o contraseña incorrectos'; return; }
+  arrancar();
+});
+$('#s-clave').addEventListener('keydown', e => { if (e.key === 'Enter') $('#s-entrar').click(); });
+$('#bl-salir').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
+
+/* ================= arranque ================= */
+async function arrancar(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session){ ver('#p-sesion'); return; }
+  ver('#p-sesion', false);
+
+  const { data, error } = await sb.rpc('fn_pos_contexto');
+  if (error){
+    ver('#p-sesion');
+    $('#s-error').textContent = 'Su usuario no tiene perfil en ningún negocio';
+    await sb.auth.signOut();
+    return;
+  }
+  S.ctx = data;
+  S.nivel = data.usuario.nivel;
+  S.moneda = data.organizacion.moneda === 'HNL' ? 'L' : data.organizacion.moneda;
+
+  if (S.nivel < 1){
+    ver('#p-bloqueado');
+    $('#bl-titulo').textContent = 'Esta pantalla no es para su rol';
+    $('#bl-texto').textContent = 'El fiado lo maneja el personal de la tienda.';
+    return;
+  }
+
+  S.sucursal = data.sucursales[0]?.id || null;
+  S.usuarioId = data.usuario.id;
+  leerTurnos();
+  $('#h-usuario').textContent = data.usuario.nombre;
+  $('#h-sucursal').textContent = data.sucursales[0]?.nombre || '';
+  $('#app').classList.remove('oculto');
+
+  S.menu = montarMenu({
+    contenedor:'#menu', modulo:'fiado', ctx:S.ctx,
+    alSalir: async () => { await sb.auth.signOut(); location.reload(); }
+  });
+  $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
+
+  await cargar();
+}
+
+/* Los turnos abiertos vienen dentro de 'cajas'. Importa CUÁL, no que haya uno:
+   un abono en efectivo entra a una gaveta concreta y ese cajero responde por
+   ella en el arqueo. Por omisión se usa el turno del propio usuario. */
+function leerTurnos(){
+  S.turnos = (S.ctx.cajas || [])
+    .filter(c => c.turno_id)
+    .map(c => ({ turno_id:c.turno_id, caja:c.caja,
+                 cajero:c.cajero, cajero_id:c.cajero_id }));
+  const mio = S.turnos.find(t => t.cajero_id === S.usuarioId);
+  S.turno = mio ? mio.turno_id : (S.turnos.length === 1 ? S.turnos[0].turno_id : null);
+}
+
+async function cargar(){
+  const [fi, re] = await Promise.all([
+    sb.from('v_fiado').select('*').order('debe', { ascending:false }),
+    sb.rpc('fn_fiado_resumen')
+  ]);
+
+  if (fi.error){ aviso('No se pudo leer el fiado', limpiarError(fi.error)); return; }
+  S.fiados = fi.data || [];
+  pintarResumen(re.data || {});
+  pintar();
+}
+
+function pintarResumen(r){
+  $('#r-total').textContent    = money(r.total || 0);
+  $('#r-clientes').textContent = r.clientes || 0;
+  $('#r-tope').textContent     = r.al_tope || 0;
+  $('#r-viejo').textContent    = money(r.monto_mas_30 || 0);
+  $('#tj-tope').classList.toggle('alerta', (r.al_tope || 0) > 0);
+  $('#tj-viejo').classList.toggle('malo', (r.mas_30_dias || 0) > 0);
+}
+
+/* ================= lista ================= */
+function visibles(){
+  let l = S.fiados;
+  const q = S.busqueda.trim().toLowerCase();
+  if (q) l = l.filter(f =>
+    (f.cliente || '').toLowerCase().includes(q) ||
+    (f.telefono || '').toLowerCase().includes(q));
+
+  if (S.filtro === 'viejo') l = l.filter(f => (f.dias ?? 0) > 30);
+  if (S.filtro === 'tope')  l = l.filter(f => f.tope_alcanzado);
+
+  l = [...l];
+  if (S.filtro === 'monto')      l.sort((a,b) => Number(b.debe) - Number(a.debe));
+  else if (S.filtro === 'viejo') l.sort((a,b) => (b.dias ?? 0) - (a.dias ?? 0));
+  return l;
+}
+
+function pintar(){
+  const l = visibles();
+  const suma = l.reduce((s,f) => s + Number(f.debe || 0), 0);
+  $('#conteo').textContent = l.length
+    ? `${l.length} cliente${l.length === 1 ? '' : 's'} · ${money(suma)}`
+    : '';
+
+  if (!l.length){
+    $('#lista').innerHTML = S.fiados.length
+      ? `<div class="vacio"><b>Nada con ese filtro</b>Pruebe con otro.</div>`
+      : `<div class="vacio"><b>Nadie le debe</b>Cuando fíe en la caja, aquí aparece quién y cuánto.</div>`;
+    return;
+  }
+
+  $('#lista').innerHTML = l.map(f => {
+    const dias = f.dias ?? null;
+    const marca = f.tope_alcanzado ? '<span class="insignia tope">En su tope</span>'
+      : (dias !== null && dias > 30) ? `<span class="insignia viejo">${dias} días</span>`
+      : (dias !== null && dias > 0)  ? `<span class="insignia bien">${dias} día${dias===1?'':'s'}</span>`
+      : '';
+    const ultimo = f.ultimo_abono
+      ? 'Último abono ' + new Date(f.ultimo_abono).toLocaleDateString('es-HN',
+          { day:'numeric', month:'short' })
+      : 'Sin abonos todavía';
+    return `
+      <button class="fila" data-id="${f.cliente_id}">
+        <span class="fila-ini">${escapar(iniciales(f.cliente))}</span>
+        <span class="fila-txt">
+          <b>${escapar(f.cliente)}</b>
+          <small>${escapar(f.telefono || 'sin teléfono')} · ${escapar(ultimo)}
+            · ${f.compras_credito} compra${f.compras_credito === 1 ? '' : 's'} al crédito</small>
+        </span>
+        <span class="fila-fin">
+          <b>${money(f.debe)}</b>
+          ${marca || `<small style="font-size:11.5px;color:var(--tenue)">de ${money(f.limite)}</small>`}
+        </span>
+      </button>`;
+  }).join('');
+}
+
+$('#buscar').addEventListener('input', e => { S.busqueda = e.target.value; pintar(); });
+$('#filtros').addEventListener('click', e => {
+  const b = e.target.closest('.fl'); if (!b) return;
+  S.filtro = b.dataset.f;
+  document.querySelectorAll('.fl').forEach(x => x.classList.toggle('activo', x === b));
+  pintar();
+});
+$('#lista').addEventListener('click', e => {
+  const f = e.target.closest('.fila'); if (!f) return;
+  abrirCliente(f.dataset.id);
+});
+
+/* ================= cajón del cliente ================= */
+async function abrirCliente(id){
+  const f = S.fiados.find(x => x.cliente_id === id);
+  if (!f) return;
+  S.cliente = f;
+
+  $('#c-nombre').innerHTML =
+    escapar(f.cliente) + `<small>${escapar(f.telefono || 'sin teléfono')}</small>`;
+  $('#c-cuerpo').innerHTML = '<div class="vacio"><span class="girando"></span></div>';
+  ver('#btn-limite', S.nivel >= 2);
+  ver('#form-velo');
+
+  const { data, error } = await sb.rpc('fn_estado_cuenta', { p_cliente_id:id });
+  S.movimientos = error ? [] : (data || []);
+  pintarCliente(error);
+}
+
+function pintarCliente(error){
+  const f = S.cliente, dias = f.dias ?? null;
+  const puedeAnular = S.nivel >= 2;
+
+  const movs = S.movimientos.length
+    ? [...S.movimientos].reverse().map(m => {
+        const esAbono = m.tipo === 'abono';
+        const fecha = new Date(m.fecha).toLocaleDateString('es-HN',
+          { day:'numeric', month:'short', year:'numeric' });
+        return `
+          <div class="mov">
+            <span class="mov-ico ${esAbono ? 'abono' : 'cargo'}">${esAbono ? '↓' : '↑'}</span>
+            <span class="mov-txt">
+              <b>${esAbono ? 'Abono' : 'Compra ' + escapar(m.documento)}</b>
+              <small>${fecha} · ${escapar(m.detalle || '')}</small>
+            </span>
+            <span class="mov-monto ${esAbono ? 'abono' : 'cargo'}">
+              ${esAbono ? '−' : '+'} ${money(esAbono ? m.abono : m.cargo)}</span>
+          </div>`;
+      }).join('')
+    : `<p class="sub" style="margin:0">${error
+        ? 'No se pudo leer el movimiento' : 'Sin movimientos registrados'}</p>`;
+
+  $('#c-cuerpo').innerHTML = `
+    <div class="deuda">
+      <small>DEBE</small>
+      <b>${money(f.debe)}</b>
+      <div class="deuda-pie">
+        <span>Límite <b>${money(f.limite)}</b></span>
+        <span>Puede fiar <b>${money(f.disponible)}</b></span>
+        ${dias !== null ? `<span>Desde hace <b>${dias} día${dias===1?'':'s'}</b></span>` : ''}
+      </div>
+    </div>
+
+    ${f.tope_alcanzado ? `<div class="aviso ojo">Llegó a su límite. No se le puede fiar
+      más hasta que abone.</div>` : ''}
+    ${(dias !== null && dias > 30) ? `<div class="aviso malo">Esta deuda tiene ${dias} días.
+      Conviene cobrarla antes de seguir fiando.</div>` : ''}
+
+    <div class="rotulo">Movimiento de la cuenta</div>
+    ${movs}
+    ${puedeAnular && S.movimientos.some(m => m.tipo === 'abono')
+      ? `<p class="ayuda" style="margin-top:12px;font-size:12px;color:var(--tenue)">
+          Para anular un abono mal registrado, búsquelo en el historial de abonos.</p>` : ''}`;
+}
+
+/* ================= límite de fiado ================= */
+$('#btn-limite').addEventListener('click', () => {
+  const f = S.cliente; if (!f) return;
+  $('#lm-sub').textContent = f.cliente + ' debe ' + money(f.debe);
+  $('#lm-monto').value = Number(f.limite || 0).toFixed(2);
+  ver('#lm-error', false);
+  avisarLimite();
+  ver('#velo-limite');
+});
+
+/* Bajar el límite por debajo de lo que ya debe es válido -deja de fiarsele-
+   pero conviene decirlo antes de guardar. */
+function avisarLimite(){
+  const nuevo = parseFloat($('#lm-monto').value.replace(/[^0-9.]/g,'')) || 0;
+  const debe = Number(S.cliente.debe) || 0;
+  const bajo = nuevo < debe;
+  ver('#lm-ojo', bajo);
+  if (bajo) $('#lm-ojo').textContent = nuevo === 0
+    ? 'Con el límite en 0 ya no se le fía nada, pero sigue debiendo '
+      + money(debe) + '. La deuda no se borra.'
+    : 'El límite queda por debajo de lo que debe. No se le podrá fiar hasta '
+      + 'que abone ' + money(debe - nuevo) + '.';
+}
+$('#lm-monto').addEventListener('input', avisarLimite);
+$('#lm-cancelar').addEventListener('click', () => ver('#velo-limite', false));
+
+$('#lm-guardar').addEventListener('click', async () => {
+  const b = $('#lm-guardar');
+  const nuevo = parseFloat($('#lm-monto').value.replace(/[^0-9.]/g,'')) || 0;
+  ver('#lm-error', false);
+  if (nuevo < 0){
+    $('#lm-error').textContent = 'El límite no puede ser negativo'; ver('#lm-error'); return;
+  }
+
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+  const { error } = await sb.rpc('fn_fijar_limite_credito',
+    { p_cliente_id:S.cliente.cliente_id, p_limite:Number(nuevo.toFixed(2)) });
+  b.disabled = false; b.textContent = 'Guardar límite';
+
+  if (error){ $('#lm-error').textContent = limpiarError(error); ver('#lm-error'); return; }
+
+  ver('#velo-limite', false);
+  ver('#form-velo', false);
+  await cargar();
+});
+$('#velo-limite').addEventListener('click', e => {
+  if (e.target.id === 'velo-limite') ver('#velo-limite', false);
+});
+
+$('#form-cerrar').addEventListener('click', () => ver('#form-velo', false));
+$('#form-cancelar').addEventListener('click', () => ver('#form-velo', false));
+$('#form-velo').addEventListener('click', e => {
+  if (e.target.id === 'form-velo') ver('#form-velo', false);
+});
+
+/* ================= abono ================= */
+$('#btn-abonar').addEventListener('click', () => {
+  const f = S.cliente; if (!f) return;
+  S.metodo = 'efectivo'; S.monto = 0;
+  $('#ab-sub').textContent = f.cliente + ' debe ' + money(f.debe);
+  $('#ab-monto').value = '0.00';
+  $('#ab-ref').value = '';
+  document.querySelectorAll('#ab-metodos .metodo').forEach(m =>
+    m.classList.toggle('activo', m.dataset.m === 'efectivo'));
+  ver('#ab-ref-caja', false);
+  ver('#ab-error', false);
+  pintarRapidos();
+  avisarTurno();
+  ver('#paso-abono'); ver('#paso-listo', false);
+  ver('#velo-abono');
+});
+
+function pintarRapidos(){
+  const d = Number(S.cliente.debe);
+  const base = [d, Math.min(d, 100), Math.min(d, 50)]
+    .map(n => Math.round(n * 100) / 100)
+    .filter(n => n > 0);
+  const unicos = [...new Set(base)];
+  $('#ab-rapidos').innerHTML = unicos.map(n =>
+    `<button class="rapido" data-r="${n}">${n === Math.round(d*100)/100
+      ? 'Todo' : money(n)}</button>`).join('');
+}
+
+/* Un abono en efectivo entra a la gaveta, así que el servidor exige un turno
+   abierto. Sin turno se avisa antes de que el cliente entregue el dinero. */
+function avisarTurno(){
+  const efectivo = S.metodo === 'efectivo';
+  const varias = efectivo && S.turnos.length > 1;
+
+  ver('#ab-caja-caja', varias);
+  if (varias){
+    const s = $('#ab-caja');
+    s.innerHTML = S.turnos.map(t =>
+      `<option value="${t.turno_id}">${escapar(t.caja)} · ${escapar(t.cajero)}</option>`).join('');
+    s.value = S.turno || S.turnos[0].turno_id;
+    S.turno = s.value;
+  }
+
+  const falta = efectivo && !S.turnos.length;
+  ver('#ab-ojo', falta);
+  if (falta) $('#ab-ojo').textContent =
+    'No hay ninguna caja abierta. Para recibir efectivo abra la caja primero, ' +
+    'o registre el abono como transferencia si el cliente lo depositó.';
+
+  $('#ab-confirmar').disabled = falta || S.monto <= 0;
+}
+
+$('#ab-caja').addEventListener('change', e => { S.turno = e.target.value; });
+
+$('#ab-metodos').addEventListener('click', e => {
+  const b = e.target.closest('.metodo'); if (!b) return;
+  S.metodo = b.dataset.m;
+  document.querySelectorAll('#ab-metodos .metodo').forEach(m =>
+    m.classList.toggle('activo', m === b));
+  ver('#ab-ref-caja', S.metodo !== 'efectivo');
+  avisarTurno();
+});
+$('#ab-rapidos').addEventListener('click', e => {
+  const b = e.target.closest('.rapido'); if (!b) return;
+  S.monto = +b.dataset.r;
+  $('#ab-monto').value = S.monto.toFixed(2);
+  avisarTurno();
+});
+$('#ab-monto').addEventListener('input', e => {
+  S.monto = parseFloat(e.target.value.replace(/[^0-9.]/g,'')) || 0;
+  avisarTurno();
+});
+$('#ab-cancelar').addEventListener('click', () => ver('#velo-abono', false));
+
+$('#ab-confirmar').addEventListener('click', async () => {
+  const b = $('#ab-confirmar');
+  ver('#ab-error', false);
+
+  if (S.monto <= 0){
+    $('#ab-error').textContent = 'Ponga cuánto está abonando'; ver('#ab-error'); return;
+  }
+  if (S.monto > Number(S.cliente.debe) + 0.001){
+    $('#ab-error').textContent = 'No puede abonar más de lo que debe ('
+      + money(S.cliente.debe) + ')';
+    ver('#ab-error'); return;
+  }
+
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+  const { data, error } = await sb.rpc('fn_registrar_abono', {
+    p_cliente_id:S.cliente.cliente_id,
+    p_monto:Number(S.monto.toFixed(2)),
+    p_metodo:S.metodo,
+    p_turno_id:S.metodo === 'efectivo' ? S.turno : null,
+    p_referencia:$('#ab-ref').value.trim() || null
+  });
+  b.disabled = false; b.textContent = 'Registrar abono';
+
+  if (error){
+    $('#ab-error').textContent = limpiarError(error); ver('#ab-error'); return;
+  }
+
+  $('#li-titulo').textContent = data.queda_libre
+    ? 'Quedó al día' : 'Abono registrado';
+  $('#li-doc').textContent = data.cliente + ' abonó ' + money(data.abonado);
+  $('#li-aviso').textContent = data.queda_libre
+    ? 'Ya no debe nada. Puede volver a fiarle hasta su límite.'
+    : 'Le queda debiendo ' + money(data.saldo_nuevo) + '.';
+  ver('#paso-abono', false); ver('#paso-listo');
+});
+
+$('#li-listo').addEventListener('click', async () => {
+  ver('#velo-abono', false);
+  ver('#form-velo', false);
+  await cargar();
+});
+
+$('#velo').addEventListener('click', e => { if (e.target.id === 'velo') ver('#velo', false); });
+
+/* ================= service worker ================= */
+if ('serviceWorker' in navigator)
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+arrancar();
+</script>
+</body>
+</html>

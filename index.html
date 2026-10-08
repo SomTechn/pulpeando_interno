@@ -68,7 +68,33 @@
 }
 .cliente i{width:26px;height:26px;border-radius:50%;background:var(--azul);color:#fff;
   display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:800}
-.cliente span{margin-left:auto;font-size:20px;line-height:1;color:#A6B2C4}
+.cliente #cl-flecha{margin-left:auto;font-size:20px;line-height:1;color:#A6B2C4}
+.cliente .cl-txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  text-align:left}
+.cliente .cl-txt small{display:block;font-size:11.5px;font-weight:600;color:var(--tenue);
+  margin-top:1px}
+.cliente.puesto{background:var(--azul-suave);color:var(--azul)}
+.cliente.puesto .cl-txt small{color:#3B6FD4}
+.cliente.debe{background:#FFF4E0;color:#8A5A00}
+.cliente.debe .cl-txt small{color:#8A5A00}
+.cliente.debe i{background:var(--ambar);color:#4A3500}
+
+/* buscador de clientes */
+.cl-busca{margin-bottom:12px}
+.cl-lista{max-height:46vh;overflow-y:auto;margin:0 -4px}
+.cl-fila{display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+  padding:11px 10px;border-radius:var(--r-sm)}
+.cl-fila:hover{background:var(--fondo)}
+.cl-fila-ini{width:34px;height:34px;border-radius:10px;flex:0 0 auto;display:grid;
+  place-items:center;background:var(--fondo);font-weight:800;font-size:13px;color:#8A99B3}
+.cl-fila-txt{flex:1;min-width:0}
+.cl-fila-txt b{display:block;font-size:14px;font-weight:600}
+.cl-fila-txt small{display:block;font-size:12px;color:var(--tenue);margin-top:1px}
+.cl-fila-fin{font-family:var(--num);font-size:13px;font-weight:700;flex:0 0 auto;text-align:right}
+.cl-fila-fin small{display:block;font-family:var(--ui);font-size:10.5px;font-weight:700;
+  color:var(--tenue)}
+.cl-deuda{color:var(--ambar)}
+.cl-tope{color:var(--rojo)}
 .lineas{flex:1;overflow-y:auto;padding:6px 16px}
 .lineas-enc{
   display:grid;grid-template-columns:1fr 96px 84px;gap:8px;padding:10px 0 8px;
@@ -111,6 +137,8 @@
 .a-cobrar small{font-size:12px;color:var(--claro);font-weight:600}
 .a-cobrar b{font-family:var(--num);font-size:28px;font-weight:700}
 .metodos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.metodos:has(#metodo-fiado:not(.oculto)){grid-template-columns:repeat(4,1fr)}
+.metodo[data-m="credito"].activo{border-color:var(--ambar);background:#FFF4E0;color:#8A5A00}
 .metodo{padding:13px 6px;border-radius:var(--r-sm);border:1.5px solid var(--linea);
   font-size:12.5px;font-weight:700;color:var(--tenue);text-align:center}
 .metodo.activo{border-color:var(--azul);background:var(--azul-suave);color:var(--azul)}
@@ -135,14 +163,7 @@
   border-radius:50%;background:#fff;transition:.2s}
 .switch.on{background:var(--azul)}
 .switch.on::after{transform:translateX(19px)}
-.listo{text-align:center}
-.marca-ok{width:66px;height:66px;border-radius:50%;background:#E7F7EE;color:var(--verde);
-  display:grid;place-items:center;margin:0 auto 16px;font-size:32px;
-  animation:brincar .45s cubic-bezier(.2,1.4,.4,1)}
-.marca-ok.espera{background:#FFF4E0;color:#8A5A00}
-@keyframes brincar{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
-.listo h2{font-size:20px;margin-bottom:6px}
-.listo .doc{font-family:var(--num);font-size:13px;color:var(--tenue);margin-bottom:18px}
+/* .listo, .marca-ok y .doc viven en ui.css: los comparte la pantalla de fiado */
 .entregar{background:var(--ambar);border-radius:var(--r-md);padding:16px;margin-bottom:16px}
 .entregar small{display:block;font-size:12px;font-weight:800;color:#5C4200;
   text-transform:uppercase;margin-bottom:3px}
@@ -290,7 +311,11 @@
       <aside class="ticket" id="ticket">
         <div class="ticket-top">
           <button class="cerrar-ticket" id="cerrar-ticket">✕</button>
-          <button class="cliente" id="btn-cliente"><i>+</i> Cliente sin registrar <span>›</span></button>
+          <button class="cliente" id="btn-cliente">
+            <i id="cl-ini">+</i>
+            <span class="cl-txt" id="cl-txt">Cliente sin registrar</span>
+            <span id="cl-flecha">›</span>
+          </button>
         </div>
         <div class="lineas" id="lineas"></div>
         <div class="totales">
@@ -329,7 +354,9 @@
         <button class="metodo activo" data-m="efectivo">Efectivo</button>
         <button class="metodo" data-m="tarjeta">Tarjeta</button>
         <button class="metodo" data-m="transferencia">Transfer.</button>
+        <button class="metodo oculto" data-m="credito" id="metodo-fiado">Fiado</button>
       </div>
+      <div class="aviso ojo oculto" id="cobro-fiado"></div>
       <div id="bloque-efectivo">
         <div class="rotulo">Recibe</div>
         <input class="recibido num" id="recibido" inputmode="decimal" value="0.00">
@@ -354,6 +381,24 @@
         <p class="sub" id="listo-aviso"></p>
         <button class="btn principal-b" style="width:100%" id="btn-terminar">Listo</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= ELEGIR CLIENTE ================= -->
+<div class="velo oculto" id="velo-cliente">
+  <div class="hoja">
+    <h2>¿Para quién es la venta?</h2>
+    <p class="sub">Hace falta solo si va a fiar o si quiere el historial del cliente.</p>
+    <label class="campo cl-busca">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="cl-buscar" placeholder="Nombre o teléfono" autocomplete="off">
+    </label>
+    <div class="cl-lista" id="cl-lista"></div>
+    <div class="acciones" style="margin-top:14px">
+      <button class="btn secundario" id="cl-quitar">Sin cliente</button>
+      <button class="btn secundario" id="cl-cerrar">Cerrar</button>
     </div>
   </div>
 </div>
@@ -396,6 +441,7 @@ const S = {
   ctx:null, sucursal:null, caja:null, turno:null, cajero:null, menu:null,
   desbloqueo:null, catalogo:[], categorias:[], ticket:[],
   categoria:'todas', busqueda:'', metodo:'efectivo', fiscal:false, recibido:0,
+  cliente:null, clientes:[], clientesLeidos:false, buscaCliente:'',
   ventas:0, acumulado:0, pin:'', moneda:'L', enLinea:navigator.onLine
 };
 
@@ -451,8 +497,26 @@ function pintarRed(){
   p.className = 'pill ' + (S.enLinea ? 'online' : 'offline');
   p.textContent = S.enLinea ? 'En línea' : 'Sin internet';
 }
-window.addEventListener('online',  async () => { S.enLinea = true; pintarRed(); await revisarCola(); });
-window.addEventListener('offline', () => { S.enLinea = false; pintarRed(); });
+window.addEventListener('online',  async () => {
+  S.enLinea = true; pintarRed(); refrescarCobro(); await revisarCola();
+});
+window.addEventListener('offline', () => { S.enLinea = false; pintarRed(); refrescarCobro(); });
+
+/* Si la señal cambia con la hoja de cobro abierta, el fiado aparece o se
+   esconde ahí mismo: sin internet no hay forma de verificar el límite. */
+function refrescarCobro(){
+  if ($('#velo-cobro').classList.contains('oculto')) return;
+  if ($('#paso-cobro').classList.contains('oculto')) return;
+  const t = totales();
+  if (!S.enLinea && S.metodo === 'credito'){
+    S.metodo = 'efectivo';
+    document.querySelectorAll('.metodo').forEach(m =>
+      m.classList.toggle('activo', m.dataset.m === 'efectivo'));
+    ver('#bloque-efectivo');
+  }
+  pintarFiado(t.total);
+  pintarCambio();
+}
 
 /* ================= sesión ================= */
 $('#s-entrar').addEventListener('click', async () => {
@@ -833,6 +897,114 @@ async function cerrarTurno(){
   location.reload();
 }
 
+/* ================= cliente ================= */
+$('#btn-cliente').addEventListener('click', async () => {
+  $('#cl-buscar').value = S.buscaCliente = '';
+  ver('#velo-cliente');
+  if (!S.clientesLeidos) await leerClientes();
+  pintarClientes();
+  $('#cl-buscar').focus();
+});
+
+async function leerClientes(){
+  $('#cl-lista').innerHTML =
+    '<div style="text-align:center;padding:26px"><span class="girando"></span></div>';
+  const { data, error } = await sb.from('clientes')
+    .select('id,nombre,telefono,saldo,limite_credito,activo')
+    .eq('activo', true)
+    .order('nombre')
+    .limit(500);
+  if (error){
+    $('#cl-lista').innerHTML =
+      `<p class="sub" style="margin:0">${escapar(limpiarError(error))}</p>`;
+    return;
+  }
+  S.clientes = data || [];
+  S.clientesLeidos = true;
+}
+
+function pintarClientes(){
+  if (!S.clientesLeidos) return;
+  const q = S.buscaCliente.trim().toLowerCase();
+  const l = (q
+    ? S.clientes.filter(c => (c.nombre||'').toLowerCase().includes(q) ||
+                             (c.telefono||'').toLowerCase().includes(q))
+    : S.clientes).slice(0, 60);
+
+  if (!l.length){
+    $('#cl-lista').innerHTML = `<p class="sub" style="margin:0">${S.clientes.length
+      ? 'Ningún cliente con ese nombre'
+      : 'Todavía no hay clientes. Se dan de alta en Catálogos.'}</p>`;
+    return;
+  }
+
+  $('#cl-lista').innerHTML = l.map(c => {
+    const debe = Number(c.saldo) || 0;
+    const lim  = Number(c.limite_credito) || 0;
+    const libre = Math.max(lim - debe, 0);
+    const fin = lim <= 0
+      ? '<small>sin fiado</small>'
+      : debe <= 0
+        ? `<span>${money(libre)}</span><small>PUEDE FIAR</small>`
+        : `<span class="${libre <= 0 ? 'cl-tope' : 'cl-deuda'}">${money(debe)}</span>
+           <small>${libre <= 0 ? 'EN SU TOPE' : 'DEBE'}</small>`;
+    return `
+      <button class="cl-fila" data-id="${c.id}">
+        <span class="cl-fila-ini">${escapar(iniciales(c.nombre))}</span>
+        <span class="cl-fila-txt">
+          <b>${escapar(c.nombre)}</b>
+          <small>${escapar(c.telefono || 'sin teléfono')}</small>
+        </span>
+        <span class="cl-fila-fin">${fin}</span>
+      </button>`;
+  }).join('');
+}
+
+$('#cl-buscar').addEventListener('input', e => {
+  S.buscaCliente = e.target.value; pintarClientes();
+});
+$('#cl-lista').addEventListener('click', e => {
+  const f = e.target.closest('.cl-fila'); if (!f) return;
+  S.cliente = S.clientes.find(c => c.id === f.dataset.id) || null;
+  pintarCliente();
+  ver('#velo-cliente', false);
+});
+$('#cl-quitar').addEventListener('click', () => {
+  S.cliente = null; pintarCliente(); ver('#velo-cliente', false);
+});
+$('#cl-cerrar').addEventListener('click', () => ver('#velo-cliente', false));
+$('#velo-cliente').addEventListener('click', e => {
+  if (e.target.id === 'velo-cliente') ver('#velo-cliente', false);
+});
+
+function pintarCliente(){
+  const b = $('#btn-cliente'), c = S.cliente;
+  b.classList.remove('puesto', 'debe');
+  if (!c){
+    $('#cl-ini').textContent = '+';
+    $('#cl-txt').textContent = 'Cliente sin registrar';
+    return;
+  }
+  const debe = Number(c.saldo) || 0;
+  const lim  = Number(c.limite_credito) || 0;
+  b.classList.add(debe > 0 ? 'debe' : 'puesto');
+  $('#cl-ini').textContent = iniciales(c.nombre);
+  $('#cl-txt').innerHTML = escapar(c.nombre) + '<small>' + (
+    lim <= 0 ? 'No se le fía'
+    : debe > 0 ? 'Debe ' + money(debe) + ' · puede fiar ' + money(Math.max(lim-debe,0))
+    : 'Puede fiar hasta ' + money(lim)
+  ) + '</small>';
+}
+
+/* Lo que el cliente puede fiar ahora mismo. El servidor manda, esto solo
+   evita que el cajero intente un fiado que va a rebotar. */
+function fiadoDisponible(){
+  const c = S.cliente; if (!c) return 0;
+  const lim = Number(c.limite_credito) || 0;
+  if (lim <= 0) return 0;
+  return Math.max(lim - (Number(c.saldo) || 0), 0);
+}
+
 /* ================= cobro ================= */
 $('#btn-cobrar').addEventListener('click', () => {
   if (!S.ticket.length) return;
@@ -844,11 +1016,37 @@ $('#btn-cobrar').addEventListener('click', () => {
   $('#recibido').value = '0.00';
   $('#sw-fiscal').classList.remove('on');
   document.querySelectorAll('.metodo').forEach(m => m.classList.toggle('activo', m.dataset.m === 'efectivo'));
+  pintarFiado(t.total);
   ver('#bloque-efectivo'); ver('#cobro-error', false);
   pintarRapidos(t.total); pintarCambio();
   ver('#paso-cobro'); ver('#paso-listo', false);
   ver('#velo-cobro');
 });
+
+/* El botón de fiado solo aparece cuando de verdad se puede fiar esta venta:
+   con cliente, con límite, con cupo suficiente y con internet (el límite se
+   verifica en el servidor, y sin conexión no hay cómo verificarlo). */
+function pintarFiado(total){
+  const c = S.cliente, libre = fiadoDisponible();
+  const alcanza = libre >= total - 0.001;
+  const puede = !!c && libre > 0 && alcanza && S.enLinea;
+
+  ver('#metodo-fiado', puede);
+
+  let nota = '';
+  if (!c)                        nota = '';
+  else if (!S.enLinea)           nota = 'Sin internet no se puede fiar: el límite de ' +
+                                        c.nombre + ' se verifica en el servidor.';
+  else if (libre <= 0 && (Number(c.limite_credito)||0) <= 0)
+                                 nota = 'A ' + c.nombre + ' no se le fía. Asígnele un límite ' +
+                                        'de crédito en Catálogos para poder fiarle.';
+  else if (libre <= 0)           nota = c.nombre + ' ya llegó a su límite. Debe ' +
+                                        money(c.saldo) + ' y tiene que abonar antes de fiar.';
+  else if (!alcanza)             nota = c.nombre + ' solo puede fiar ' + money(libre) +
+                                        ' y esta venta es de ' + money(total) + '.';
+  ver('#cobro-fiado', !!nota);
+  if (nota) $('#cobro-fiado').textContent = nota;
+}
 function pintarRapidos(total){
   const base = [total, Math.ceil(total/50)*50, Math.ceil(total/100)*100, Math.ceil(total/500)*500];
   const unicos = [...new Set(base.map(n => Math.round(n)))].slice(0,4);
@@ -857,6 +1055,13 @@ function pintarRapidos(total){
 }
 function pintarCambio(){
   const t = totales(), c = $('#cambio-caja');
+  if (S.metodo === 'credito'){
+    c.classList.remove('falta');
+    c.querySelector('span').textContent = 'Queda fiado a ' + (S.cliente?.nombre || '');
+    $('#cambio').textContent = money(t.total);
+    $('#confirmar-cobro').disabled = false;
+    return;
+  }
   if (S.metodo !== 'efectivo'){
     c.classList.remove('falta');
     c.querySelector('span').textContent = 'Pago con ' + S.metodo;
@@ -894,13 +1099,27 @@ $('#confirmar-cobro').addEventListener('click', async () => {
   const items = S.ticket.map(l => ({ producto_id:l.producto_id, cantidad:l.cantidad }));
   const pagos = [{ metodo:S.metodo, monto:Number(t.total.toFixed(2)),
                    recibido:S.metodo === 'efectivo' ? S.recibido : null }];
+  const clienteId = S.cliente?.id || null;
 
   ver('#cobro-error', false);
+
+  // Un fiado necesita verificar el límite contra el servidor: no se encola.
+  if (S.metodo === 'credito' && !S.enLinea){
+    $('#cobro-error').textContent =
+      'Se cayó el internet. Cobre de otra forma o espere a que vuelva la señal.';
+    ver('#cobro-error');
+    S.metodo = 'efectivo';
+    document.querySelectorAll('.metodo').forEach(m =>
+      m.classList.toggle('activo', m.dataset.m === 'efectivo'));
+    ver('#bloque-efectivo'); pintarFiado(t.total); pintarCambio();
+    return;
+  }
+
   b.disabled = true; b.innerHTML = '<span class="girando"></span>';
 
   if (!S.enLinea){
     await DB.encolar({ items, pagos, fiscal:S.fiscal, sucursal:S.sucursal,
-                       turno:S.turno, creada:new Date().toISOString() });
+                       turno:S.turno, cliente:clienteId, creada:new Date().toISOString() });
     descontarLocal();
     mostrarListo({ offline:true, cambio:Math.max(S.recibido - t.total, 0) });
     b.disabled = false; b.textContent = 'Confirmar cobro';
@@ -909,7 +1128,7 @@ $('#confirmar-cobro').addEventListener('click', async () => {
 
   const { data, error } = await sb.rpc('fn_registrar_venta', {
     p_desbloqueo_id:S.desbloqueo, p_items:items, p_pagos:pagos,
-    p_cliente_id:null, p_fiscal:S.fiscal });
+    p_cliente_id:clienteId, p_fiscal:S.fiscal });
   b.disabled = false; b.textContent = 'Confirmar cobro';
 
   if (error){
@@ -924,8 +1143,18 @@ $('#confirmar-cobro').addEventListener('click', async () => {
   S.ventas++; S.acumulado += Number(data.total);
   $('#h-ventas').textContent = S.ventas + ' venta' + (S.ventas===1?'':'s') + ' · ' + money(S.acumulado);
   descontarLocal();
+
+  // Lo que quedó fiado ya subió el saldo del cliente: hay que reflejarlo aquí
+  // o el próximo fiado se calcularía con el saldo viejo.
+  const fiado = Number(data.fiado) || 0;
+  if (fiado > 0 && S.cliente){
+    S.cliente.saldo = (Number(S.cliente.saldo) || 0) + fiado;
+    const i = S.clientes.findIndex(c => c.id === S.cliente.id);
+    if (i >= 0) S.clientes[i] = { ...S.clientes[i], saldo:S.cliente.saldo };
+  }
+
   mostrarListo({ documento:data.documento, numero:data.numero_fiscal || data.numero,
-                 cambio:Number(data.cambio) });
+                 cambio:Number(data.cambio), fiado, cliente:S.cliente?.nombre });
 });
 
 function descontarLocal(){
@@ -935,22 +1164,27 @@ function descontarLocal(){
   });
 }
 
-function mostrarListo({ documento, numero, cambio, offline }){
+function mostrarListo({ documento, numero, cambio, offline, fiado, cliente }){
   $('#listo-icono').textContent = offline ? '⏳' : '✓';
   $('#listo-icono').classList.toggle('espera', !!offline);
   $('#listo-titulo').textContent = offline ? 'Venta guardada sin internet'
+    : fiado > 0 ? 'Venta fiada'
     : (documento === 'factura' ? 'Factura emitida' : 'Venta registrada');
   $('#listo-doc').textContent = offline ? 'Se enviará al recuperar la señal' : numero;
   ver('#caja-entregar', cambio > 0);
   $('#listo-cambio').textContent = money(cambio);
   $('#listo-aviso').textContent = offline
     ? 'El inventario se descargará cuando la venta se envíe. La caja se bloqueó.'
-    : 'La caja se bloqueó. Para la siguiente venta hay que digitar el PIN otra vez.';
+    : fiado > 0
+      ? (cliente || 'El cliente') + ' quedó debiendo ' + money(fiado) +
+        '. Se le puede cobrar desde Fiado. La caja se bloqueó.'
+      : 'La caja se bloqueó. Para la siguiente venta hay que digitar el PIN otra vez.';
   ver('#paso-cobro', false); ver('#paso-listo');
 }
 
 $('#btn-terminar').addEventListener('click', async () => {
   S.ticket = [];
+  S.cliente = null; pintarCliente();
   ver('#velo-cobro', false);
   $('#ticket').classList.remove('abierto');
   pintar();
@@ -985,7 +1219,7 @@ $('#sync-enviar').addEventListener('click', async () => {
     if (e1){ fallo = limpiarError(e1); break; }
     const { error:e2 } = await sb.rpc('fn_registrar_venta', {
       p_desbloqueo_id:desb, p_items:v.items, p_pagos:v.pagos,
-      p_cliente_id:null, p_fiscal:v.fiscal });
+      p_cliente_id:v.cliente || null, p_fiscal:v.fiscal });
     if (e2){ fallo = limpiarError(e2); break; }
     await DB.borrar(v.id);
     enviadas++;

@@ -204,7 +204,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth:{ persistSession:true, autoRefreshToken:true }
 });
 
-const S = { ctx:null, sucursal:null, moneda:'L', menu:null,
+const S = { ctx:null, sucursal:null, moneda:'L', menu:null, nivel:0,
             entidad:null, filas:[], busqueda:'', editando:null, aux:{} };
 
 const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
@@ -330,8 +330,9 @@ const ENTIDADES = {
       { k:'email', e:'Correo', tipo:'email' },
       { k:'direccion', e:'Dirección', tipo:'texto', ancho:true },
       { k:'identificacion_fiscal', e:'RTN', tipo:'texto' },
-      { k:'limite_credito', e:'Límite de fiado', tipo:'decimal', def:0,
-        ayuda:'Cuánto le puede fiar como máximo.' },
+      { k:'limite_credito', e:'Límite de fiado', tipo:'decimal', def:0, nivel:2,
+        ayuda:'Cuánto le puede fiar como máximo. En 0 no se le fía.',
+        ayudaBloqueado:'Cuánto le puede fiar como máximo. Solo un supervisor lo cambia.' },
       { k:'activo', e:'Activo', tipo:'si', def:true }
     ],
     soloLectura:['saldo']
@@ -391,6 +392,7 @@ async function arrancar(){
     return;
   }
   S.ctx = data;
+  S.nivel = data.usuario.nivel;
   S.moneda = data.organizacion.moneda === 'HNL' ? 'L' : data.organizacion.moneda;
 
   if (data.usuario.nivel < 1){
@@ -540,6 +542,10 @@ function abrirForm(fila){
     if (c.s){ html += `<div class="seccion">${escapar(c.s)}</div>`; continue; }
     const cls = c.ancho ? 'campo-g ancho-total' : 'campo-g';
 
+    // Un campo puede pedir más rango que la pantalla. Se muestra, para que el
+    // auxiliar vea cómo está, pero bloqueado: la base lo rechazaría igual.
+    const bloqueado = c.nivel !== undefined && S.nivel < c.nivel;
+
     if (c.tipo === 'si'){
       const on = fila ? !!fila[c.k] : !!c.def;
       html += `<label class="marca-check ${c.ancho ? 'ancho-total' : ''}">
@@ -597,10 +603,12 @@ function abrirForm(fila){
                    c.tipo === 'email' ? 'type="email"' : '';
       const numCls = (c.tipo === 'decimal' || c.tipo === 'entero') ? ' num' : '';
       html += `<input class="entrada${numCls}" data-k="${c.k}" ${modo}
-                 value="${escapar(val(c.k))}">`;
+                 ${bloqueado ? 'disabled' : ''} value="${escapar(val(c.k))}">`;
     }
     html += '</div>';
-    if (c.ayuda) html += `<div class="ayuda ${c.ancho ? 'ancho-total' : ''}">${escapar(c.ayuda)}</div>`;
+    const ayuda = bloqueado ? (c.ayudaBloqueado || 'Solo un supervisor puede cambiarlo.')
+                            : c.ayuda;
+    if (ayuda) html += `<div class="ayuda ${c.ancho ? 'ancho-total' : ''}">${escapar(ayuda)}</div>`;
   }
   html += '</div>';
 
@@ -729,14 +737,31 @@ $('#form-guardar').addEventListener('click', async () => {
           { p_perfil_id:id, p_pin:pin });
         if (e2) throw e2;
       }
-    } else if (id){
-      const { error } = await sb.from(e.tabla).update(datos).eq('id', id);
-      if (error) throw error;
     } else {
-      datos.organizacion_id = S.ctx.organizacion.id;
-      const { data, error } = await sb.from(e.tabla).insert(datos).select('id').single();
-      if (error) throw error;
-      id = data.id;
+      // El límite de fiado no se escribe en la tabla: la base no lo permite
+      // y es decisión de supervisor. Va por su propia función, que deja
+      // constancia de quién lo fijó.
+      let limite = null;
+      if (S.entidad === 'clientes' && 'limite_credito' in datos){
+        limite = Number(datos.limite_credito) || 0;
+        delete datos.limite_credito;
+      }
+
+      if (id){
+        const { error } = await sb.from(e.tabla).update(datos).eq('id', id);
+        if (error) throw error;
+      } else {
+        datos.organizacion_id = S.ctx.organizacion.id;
+        const { data, error } = await sb.from(e.tabla).insert(datos).select('id').single();
+        if (error) throw error;
+        id = data.id;
+      }
+
+      if (limite !== null && limite !== Number(S.editando?.limite_credito || 0)){
+        const { error } = await sb.rpc('fn_fijar_limite_credito',
+          { p_cliente_id:id, p_limite:limite });
+        if (error) throw error;
+      }
     }
 
     if (S.entidad === 'productos'){
