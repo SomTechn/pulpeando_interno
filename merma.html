@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1729">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="icono-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icono-192.png">
+<title>Merma · Pulpeando</title>
+<script src="config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ui.css">
+<style>
+.zona{flex:1;display:flex;flex-direction:column;min-height:0;padding:14px 16px 0}
+
+.pestanas{display:flex;gap:7px;flex:0 0 auto;margin-bottom:12px}
+.pes{flex:1;height:42px;border-radius:var(--r-md);border:1.5px solid var(--linea);
+  background:var(--panel);font-size:13.5px;font-weight:700;color:var(--tenue);
+  display:flex;align-items:center;justify-content:center;gap:6px}
+.pes.activo{border-color:var(--azul);background:var(--azul-suave);color:var(--azul)}
+.pes .globo{min-width:20px;height:20px;padding:0 6px;border-radius:999px;
+  background:var(--ambar);color:#4A3200;font-size:11px;font-weight:800;
+  display:inline-flex;align-items:center;justify-content:center}
+
+.fechas{display:flex;gap:8px;align-items:center;flex:0 0 auto;margin-bottom:12px}
+.fechas input{flex:1;height:46px;border:1.5px solid var(--linea);
+  border-radius:var(--r-md);padding:0 12px;outline:none;font-size:14px;
+  background:var(--panel);min-width:0}
+.fechas input:focus{border-color:var(--azul)}
+.fechas span{color:var(--tenue);font-size:13px;flex:0 0 auto}
+
+.cuerpo{flex:1;overflow-y:auto;min-height:0;padding-bottom:28px}
+
+.ficha{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);
+  padding:16px 18px;margin-bottom:12px}
+.titulin{font-size:11.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  color:#9AA8BC;margin-bottom:10px}
+
+/* Las dos mermas, una al lado de la otra. Que se vean juntas es el punto:
+   un negocio con mucha merma por daño tiene un problema de manejo; uno con
+   mucha desconocida tiene otro muy distinto. */
+.dos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
+  margin-bottom:12px}
+.balde{border-radius:var(--r-md);padding:15px 16px;border:1px solid var(--linea);
+  background:var(--panel);min-width:0}
+.balde .eti{font-size:11.5px;font-weight:800;letter-spacing:.04em;
+  text-transform:uppercase;line-height:1.3;margin-bottom:8px}
+.balde b{display:block;font-family:var(--num);font-size:25px;font-weight:700;
+  line-height:1.05;letter-spacing:-.03em;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+.balde small{display:block;font-size:12px;color:var(--tenue);margin-top:5px;
+  line-height:1.4}
+.balde.dano{background:#FFF4E0;border-color:#F3E2BC}
+.balde.dano .eti{color:#8A5A00}
+.balde.desc{background:#FFEDF1;border-color:#F6CBD6}
+.balde.desc .eti{color:#9F1239}
+.balde.desc b{color:#9F1239}
+
+.totalote{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.totalote b{font-family:var(--num);font-size:22px;font-weight:700}
+.totalote span{font-size:13px;color:var(--tenue)}
+.totalote .pct{margin-left:auto;font-family:var(--num);font-size:15px;
+  font-weight:700;padding:4px 10px;border-radius:999px;background:var(--fondo)}
+
+/* causas */
+.causa{display:flex;align-items:center;gap:12px;padding:9px 0;
+  border-bottom:1px solid var(--linea)}
+.causa:last-child{border-bottom:none;padding-bottom:0}
+.causa-nom{flex:1;min-width:0;font-size:13.5px;overflow-wrap:anywhere}
+.causa-bar{flex:0 0 64px;height:7px;border-radius:999px;background:var(--fondo);
+  overflow:hidden}
+.causa-bar span{display:block;height:100%;border-radius:999px;background:var(--ambar)}
+.causa-n{flex:0 0 auto;font-family:var(--num);font-size:14px;font-weight:700;
+  text-align:right;white-space:nowrap}
+
+/* una merma de la lista */
+.mer{display:flex;align-items:center;gap:13px;width:100%;text-align:left;
+  background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);
+  padding:13px 15px;margin-bottom:9px}
+.mer-txt{flex:1;min-width:0}
+.mer-txt b{display:block;font-size:14px;font-weight:700;line-height:1.3;
+  overflow-wrap:anywhere}
+.mer-txt small{display:block;font-size:12px;color:var(--tenue);margin-top:4px;
+  line-height:1.45}
+/* El quien y el cuando no compiten con el que paso: van mas abajo y mas
+   claritos, o las cinco lineas se leen como un solo parrafo. */
+.mer-meta{display:block;margin-top:5px;font-size:11.5px;color:var(--claro);
+  line-height:1.45}
+.mer-fin{flex:0 0 auto;text-align:right;display:flex;flex-direction:column;
+  align-items:flex-end;gap:4px}
+.mer-fin b{font-family:var(--num);font-size:16px;font-weight:700;color:var(--rojo)}
+.mer.pendiente{background:#FFF9EC;border-color:#F3E2BC}
+.mer.rechazado{background:#FDFBFC;border-color:#F0D8DE}
+.mer.rechazado .mer-txt b,.mer.rechazado .mer-fin b{text-decoration:line-through;
+  color:var(--tenue)}
+.sello{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;
+  font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em}
+.sello.dano{background:#FFF4E0;color:#8A5A00}
+.sello.desconocida{background:#FFEDF1;color:#9F1239}
+.sello.pendiente{background:var(--azul-suave);color:var(--azul)}
+.mer-acc{display:flex;gap:9px;margin:-2px 0 12px}
+.mer-acc .btn{flex:1;height:44px;font-size:14px}
+.mer-acc .btn.si{background:var(--verde);color:#fff}
+.mer-acc .btn.no{background:var(--panel);border:1px solid var(--linea);color:var(--tenue)}
+
+.vacio{text-align:center;padding:44px 20px;color:var(--tenue)}
+.vacio b{display:block;font-size:16px;color:var(--tinta);margin-bottom:6px}
+.vacio p{font-size:13.5px;line-height:1.5;max-width:360px;margin:0 auto}
+
+.entrada{height:50px;border:1.5px solid var(--linea);border-radius:var(--r-md);
+  padding:0 14px;outline:none;font-size:15px;background:var(--panel);width:100%}
+.entrada:focus{border-color:var(--azul)}
+.aviso{border-radius:var(--r-sm);padding:11px 13px;font-size:13px;line-height:1.45;
+  margin-bottom:12px}
+.aviso.malo{background:#FFEDF1;color:#9F1239}
+.aviso.bien{background:#E7F7EE;color:var(--verde-oscuro)}
+.aviso.ojo{background:#FFF4E0;color:#8A5A00}
+.acciones{display:flex;gap:10px;margin-top:18px}
+.acciones .btn{flex:1}
+
+@media (max-width:820px){
+  .zona{padding:12px 14px 0}
+  .ficha{padding:14px 15px}
+  .balde b{font-size:21px}
+}
+@media (max-width:430px){
+  .dos{grid-template-columns:1fr}
+  .pes{font-size:12.5px}
+}
+</style>
+</head>
+<body>
+
+<div class="oscura oculto" id="p-config">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Configuración</div>
+    <div class="titulo-o">Falta conectar el proyecto</div>
+    <p class="sub-o">Ponga la URL y la llave publishable en <b>config.js</b>.</p>
+  </div>
+</div>
+
+<div class="oscura oculto" id="p-sesion">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Merma</div>
+    <div class="titulo-o">Iniciar sesión</div>
+    <p class="sub-o">Use el correo con el que su gerente lo dio de alta</p>
+    <input class="campo-o" id="s-email" type="email" placeholder="correo@negocio.hn" autocomplete="username">
+    <input class="campo-o" id="s-clave" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <div class="error-o" id="s-error"></div>
+    <button class="btn-o" id="s-entrar">Entrar</button>
+  </div>
+</div>
+
+<div class="oscura oculto" id="p-bloqueado">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Merma</div>
+    <div class="titulo-o" id="bl-titulo">Sin permiso</div>
+    <p class="sub-o" id="bl-texto"></p>
+    <a class="btn-o" href="index.html" style="display:block;line-height:52px">Ir a la caja</a>
+    <button class="btn-o fantasma" id="bl-salir">Cerrar sesión</button>
+  </div>
+</div>
+
+<div class="armazon oculto" id="app">
+  <aside id="menu"></aside>
+
+  <div class="principal">
+    <header class="barra">
+      <button class="hamburguesa" id="abrir-menu" aria-label="Menú">
+        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="barra-titulo">
+        <b>Merma</b>
+        <small id="h-sucursal">—</small>
+      </div>
+      <div class="barra-fin">
+        <span class="pill" id="h-usuario">—</span>
+      </div>
+    </header>
+
+    <div class="zona">
+      <div class="pestanas" id="pestanas"></div>
+      <div class="fechas oculto" id="fechas">
+        <input type="date" id="f-desde" aria-label="Desde">
+        <span>a</span>
+        <input type="date" id="f-hasta" aria-label="Hasta">
+      </div>
+      <div class="cuerpo" id="cuerpo"></div>
+    </div>
+  </div>
+</div>
+
+<div class="velo oculto" id="velo"><div class="hoja" id="hoja"></div></div>
+
+<script type="module">
+const CFG = window.SUPABASE_CONFIG || {};
+const SUPABASE_URL = CFG.url || 'PEGUE_AQUI_LA_URL';
+const SUPABASE_KEY = CFG.key || 'PEGUE_AQUI_LA_LLAVE';
+
+const $ = s => document.querySelector(s);
+const ver = (id, si = true) => $(id).classList.toggle('oculto', !si);
+
+if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin configurar'); }
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { montarMenu, escapar } from './menu.js';
+
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth:{ persistSession:true, autoRefreshToken:true }
+});
+
+const S = {
+  ctx:null, sucursal:null, moneda:'L', menu:null, nivel:0,
+  vista:'pendientes',       // pendientes · historial · resumen
+  mermas:[], resumen:null, cargando:false,
+  desde:null, hasta:null
+};
+
+const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
+  { minimumFractionDigits:2, maximumFractionDigits:2 });
+const cant = n => (Number(n)||0).toLocaleString('es-HN', { maximumFractionDigits:3 });
+const iso = d => d.toISOString().slice(0,10);
+
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function fecha(v){
+  if (!v) return '—';
+  const [a, m, d] = String(v).slice(0,10).split('-').map(Number);
+  return `${d} ${MESES[m-1]} ${a}`;
+}
+function cuando(v){
+  if (!v) return '—';
+  const d = new Date(v);
+  const dias = Math.floor((Date.now() - d.getTime()) / 86400000);
+  const hora = d.toLocaleTimeString('es-HN', { hour:'numeric', minute:'2-digit' });
+  if (dias <= 0) return 'hoy ' + hora;
+  if (dias === 1) return 'ayer ' + hora;
+  if (dias < 7)   return 'hace ' + dias + ' días';
+  return fecha(v);
+}
+
+function limpiarError(e){
+  const m = (e?.message || String(e)).replace(/^.*?:\s*/, '');
+  if (/JWT|token/i.test(m)) return 'La sesión venció. Vuelva a entrar.';
+  if (/Failed to fetch|NetworkError/i.test(m)) return 'Sin conexión con el servidor';
+  return m;
+}
+
+function aviso(titulo, texto){
+  $('#hoja').innerHTML = `<h2>${escapar(titulo)}</h2>
+    <p class="sub">${escapar(texto)}</p>
+    <button class="btn principal-b" style="width:100%" id="ok">Entendido</button>`;
+  ver('#velo');
+  $('#ok').onclick = () => ver('#velo', false);
+}
+const cerrarHoja = () => ver('#velo', false);
+$('#velo').addEventListener('click', e => { if (e.target === $('#velo')) cerrarHoja(); });
+
+/* ================= sesión ================= */
+$('#s-entrar').addEventListener('click', async () => {
+  const b = $('#s-entrar');
+  $('#s-error').textContent = '';
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+  const { error } = await sb.auth.signInWithPassword({
+    email:$('#s-email').value.trim(), password:$('#s-clave').value });
+  b.disabled = false; b.textContent = 'Entrar';
+  if (error){ $('#s-error').textContent = 'Correo o contraseña incorrectos'; return; }
+  arrancar();
+});
+$('#s-clave').addEventListener('keydown', e => { if (e.key === 'Enter') $('#s-entrar').click(); });
+$('#bl-salir').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
+
+/* ================= arranque ================= */
+async function arrancar(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session){ ver('#p-sesion'); return; }
+  ver('#p-sesion', false);
+
+  const { data, error } = await sb.rpc('fn_pos_contexto');
+  if (error){
+    ver('#p-sesion');
+    $('#s-error').textContent = 'Su usuario no tiene perfil en ningún negocio';
+    await sb.auth.signOut();
+    return;
+  }
+  S.ctx = data;
+  S.nivel = data.usuario.nivel;
+  S.moneda = data.organizacion.moneda === 'HNL' ? 'L' : data.organizacion.moneda;
+
+  if (S.nivel < 1){
+    ver('#p-bloqueado');
+    $('#bl-titulo').textContent = 'Esta pantalla no es para su rol';
+    $('#bl-texto').textContent = 'La merma la lleva el personal de la tienda.';
+    return;
+  }
+
+  S.sucursal = data.sucursales[0]?.id || null;
+  $('#h-usuario').textContent = data.usuario.nombre;
+  $('#h-sucursal').textContent = data.sucursales[0]?.nombre || '';
+  $('#app').classList.remove('oculto');
+
+  S.menu = montarMenu({
+    contenedor:'#menu', modulo:'merma', ctx:S.ctx,
+    alSalir: async () => { await sb.auth.signOut(); location.reload(); }
+  });
+  $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
+
+  const hoy = new Date();
+  S.hasta = iso(hoy);
+  S.desde = iso(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+  $('#f-desde').value = S.desde;
+  $('#f-hasta').value = S.hasta;
+
+  $('#f-desde').addEventListener('change', e => { S.desde = e.target.value; cargar(); });
+  $('#f-hasta').addEventListener('change', e => { S.hasta = e.target.value; cargar(); });
+
+  cargar();
+}
+
+/* ================= cargar ================= */
+async function cargar(){
+  S.cargando = true; pintarPestanas(); pintar();
+
+  if (S.vista === 'resumen'){
+    // El resumen es de supervisor para arriba; la auxiliar ni ve la pestaña.
+    const { data, error } = await sb.rpc('fn_merma_resumen',
+      { p_desde:S.desde, p_hasta:S.hasta, p_sucursal_id:S.sucursal });
+    S.cargando = false;
+    if (error){ aviso('No se pudo leer el resumen', limpiarError(error)); S.resumen = null; }
+    else S.resumen = data;
+    pintarPestanas(); pintar();
+    return;
+  }
+
+  const args = S.vista === 'pendientes'
+    ? { p_estado:'pendiente', p_sucursal_id:S.sucursal, p_limite:100 }
+    : { p_estado:'todos', p_desde:S.desde, p_hasta:S.hasta,
+        p_sucursal_id:S.sucursal, p_limite:200 };
+
+  const { data, error } = await sb.rpc('fn_mermas', args);
+  S.cargando = false;
+  if (error){ aviso('No se pudo leer la merma', limpiarError(error)); S.mermas = []; }
+  else S.mermas = data || [];
+  pintarPestanas(); pintar();
+}
+
+/* ================= pestañas ================= */
+function pintarPestanas(){
+  const pend = S.vista === 'pendientes' ? S.mermas.length
+             : (S.resumen?.pendientes ?? null);
+  const globo = pend ? `<span class="globo">${pend}</span>` : '';
+  $('#pestanas').innerHTML = `
+    <button class="pes ${S.vista === 'pendientes' ? 'activo' : ''}" data-v="pendientes">
+      Por aprobar ${globo}</button>
+    <button class="pes ${S.vista === 'historial' ? 'activo' : ''}" data-v="historial">
+      Historial</button>
+    ${S.nivel >= 2 ? `<button class="pes ${S.vista === 'resumen' ? 'activo' : ''}"
+       data-v="resumen">Resumen</button>` : ''}`;
+  ver('#fechas', S.vista !== 'pendientes');
+}
+
+$('#pestanas').addEventListener('click', e => {
+  const b = e.target.closest('[data-v]');
+  if (!b || b.dataset.v === S.vista) return;
+  S.vista = b.dataset.v;
+  cargar();
+});
+
+/* ================= pintar ================= */
+function pintar(){
+  if (S.cargando){
+    $('#cuerpo').innerHTML = '<div class="vacio"><span class="girando"></span></div>';
+    return;
+  }
+  if (S.vista === 'resumen') return pintarResumen();
+  return pintarLista();
+}
+
+const CLASE = { dano:'Por daño', desconocida:'Desconocida' };
+
+function pintarLista(){
+  const puede = S.nivel >= 3;
+
+  if (!S.mermas.length){
+    $('#cuerpo').innerHTML = S.vista === 'pendientes'
+      ? `<div class="vacio"><b>Nada esperando</b>
+           <p>Las mermas que registre el personal aparecen aquí para que
+              gerencia las apruebe. Se registran desde Consultar, con el
+              producto en la mano.</p></div>`
+      : `<div class="vacio"><b>Sin merma en este periodo</b>
+           <p>Cambie las fechas de arriba para ver otro rango.</p></div>`;
+    return;
+  }
+
+  $('#cuerpo').innerHTML = S.mermas.map(m => `
+    <div class="mer ${m.estado}">
+      <div class="mer-txt">
+        <b>${escapar(m.producto)}</b>
+        <small>
+          <span class="sello ${m.clase}">${escapar(CLASE[m.clase] || m.clase)}</span>
+          ${escapar(m.causa)} · ${escapar(m.ubicacion || m.sucursal)}${
+            m.lote ? ' · lote ' + escapar(m.lote) : ''}${
+            m.notas ? ' · «' + escapar(m.notas) + '»' : ''}
+          <span class="mer-meta">${escapar(m.numero)} · ${escapar(m.solicitado_por || '—')} · ${cuando(m.solicitado_en)}${
+            m.estado === 'rechazado' && m.nota ? ' · rechazada: «' + escapar(m.nota) + '»' : ''}</span>
+        </small>
+      </div>
+      <div class="mer-fin">
+        <b>−${cant(m.cantidad)}</b>
+        ${m.valor !== null && m.valor !== undefined
+          ? `<small class="num">${money(m.valor)}</small>` : ''}
+      </div>
+    </div>
+    ${m.estado === 'pendiente' && puede ? `<div class="mer-acc">
+      <button class="btn no" data-rechazar="${m.merma_id}">Rechazar</button>
+      <button class="btn si" data-aprobar="${m.merma_id}">Aprobar</button>
+    </div>` : ''}`).join('')
+    + (S.vista === 'pendientes' && !puede
+       ? '<div class="aviso ojo">El gerente las aprueba. Mientras tanto el inventario no cambia.</div>'
+       : '');
+}
+
+function pintarResumen(){
+  const r = S.resumen;
+  if (!r){ $('#cuerpo').innerHTML = '<div class="vacio">Sin datos</div>'; return; }
+
+  const causas = r.dano?.por_causa || [];
+  const tope = Math.max(1, ...causas.map(c => Number(c.valor) || 0));
+
+  const top = r.top || [];
+
+  /* Cuando los conteos encuentran mas de lo que el sistema decia, la resta da
+     cero y la frase de siempre mentiria ("0 unidades de menos, menos L1,053
+     de sobrante"). Un sobrante grande casi nunca es mercaderia que aparecio:
+     es como se esta recibiendo o contando, y eso hay que decirlo. */
+  const sobraMas = Number(r.sobrante.valor) > Number(r.desconocida.valor);
+
+  $('#cuerpo').innerHTML = `
+    <div class="dos">
+      <div class="balde dano">
+        <div class="eti">Merma por daño</div>
+        <b>${money(r.dano.valor)}</b>
+        <small>${cant(r.dano.unidades)} unidades · se sabe qué pasó</small>
+      </div>
+      <div class="balde ${sobraMas ? '' : 'desc'}">
+        <div class="eti">Merma desconocida</div>
+        <b>${money(r.desconocida_neta)}</b>
+        <small>${sobraMas
+          ? `Los conteos encontraron ${money(Number(r.sobrante.valor) - Number(r.desconocida.valor))} de <b>más</b>, no de menos`
+          : `${cant(r.desconocida.unidades)} unidades contadas de menos${
+              Number(r.sobrante.valor) > 0
+                ? `, menos ${money(r.sobrante.valor)} de sobrante` : ''}`}</small>
+      </div>
+    </div>
+
+    <div class="ficha">
+      <div class="titulin">Total perdido</div>
+      <div class="totalote">
+        <b>${money(r.total)}</b>
+        <span>perdidos del ${fecha(r.desde)} al ${fecha(r.hasta)}</span>
+        ${r.porcentaje !== null && r.porcentaje !== undefined
+          ? `<span class="pct">${r.porcentaje}% de la venta</span>` : ''}
+      </div>
+    </div>
+
+    ${causas.length ? `
+    <div class="ficha">
+      <div class="titulin">Por qué se dañó</div>
+      ${causas.map(c => `<div class="causa">
+        <span class="causa-nom">${escapar(c.causa)}</span>
+        <span class="causa-bar"><span style="width:${Math.round(Number(c.valor)/tope*100)}%"></span></span>
+        <span class="causa-n">${money(c.valor)}</span>
+      </div>`).join('')}
+    </div>` : ''}
+
+    ${top.length ? `
+    <div class="ficha">
+      <div class="titulin">Los que más se pierden</div>
+      ${top.map(t => `<div class="causa">
+        <span class="causa-nom">${escapar(t.producto)}
+          <span class="sello ${t.clase}">${escapar(CLASE[t.clase] || t.clase)}</span></span>
+        <span class="causa-n">${cant(t.unidades)} · ${money(t.valor)}</span>
+      </div>`).join('')}
+    </div>` : ''}
+
+    <div class="ficha">
+      <div class="titulin">Cómo se mide cada una</div>
+      <p style="font-size:13px;line-height:1.6;color:var(--tenue)">
+        La <b style="color:#8A5A00">merma por daño</b> es la que alguien
+        registró con una causa: se venció, se quebró, se cortó el frío. Tiene
+        arreglo — comprar menos, rotar mejor, revisar el refrigerador.<br><br>
+        La <b style="color:#9F1239">merma desconocida</b> no se registra: sale
+        de la resta. Es lo que los conteos encontraron de menos y nadie pudo
+        explicar. Por eso la única manera de medirla es contando, y un negocio
+        que no cuenta no sabe cuánto se le pierde.
+      </p>
+      ${sobraMas ? `<div class="aviso ojo" style="margin:14px 0 0">En este
+        periodo los conteos encontraron <b>más</b> de lo que el sistema decía.
+        Mercadería que aparece sola casi no existe: suele ser que algo entró
+        sin registrarse, que se vendió un producto marcando otro, o que se
+        contó mal. Vale la pena revisar las últimas compras.</div>` : ''}
+    </div>`;
+}
+
+/* ================= aprobar y rechazar ================= */
+$('#cuerpo').addEventListener('click', e => {
+  const ap = e.target.closest('[data-aprobar]');
+  if (ap){ aprobar(ap.dataset.aprobar); return; }
+  const rz = e.target.closest('[data-rechazar]');
+  if (rz){ hojaRechazar(rz.dataset.rechazar); return; }
+});
+
+async function aprobar(id){
+  const { data, error } = await sb.rpc('fn_resolver_merma',
+    { p_merma_id:id, p_aprobar:true });
+  if (error){ aviso('No se pudo aprobar', limpiarError(error)); return; }
+  await cargar();
+  $('#hoja').innerHTML = `
+    <h2>${escapar(data.numero)}</h2>
+    <p class="sub">${escapar(data.producto)}</p>
+    <div class="aviso bien">Se dieron de baja ${cant(data.cantidad)}.
+      Quedan <b>${cant(data.existencia_total)}</b> en la sucursal.</div>
+    ${data.valor !== null && data.valor !== undefined
+      ? `<div class="aviso ojo">Son ${money(data.valor)} al costo promedio.</div>` : ''}
+    <button class="btn principal-b" style="width:100%" id="ap-ok">Entendido</button>`;
+  ver('#velo');
+  $('#ap-ok').onclick = cerrarHoja;
+}
+
+function hojaRechazar(id){
+  $('#hoja').innerHTML = `
+    <h2>Rechazar la merma</h2>
+    <p class="sub">El inventario se queda como está. Quien la registró verá el
+      motivo.</p>
+    <div class="campo-g">
+      <label for="rz-motivo">¿Por qué se rechaza?</label>
+      <input class="entrada" id="rz-motivo" placeholder="Ese producto lo vi completo…">
+    </div>
+    <div class="aviso malo oculto" id="rz-error"></div>
+    <div class="acciones">
+      <button class="btn secundario" id="rz-no">Mejor no</button>
+      <button class="btn principal-b" id="rz-si">Rechazar</button>
+    </div>`;
+  ver('#velo');
+  $('#rz-motivo').focus();
+  $('#rz-no').onclick = cerrarHoja;
+  $('#rz-si').onclick = async () => {
+    const motivo = $('#rz-motivo').value.trim();
+    const err = $('#rz-error');
+    if (!motivo){
+      err.textContent = 'Diga por qué se rechaza: quien la registró necesita saberlo.';
+      err.classList.remove('oculto');
+      return;
+    }
+    const b = $('#rz-si');
+    b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+    const { error } = await sb.rpc('fn_resolver_merma',
+      { p_merma_id:id, p_aprobar:false, p_nota:motivo });
+    b.disabled = false; b.textContent = 'Rechazar';
+    if (error){
+      err.textContent = limpiarError(error);
+      err.classList.remove('oculto');
+      return;
+    }
+    cerrarHoja();
+    await cargar();
+  };
+}
+
+/* ================= al aire ================= */
+arrancar();
+
+if ('serviceWorker' in navigator)
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>

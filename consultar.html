@@ -352,7 +352,7 @@ const S = {
   vista:'inicio',        // inicio · resultados · ficha
   busqueda:'', resultados:[],
   prod:null, semanas:[], conteos:[], cargando:false,
-  pendientes:[], puedeAprobar:false
+  pendientes:[], puedeAprobar:false, causas:[]
 };
 
 const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
@@ -436,9 +436,16 @@ async function arrancar(){
   if (await hayCamara()) ver('#btn-camara');
   $('#btn-camara').addEventListener('click', escanearCodigo);
 
-  await cargarPendientes();
+  await Promise.all([cargarPendientes(), cargarCausas()]);
   pintar();
   $('#buscar').focus();
+}
+
+/* El catalogo de causas de merma. Se lee una vez al abrir la pantalla: es
+   corto y no cambia en medio de un turno. */
+async function cargarCausas(){
+  const { data, error } = await sb.rpc('fn_causas_merma', { p_solo_activas:true });
+  S.causas = error ? [] : (data || []);
 }
 
 /* Los ajustes que estan esperando aprobacion. En la portada de esta pantalla
@@ -794,6 +801,7 @@ function pintarFicha(){
     ${bloqueConteos}
 
     <div class="acciones-ficha">
+      <button class="btn secundario" id="btn-merma">Registrar merma</button>
       <button class="btn secundario" id="btn-mover">Mover de lugar</button>
       <button class="btn secundario" id="btn-conteo">${escapar(textoConteo)}</button>
     </div>
@@ -811,6 +819,7 @@ function pintarFicha(){
     </div>`;
 
   $('#btn-editar').addEventListener('click', () => hojaEditar());
+  $('#btn-merma').addEventListener('click', hojaMerma);
   $('#btn-mover').addEventListener('click', hojaMover);
   $('#btn-conteo').addEventListener('click', hojaConteo);
 }
@@ -873,6 +882,130 @@ function fecha(v){
   if (!v) return '—';
   const [a, m, d] = String(v).slice(0,10).split('-').map(Number);
   return `${d} ${MESES[m-1]} ${a}`;
+}
+
+/* ================= registrar merma =================
+
+   Dos mermas, muy distintas:
+     por daño        alguien sabe que paso y lo dice (se vencio, se quebro)
+     desconocida     falta y nadie sabe por que
+
+   La CLASE la trae la causa, no la elige quien registra: si la eligiera, la
+   mitad de lo que se pierde terminaria en el balde que menos incomoda.
+   ==================================================== */
+function hojaMerma(){
+  const p = S.prod;
+  if (!S.causas.length){
+    aviso('Faltan las causas de merma',
+      'Un gerente tiene que crear las causas antes de poder registrar mermas.');
+    return;
+  }
+
+  const dano = S.causas.filter(c => c.clase === 'dano');
+  const desc = S.causas.filter(c => c.clase === 'desconocida');
+  const opt = c => `<option value="${c.causa_id}">${escapar(c.nombre)}</option>`;
+
+  const lugares = p.ubicaciones || [];
+  const selLugar = lugares.length > 1 ? `
+    <div class="campo-g" style="margin-top:12px">
+      <label for="mr-lugar">¿De dónde sale?</label>
+      <select class="entrada" id="mr-lugar">
+        ${lugares.map(u => `<option value="${u.ubicacion_id}"
+          >${escapar(u.nombre)} (${cant(u.cantidad)})</option>`).join('')}
+      </select>
+    </div>` : '';
+
+  const lotes = p.lotes || [];
+  const selLote = lotes.length ? `
+    <div class="campo-g" style="margin-top:12px">
+      <label for="mr-lote">¿De qué lote?</label>
+      <select class="entrada" id="mr-lote">
+        ${lotes.map(l => `<option value="${l.lote_id}">${escapar(l.codigo || 'Lote')} (${cant(l.cantidad)})${l.vence ? ' · vence ' + fecha(l.vence) : ''}</option>`).join('')}
+        ${Number(p.sin_lote) > 0 ? `<option value="">Sin lote (${cant(p.sin_lote)})</option>` : ''}
+      </select>
+    </div>` : '';
+
+  $('#hoja').innerHTML = `
+    <h2>Registrar merma</h2>
+    <p class="sub">${escapar(p.nombre)}</p>
+    <div class="campo-g">
+      <label for="mr-causa">¿Qué le pasó?</label>
+      <select class="entrada" id="mr-causa">
+        ${dano.length ? `<optgroup label="Por daño">${dano.map(opt).join('')}</optgroup>` : ''}
+        ${desc.length ? `<optgroup label="No se sabe">${desc.map(opt).join('')}</optgroup>` : ''}
+      </select>
+    </div>
+    ${selLugar}
+    ${selLote}
+    <div class="campo-g" style="margin-top:12px">
+      <label for="mr-cant">¿Cuántos?</label>
+      <input class="entrada" id="mr-cant" inputmode="decimal" placeholder="0">
+    </div>
+    <div class="campo-g" style="margin-top:12px">
+      <label for="mr-nota">Detalle (opcional)</label>
+      <input class="entrada" id="mr-nota" placeholder="Se cayó la caja al bajarla…">
+    </div>
+    <div class="aviso ojo" style="margin-top:14px">Esto <b>da de baja la
+      mercadería</b> del negocio. Va a aprobación del gerente: hasta entonces
+      el inventario no cambia.</div>
+    <div class="aviso malo oculto" id="mr-error"></div>
+    <div class="acciones">
+      <button class="btn secundario" id="mr-no">Cancelar</button>
+      <button class="btn principal-b" id="mr-si">Registrar</button>
+    </div>`;
+  ver('#velo');
+  $('#mr-cant').focus();
+
+  $('#mr-cant').addEventListener('input', e => {
+    e.target.value = e.target.value.replace(/[^0-9.]/g, '');
+  });
+  $('#mr-no').onclick = cerrarHoja;
+  $('#mr-si').onclick = async () => {
+    const err = $('#mr-error');
+    const fallar = t => { err.textContent = t; err.classList.remove('oculto'); };
+    err.classList.add('oculto');
+
+    const n = Number($('#mr-cant').value);
+    if (!n || n <= 0) return fallar('Ponga cuántos se perdieron.');
+
+    const b = $('#mr-si');
+    b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+
+    const { data, error } = await sb.rpc('fn_registrar_merma', {
+      p_producto_id:p.producto_id,
+      p_cantidad:n,
+      p_causa_id:$('#mr-causa').value,
+      p_ubicacion_id:$('#mr-lugar') ? $('#mr-lugar').value
+                     : (lugares.find(u => u.predeterminada)?.ubicacion_id || null),
+      p_lote_id:$('#mr-lote') ? ($('#mr-lote').value || null) : null,
+      p_notas:$('#mr-nota').value.trim() || null });
+
+    b.disabled = false; b.textContent = 'Registrar';
+    if (error) return fallar(limpiarError(error));
+
+    $('#hoja').innerHTML = `
+      <h2>${escapar(data.numero)}</h2>
+      <p class="sub">${escapar(data.producto)}</p>
+      <div class="pend-fila">
+        <div class="pend-txt">
+          <b>${escapar(data.causa)}</b>
+          <small>${escapar(data.ubicacion || 'Sucursal')}${
+            data.clase === 'desconocida' ? ' · merma desconocida' : ' · merma por daño'}</small>
+        </div>
+        <span class="pend-dif">−${cant(data.cantidad)}</span>
+      </div>
+      ${data.valor !== null && data.valor !== undefined
+        ? `<div class="aviso ojo" style="margin-top:12px">Son ${money(data.valor)} al costo promedio.</div>` : ''}
+      <div class="aviso ojo" style="margin-top:12px">El inventario <b>no cambió
+        todavía</b>. ${data.puede_aprobar ? 'Usted puede aprobarla en Merma.'
+                                          : 'Cambia cuando el gerente la apruebe.'}</div>
+      <div class="acciones">
+        <button class="btn secundario" id="mr-listo">Seguir</button>
+        <a class="btn principal-b" href="merma.html"
+           style="display:grid;place-items:center">Ir a Merma</a>
+      </div>`;
+    $('#mr-listo').onclick = async () => { cerrarHoja(); await recargarFicha(); };
+  };
 }
 
 /* ================= editar inventario =================

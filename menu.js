@@ -28,6 +28,7 @@ const ICONOS = {
   etiqueta:  '<path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"/><circle cx="7.5" cy="7.5" r="1.3"/>',
   fiado:     '<path d="M4 5h16a1 1 0 0 1 1 1v3H3V6a1 1 0 0 1 1-1z"/><path d="M3 9v9a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9"/><path d="M7 14h5"/>',
   lupa:      '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  merma:     '<path d="M3 6h18l-1.5 13a2 2 0 0 1-2 1.8H6.5a2 2 0 0 1-2-1.8z"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="m10 11 4 5M14 11l-4 5"/>',
   todos:     '<path d="M4 6h16M4 12h16M4 18h16"/>',
   salir:     '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>'
 };
@@ -46,6 +47,7 @@ const MODULOS = [
   { id:'fiado',   nombre:'Fiado',       url:'fiado.html',   icono:'fiado',   nivel:1 },
   { id:'compras', nombre:'Compras',     url:'compras.html', icono:'compras', nivel:2 },
   { id:'conteo',  nombre:'Conteo',      url:'conteo.html',  icono:'inventario', nivel:1 },
+  { id:'merma',   nombre:'Merma',       url:'merma.html',   icono:'merma',   nivel:1 },
   { id:'catalogo', nombre:'Catálogos',  url:'catalogo.html', icono:'inventario', nivel:1 }
 ];
 

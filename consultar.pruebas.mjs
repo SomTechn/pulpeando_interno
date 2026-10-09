@@ -186,6 +186,16 @@ const base = (rol = 'gerente', nivel = 3, extra = {}) => ({
                                  producto:'Leche entera 1 L' }, error:null },
     fn_ajustes:{ data:[], error:null },
     fn_conteos_del_producto:{ data:[], error:null },
+    fn_causas_merma:{ data:[
+      { causa_id:'cm1', nombre:'Vencimiento', clase:'dano', activa:true, orden:10 },
+      { causa_id:'cm2', nombre:'Quiebra o derrame', clase:'dano', activa:true, orden:50 },
+      { causa_id:'cm9', nombre:'No se sabe, desapareció', clase:'desconocida',
+        activa:true, orden:900 }], error:null },
+    fn_registrar_merma: a => ({ data:{
+      merma_id:'me1', numero:'ME-S01-000004', producto:'Leche entera 1 L',
+      causa:'Vencimiento', clase:'dano', ubicacion:'Refrigerador',
+      cantidad:a.p_cantidad, valor: nivel >= 2 ? a.p_cantidad * 18.2 : null,
+      puede_aprobar: nivel >= 3 }, error:null }),
     fn_existencia_ubicacion_lote:{ data:POR_LOTE, error:null },
     fn_solicitar_ajuste: a => ({ data:{
       ajuste_id:'ajN', numero:'AJ-S01-000009',
@@ -900,6 +910,107 @@ console.log('\n=== APROBAR Y RECHAZAR DESDE EL PRODUCTO ===');
   const r = e.llamadas.find(l => l.fn === 'fn_resolver_ajuste');
   chk('con motivo sí lo manda',
       r && r.args.p_aprobar === false && r.args.p_nota === 'Hay que volver a contarlo');
+}
+
+console.log('\n=== REGISTRAR MERMA DESDE EL PRODUCTO ===');
+{
+  const estado = base();
+  const { d, p, w, estado:e } = await montar(estado);
+  chk('lee el catálogo de causas al arrancar',
+      e.llamadas.some(l => l.fn === 'fn_causas_merma'));
+  await p.abrir('p1');
+  await esperar(120);
+  chk('hay botón de merma', !!d.querySelector('#btn-merma'));
+
+  d.querySelector('#btn-merma').click();
+  await esperar();
+  chk('abre la hoja', !!d.querySelector('#mr-causa'));
+  chk('las causas van agrupadas por clase',
+      d.querySelectorAll('#mr-causa optgroup').length === 2);
+  chk('la primera agrupación es la de daño',
+      d.querySelectorAll('#mr-causa optgroup')[0].label === 'Por daño');
+  chk('y la desconocida está, pero aparte',
+      d.querySelectorAll('#mr-causa optgroup')[1].label === 'No se sabe');
+  chk('pregunta de qué lugar sale', !!d.querySelector('#mr-lugar'));
+  chk('y de qué lote', !!d.querySelector('#mr-lote'));
+  chk('avisa que da de baja mercadería',
+      /da de[\s\S]*baja la[\s\S]*mercadería/i.test(d.querySelector('#hoja').textContent));
+  chk('y que pasa por aprobación',
+      /aprobación del gerente/.test(d.querySelector('#hoja').textContent));
+
+  d.querySelector('#mr-si').click();
+  await esperar();
+  chk('sin cantidad no manda nada',
+      /Ponga cuántos se perdieron/.test(d.querySelector('#mr-error').textContent));
+  chk('y no llama al servidor',
+      !e.llamadas.some(l => l.fn === 'fn_registrar_merma'));
+
+  const campo = d.querySelector('#mr-cant');
+  campo.value = '-3';
+  campo.dispatchEvent(new w.Event('input', { bubbles:true }));
+  chk('el campo no acepta negativos', campo.value === '3');
+
+  d.querySelector('#mr-causa').value = 'cm2';
+  d.querySelector('#mr-lugar').value = 'u2';
+  d.querySelector('#mr-nota').value = 'Se cayó la caja';
+  d.querySelector('#mr-si').click();
+  await esperar(160);
+  const r = e.llamadas.find(l => l.fn === 'fn_registrar_merma');
+  chk('manda producto, causa, lugar, lote, cantidad y nota',
+      r.args.p_producto_id === 'p1' && r.args.p_causa_id === 'cm2' &&
+      r.args.p_ubicacion_id === 'u2' && r.args.p_lote_id === 'lo0' &&
+      r.args.p_cantidad === 3 && r.args.p_notas === 'Se cayó la caja');
+  chk('confirma con el número', /ME-S01-000004/.test(d.querySelector('#hoja').textContent));
+  chk('dice qué clase de merma es',
+      /merma por daño/.test(d.querySelector('#hoja').textContent));
+  chk('y que el inventario no cambió todavía',
+      /no cambió[\s\S]*todavía/i.test(d.querySelector('#hoja').textContent));
+  chk('ofrece ir a Merma', !!d.querySelector('#hoja a[href="merma.html"]'));
+}
+{
+  const estado = base('auxiliar', 1);
+  const { d, p, w } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  d.querySelector('#btn-merma').click();
+  await esperar();
+  const campo = d.querySelector('#mr-cant');
+  campo.value = '2'; campo.dispatchEvent(new w.Event('input', { bubbles:true }));
+  d.querySelector('#mr-si').click();
+  await esperar(160);
+  chk('la auxiliar no ve cuánto vale la merma',
+      !/al costo promedio/.test(d.querySelector('#hoja').textContent));
+  chk('y se le dice que el gerente la aprueba',
+      /Cambia cuando el gerente la apruebe/.test(d.querySelector('#hoja').textContent));
+}
+{
+  const estado = base();
+  estado.rpc.fn_registrar_merma = { data:null,
+    error:{ message:'En Refrigerador el sistema solo tiene 1' } };
+  const { d, p, w } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  d.querySelector('#btn-merma').click();
+  await esperar();
+  const campo = d.querySelector('#mr-cant');
+  campo.value = '9'; campo.dispatchEvent(new w.Event('input', { bubbles:true }));
+  d.querySelector('#mr-si').click();
+  await esperar(160);
+  chk('si no alcanza lo dice con el número',
+      /solo tiene 1/.test(d.querySelector('#mr-error').textContent));
+  chk('y la hoja sigue abierta para corregir', !!d.querySelector('#mr-cant'));
+}
+{
+  const estado = base();
+  estado.rpc.fn_causas_merma = { data:[], error:null };
+  const { d, p } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  d.querySelector('#btn-merma').click();
+  await esperar();
+  chk('sin causas en el catálogo explica qué falta',
+      /Faltan las causas de merma/.test(d.querySelector('#hoja').textContent));
+  chk('y no muestra un formulario roto', !d.querySelector('#mr-causa'));
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);
