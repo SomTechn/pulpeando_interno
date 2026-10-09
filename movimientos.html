@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1729">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="icono-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icono-192.png">
+<title>Movimientos · Pulpeando</title>
+<script src="config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ui.css">
+<style>
+.zona{flex:1;display:flex;flex-direction:column;min-height:0;padding:14px 16px 0}
+
+.pestanas{display:flex;gap:7px;flex:0 0 auto;margin-bottom:10px}
+.pes{flex:1;height:42px;border-radius:var(--r-md);border:1.5px solid var(--linea);
+  background:var(--panel);font-size:13.5px;font-weight:700;color:var(--tenue)}
+.pes.activo{border-color:var(--azul);background:var(--azul-suave);color:var(--azul)}
+
+.fechas{display:flex;gap:8px;align-items:center;flex:0 0 auto;margin-bottom:8px}
+.fechas input,.fechas select{flex:1;height:46px;border:1.5px solid var(--linea);
+  border-radius:var(--r-md);padding:0 12px;outline:none;font-size:14px;
+  background:var(--panel);min-width:0}
+.fechas input:focus,.fechas select:focus{border-color:var(--azul)}
+.fechas span{color:var(--tenue);font-size:13px;flex:0 0 auto}
+
+/* Atajos de fecha: lo que se pregunta el 90% de las veces */
+.atajos{display:flex;gap:6px;overflow-x:auto;flex:0 0 auto;margin-bottom:10px;
+  scrollbar-width:none;padding-bottom:2px}
+.atajos::-webkit-scrollbar{display:none}
+.atajo{flex:0 0 auto;height:32px;padding:0 13px;border-radius:999px;
+  border:1px solid var(--linea);background:var(--panel);font-size:12.5px;
+  font-weight:700;color:var(--tenue);white-space:nowrap}
+.atajo.activo{background:var(--tinta);border-color:var(--tinta);color:#fff}
+
+.filtros{display:flex;gap:8px;align-items:center;flex:0 0 auto;margin-bottom:12px}
+.filtros .entrada{flex:1;height:44px;font-size:14px;min-width:0}
+.interruptor{flex:0 0 auto;display:flex;align-items:center;gap:7px;height:44px;
+  padding:0 12px;border-radius:var(--r-md);border:1px solid var(--linea);
+  background:var(--panel);font-size:12.5px;font-weight:700;color:var(--tenue);
+  white-space:nowrap}
+.interruptor input{width:17px;height:17px;accent-color:var(--azul)}
+.btn-csv{flex:0 0 auto;height:44px;padding:0 13px;border-radius:var(--r-md);
+  border:1px solid var(--linea);background:var(--panel);font-size:12.5px;
+  font-weight:800;color:var(--tenue)}
+
+.cuerpo{flex:1;overflow-y:auto;min-height:0;padding-bottom:28px}
+
+.ficha{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);
+  padding:16px 18px;margin-bottom:12px}
+.titulin{font-size:11.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  color:#9AA8BC;margin-bottom:10px}
+
+/* Inicial → entradas → salidas → final, en ese orden: es la cuenta que se
+   lee de izquierda a derecha y que tiene que cuadrar. */
+.cuenta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;
+  margin-bottom:12px}
+.cubo{border-radius:var(--r-md);padding:13px 14px;border:1px solid var(--linea);
+  background:var(--panel);min-width:0}
+.cubo .eti{font-size:11px;font-weight:800;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--tenue);margin-bottom:6px}
+.cubo b{display:block;font-family:var(--num);font-size:19px;font-weight:700;
+  line-height:1.1;letter-spacing:-.03em;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+.cubo small{display:block;font-size:11.5px;color:var(--tenue);margin-top:4px}
+.cubo.entra{background:#E7F7EE;border-color:#C7EBD6}
+.cubo.entra .eti,.cubo.entra b{color:var(--verde-oscuro)}
+.cubo.sale{background:#FFEDF1;border-color:#F6CBD6}
+.cubo.sale .eti,.cubo.sale b{color:#9F1239}
+
+.tipo{display:flex;align-items:center;gap:10px;padding:9px 0;
+  border-bottom:1px solid var(--linea)}
+.tipo:last-child{border-bottom:none;padding-bottom:0}
+.tipo-nom{flex:1;min-width:0;font-size:13.5px}
+.tipo-nom small{display:block;font-size:11.5px;color:var(--tenue);margin-top:2px}
+.tipo-n{flex:0 0 auto;font-family:var(--num);font-size:14px;font-weight:700;
+  text-align:right;white-space:nowrap}
+.tipo-n small{display:block;font-size:11.5px;font-weight:500;color:var(--tenue)}
+.mas{color:var(--verde-oscuro)}
+.menos{color:#9F1239}
+
+/* un producto de la lista */
+.prod{display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+  background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);
+  padding:12px 14px;margin-bottom:8px}
+.prod-txt{flex:1;min-width:0}
+.prod-txt b{display:block;font-size:14px;font-weight:700;line-height:1.3;
+  overflow-wrap:anywhere}
+.prod-txt small{display:block;font-size:11.5px;color:var(--tenue);margin-top:3px}
+.prod-fin{flex:0 0 auto;text-align:right}
+.prod-fin .saldo{font-family:var(--num);font-size:15px;font-weight:700;white-space:nowrap}
+.prod-fin .saldo i{font-style:normal;color:var(--claro);font-weight:500}
+.prod-fin small{display:block;font-family:var(--num);font-size:12px;margin-top:3px;
+  white-space:nowrap}
+.prod.quieto .prod-txt b{color:var(--tenue)}
+.prod.descuadre{border-color:#F6CBD6;background:#FFF7F9}
+.sello{display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;
+  font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;
+  background:#FFEDF1;color:#9F1239;margin-left:4px}
+
+/* kardex de un producto */
+.hoja.ancha{max-width:620px}
+.mov{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--linea)}
+.mov:last-child{border-bottom:none}
+.mov-txt{flex:1;min-width:0}
+.mov-txt b{display:block;font-size:13.5px;font-weight:700}
+.mov-txt small{display:block;font-size:11.5px;color:var(--tenue);margin-top:3px;
+  line-height:1.45;overflow-wrap:anywhere}
+.mov-fin{flex:0 0 auto;text-align:right;font-family:var(--num)}
+.mov-fin b{display:block;font-size:14.5px;font-weight:700}
+.mov-fin small{display:block;font-size:11.5px;color:var(--tenue);margin-top:3px}
+.mini{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;
+  margin-bottom:14px;text-align:center}
+.mini div{background:var(--fondo);border-radius:var(--r-sm);padding:8px 4px}
+.mini small{display:block;font-size:10.5px;font-weight:800;text-transform:uppercase;
+  color:var(--tenue);letter-spacing:.03em}
+.mini b{display:block;font-family:var(--num);font-size:15px;margin-top:2px}
+
+.vacio{text-align:center;padding:44px 20px;color:var(--tenue)}
+.vacio b{display:block;font-size:16px;color:var(--tinta);margin-bottom:6px}
+.vacio p{font-size:13.5px;line-height:1.5;max-width:380px;margin:0 auto}
+
+.entrada{height:50px;border:1.5px solid var(--linea);border-radius:var(--r-md);
+  padding:0 14px;outline:none;font-size:15px;background:var(--panel);width:100%}
+.entrada:focus{border-color:var(--azul)}
+
+@media (max-width:820px){
+  .zona{padding:12px 14px 0}
+  .ficha{padding:14px 15px}
+  .cuenta{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:430px){
+  .filtros{flex-wrap:wrap}
+  .filtros .entrada{flex:1 1 100%}
+  .interruptor{flex:1}
+  .mini b{font-size:13.5px}
+}
+</style>
+</head>
+<body>
+
+<div class="oscura oculto" id="p-config">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Configuración</div>
+    <div class="titulo-o">Falta conectar el proyecto</div>
+    <p class="sub-o">Ponga la URL y la llave publishable en <b>config.js</b>.</p>
+  </div>
+</div>
+
+<div class="oscura oculto" id="p-sesion">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Movimientos</div>
+    <div class="titulo-o">Iniciar sesión</div>
+    <p class="sub-o">Use el correo con el que su gerente lo dio de alta</p>
+    <input class="campo-o" id="s-email" type="email" placeholder="correo@negocio.hn" autocomplete="username">
+    <input class="campo-o" id="s-clave" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <div class="error-o" id="s-error"></div>
+    <button class="btn-o" id="s-entrar">Entrar</button>
+  </div>
+</div>
+
+<div class="oscura oculto" id="p-bloqueado">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Movimientos</div>
+    <div class="titulo-o" id="bl-titulo">Sin permiso</div>
+    <p class="sub-o" id="bl-texto"></p>
+    <a class="btn-o" href="index.html" style="display:block;line-height:52px">Ir a la caja</a>
+    <button class="btn-o fantasma" id="bl-salir">Cerrar sesión</button>
+  </div>
+</div>
+
+<div class="armazon oculto" id="app">
+  <aside id="menu"></aside>
+
+  <div class="principal">
+    <header class="barra">
+      <button class="hamburguesa" id="abrir-menu" aria-label="Menú">
+        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="barra-titulo">
+        <b>Movimientos</b>
+        <small id="h-sucursal">—</small>
+      </div>
+      <div class="barra-fin">
+        <span class="pill" id="h-usuario">—</span>
+      </div>
+    </header>
+
+    <div class="zona">
+      <div class="pestanas" id="pestanas">
+        <button class="pes activo" data-v="periodo">Periodo</button>
+        <button class="pes" data-v="dia">Existencia al día</button>
+      </div>
+
+      <div class="fechas">
+        <input type="date" id="f-desde" aria-label="Desde">
+        <span id="f-a">a</span>
+        <input type="date" id="f-hasta" aria-label="Hasta">
+        <select id="f-sucursal" class="oculto" aria-label="Sucursal"></select>
+      </div>
+      <div class="atajos" id="atajos"></div>
+
+      <div class="filtros">
+        <input class="entrada" id="f-buscar" type="search"
+               placeholder="Buscar producto, SKU o código" autocomplete="off">
+        <label class="interruptor" id="l-movidos">
+          <input type="checkbox" id="f-movidos"> Solo con movimiento
+        </label>
+        <button class="btn-csv" id="b-csv" title="Descargar para Excel">CSV</button>
+      </div>
+
+      <div class="cuerpo" id="cuerpo"></div>
+    </div>
+  </div>
+</div>
+
+<div class="velo oculto" id="velo"><div class="hoja" id="hoja"></div></div>
+
+<script type="module">
+const CFG = window.SUPABASE_CONFIG || {};
+const SUPABASE_URL = CFG.url || 'PEGUE_AQUI_LA_URL';
+const SUPABASE_KEY = CFG.key || 'PEGUE_AQUI_LA_LLAVE';
+
+const $ = s => document.querySelector(s);
+const ver = (id, si = true) => $(id).classList.toggle('oculto', !si);
+
+if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin configurar'); }
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { montarMenu, escapar } from './menu.js';
+
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth:{ persistSession:true, autoRefreshToken:true }
+});
+
+const S = {
+  ctx:null, sucursal:null, moneda:'L', menu:null, nivel:0,
+  vista:'periodo',          // periodo · dia
+  desde:null, hasta:null, dia:null, atajo:'mes',
+  buscar:'', movidos:false,
+  datos:null, cargando:false, pedido:0
+};
+
+const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
+  { minimumFractionDigits:2, maximumFractionDigits:2 });
+const cant = n => (Number(n)||0).toLocaleString('es-HN', { maximumFractionDigits:3 });
+const firmado = n => (Number(n) > 0 ? '+' : Number(n) < 0 ? '−' : '') + cant(Math.abs(Number(n)||0));
+
+/* Las fechas se arman con la hora local del aparato: toISOString daria la
+   fecha de Greenwich, y a las 7 de la noche en Honduras ya seria mañana. */
+const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function fecha(v){
+  if (!v) return '—';
+  const [a, m, d] = String(v).slice(0,10).split('-').map(Number);
+  return `${d} ${MESES[m-1]} ${a}`;
+}
+function fechaHora(v){
+  if (!v) return '—';
+  const d = new Date(v);
+  return `${d.getDate()} ${MESES[d.getMonth()]} · ` +
+         d.toLocaleTimeString('es-HN', { hour:'numeric', minute:'2-digit' });
+}
+
+function limpiarError(e){
+  const m = (e?.message || String(e))
+    .replace(/^(?:[0-9A-Z]{5}|error|Error|ERROR):\s*/, '');
+  if (/JWT|token/i.test(m)) return 'La sesión venció. Vuelva a entrar.';
+  if (/Failed to fetch|NetworkError/i.test(m)) return 'Sin conexión con el servidor';
+  return m;
+}
+
+function aviso(titulo, texto){
+  $('#hoja').className = 'hoja';
+  $('#hoja').innerHTML = `<h2>${escapar(titulo)}</h2>
+    <p class="sub">${escapar(texto)}</p>
+    <button class="btn principal-b" style="width:100%" id="ok">Entendido</button>`;
+  ver('#velo');
+  $('#ok').onclick = () => ver('#velo', false);
+}
+const cerrarHoja = () => ver('#velo', false);
+$('#velo').addEventListener('click', e => { if (e.target === $('#velo')) cerrarHoja(); });
+
+/* ================= sesión ================= */
+$('#s-entrar').addEventListener('click', async () => {
+  const b = $('#s-entrar');
+  $('#s-error').textContent = '';
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+  const { error } = await sb.auth.signInWithPassword({
+    email:$('#s-email').value.trim(), password:$('#s-clave').value });
+  b.disabled = false; b.textContent = 'Entrar';
+  if (error){ $('#s-error').textContent = 'Correo o contraseña incorrectos'; return; }
+  arrancar();
+});
+$('#s-clave').addEventListener('keydown', e => { if (e.key === 'Enter') $('#s-entrar').click(); });
+$('#bl-salir').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
+
+/* ================= atajos de fecha ================= */
+function rango(atajo){
+  const hoy = new Date();
+  const d = n => new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + n);
+  switch (atajo){
+    case 'hoy':    return [iso(hoy), iso(hoy)];
+    case 'ayer':   return [iso(d(-1)), iso(d(-1))];
+    case 'semana': {
+      // la semana empieza el lunes
+      const lunes = d(-((hoy.getDay() + 6) % 7));
+      return [iso(lunes), iso(hoy)];
+    }
+    case '7':      return [iso(d(-6)), iso(hoy)];
+    case 'mes':    return [iso(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), iso(hoy)];
+    case 'pasado': return [iso(new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)),
+                           iso(new Date(hoy.getFullYear(), hoy.getMonth(), 0))];
+  }
+}
+
+const ATAJOS_PERIODO = [['hoy','Hoy'], ['ayer','Ayer'], ['semana','Esta semana'],
+                        ['mes','Este mes'], ['pasado','Mes pasado']];
+const ATAJOS_DIA = [['hoy','Hoy'], ['ayer','Ayer'], ['cierre','Cierre del mes pasado']];
+
+function pintarAtajos(){
+  const lista = S.vista === 'periodo' ? ATAJOS_PERIODO : ATAJOS_DIA;
+  $('#atajos').innerHTML = lista.map(([k, n]) =>
+    `<button class="atajo ${S.atajo === k ? 'activo' : ''}" data-a="${k}">${n}</button>`).join('');
+}
+
+$('#atajos').addEventListener('click', e => {
+  const b = e.target.closest('[data-a]');
+  if (!b) return;
+  S.atajo = b.dataset.a;
+  if (S.vista === 'periodo'){
+    [S.desde, S.hasta] = rango(S.atajo);
+  } else {
+    S.dia = S.atajo === 'cierre' ? rango('pasado')[1] : rango(S.atajo)[0];
+  }
+  pintarFechas(); cargar();
+});
+
+function pintarFechas(){
+  const dia = S.vista === 'dia';
+  $('#f-desde').value = dia ? S.dia : S.desde;
+  $('#f-hasta').value = S.hasta;
+  ver('#f-hasta', !dia); ver('#f-a', !dia);
+  $('#f-desde').setAttribute('aria-label', dia ? 'Día' : 'Desde');
+  ver('#l-movidos', !dia);
+  $('#pestanas').querySelectorAll('.pes').forEach(b =>
+    b.classList.toggle('activo', b.dataset.v === S.vista));
+  pintarAtajos();
+}
+
+/* ================= arranque ================= */
+async function arrancar(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session){ ver('#p-sesion'); return; }
+  ver('#p-sesion', false);
+
+  const { data, error } = await sb.rpc('fn_pos_contexto');
+  if (error){
+    ver('#p-sesion');
+    $('#s-error').textContent = 'Su usuario no tiene perfil en ningún negocio';
+    await sb.auth.signOut();
+    return;
+  }
+  S.ctx = data;
+  S.nivel = data.usuario.nivel;
+  S.moneda = data.organizacion.moneda === 'HNL' ? 'L' : data.organizacion.moneda;
+
+  // El kardex es de supervisor para arriba, igual que en la base de datos.
+  if (S.nivel < 2){
+    ver('#p-bloqueado');
+    $('#bl-titulo').textContent = 'Esta pantalla no es para su rol';
+    $('#bl-texto').textContent = 'Los movimientos de inventario los revisa el supervisor o el gerente.';
+    return;
+  }
+
+  const sucs = data.sucursales || [];
+  S.sucursal = sucs[0]?.id || null;
+  $('#h-usuario').textContent = data.usuario.nombre;
+  $('#h-sucursal').textContent = sucs[0]?.nombre || '';
+  if (sucs.length > 1){
+    $('#f-sucursal').innerHTML = sucs.map(s =>
+      `<option value="${escapar(s.id)}">${escapar(s.nombre)}</option>`).join('');
+    ver('#f-sucursal');
+  }
+  $('#app').classList.remove('oculto');
+
+  S.menu = montarMenu({
+    contenedor:'#menu', modulo:'movimientos', ctx:S.ctx,
+    alSalir: async () => { await sb.auth.signOut(); location.reload(); }
+  });
+  $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
+
+  [S.desde, S.hasta] = rango('mes');
+  S.dia = rango('hoy')[0];
+  pintarFechas();
+  cargar();
+}
+
+/* ================= filtros ================= */
+$('#pestanas').addEventListener('click', e => {
+  const b = e.target.closest('[data-v]');
+  if (!b || b.dataset.v === S.vista) return;
+  S.vista = b.dataset.v;
+  S.atajo = S.vista === 'dia' ? 'hoy' : 'mes';
+  if (S.vista === 'dia') S.dia = rango('hoy')[0];
+  else [S.desde, S.hasta] = rango('mes');
+  pintarFechas(); cargar();
+});
+
+$('#f-desde').addEventListener('change', e => {
+  if (!e.target.value) return;
+  if (S.vista === 'dia') S.dia = e.target.value; else S.desde = e.target.value;
+  S.atajo = null; pintarAtajos(); cargar();
+});
+$('#f-hasta').addEventListener('change', e => {
+  if (!e.target.value) return;
+  S.hasta = e.target.value; S.atajo = null; pintarAtajos(); cargar();
+});
+$('#f-sucursal').addEventListener('change', e => {
+  S.sucursal = e.target.value;
+  $('#h-sucursal').textContent = e.target.selectedOptions[0]?.textContent || '';
+  cargar();
+});
+$('#f-movidos').addEventListener('change', e => { S.movidos = e.target.checked; cargar(); });
+
+let espera = null;
+$('#f-buscar').addEventListener('input', e => {
+  clearTimeout(espera);
+  espera = setTimeout(() => { S.buscar = e.target.value.trim(); cargar(); }, 350);
+});
+
+/* ================= cargar ================= */
+async function cargar(){
+  const dia = S.vista === 'dia';
+  const desde = dia ? S.dia : S.desde;
+  const hasta = dia ? S.dia : S.hasta;
+
+  if (!desde || !hasta) return;
+  if (desde > hasta){
+    S.datos = null;
+    $('#cuerpo').innerHTML = `<div class="vacio"><b>Las fechas están al revés</b>
+      <p>La fecha de inicio tiene que ser antes de la final.</p></div>`;
+    return;
+  }
+
+  // Si el usuario cambia de filtro antes de que llegue la respuesta, la
+  // respuesta vieja no debe pisar a la nueva.
+  const turno = ++S.pedido;
+  S.cargando = true; pintar();
+
+  const { data, error } = await sb.rpc('fn_inventario_por_fecha', {
+    p_desde:desde, p_hasta:hasta, p_sucursal_id:S.sucursal,
+    p_buscar:S.buscar || null,
+    p_solo_movidos: dia ? false : S.movidos
+  });
+  if (turno !== S.pedido) return;
+  S.cargando = false;
+  if (error){
+    S.datos = null;
+    $('#cuerpo').innerHTML = `<div class="vacio"><b>No se pudo leer</b>
+      <p>${escapar(limpiarError(error))}</p></div>`;
+    return;
+  }
+  S.datos = data;
+  pintar();
+}
+
+/* ================= pintar ================= */
+function pintar(){
+  if (S.cargando){
+    $('#cuerpo').innerHTML = '<div class="vacio"><span class="girando"></span></div>';
+    return;
+  }
+  if (!S.datos) return;
+  return S.vista === 'dia' ? pintarDia() : pintarPeriodo();
+}
+
+function avisoTope(d){
+  return d.truncado
+    ? `<div class="aviso ojo">Se muestran los primeros ${cant(d.limite)} productos de
+         ${cant(d.totales.productos)}. Busque uno en particular para ver los demás.</div>`
+    : '';
+}
+
+function pintarPeriodo(){
+  const d = S.datos, t = d.totales, ve = d.puede_ver_costos;
+  const lista = d.productos || [];
+
+  if (!lista.length){
+    $('#cuerpo').innerHTML = `<div class="vacio"><b>Sin movimientos</b>
+      <p>${S.buscar ? 'Ningún producto con ese nombre tuvo movimiento en estas fechas.'
+                    : 'No entró ni salió nada entre el ' + fecha(d.desde) + ' y el ' + fecha(d.hasta) + '.'}</p></div>`;
+    return;
+  }
+
+  const tipos = d.por_tipo || [];
+  const entradas = tipos.filter(x => x.entrada);
+  const salidas  = tipos.filter(x => !x.entrada);
+  const suma = (l, k) => l.reduce((a, x) => a + (Number(x[k]) || 0), 0);
+
+  // Con costos, la cuenta va en lempiras: sumar libras de arroz con botellas
+  // de aceite no dice nada. Sin costos, se cuentan movimientos.
+  const cubos = ve ? `
+    <div class="cuenta">
+      <div class="cubo"><div class="eti">Empezó con</div><b>${money(t.valor_inicial)}</b>
+        <small>al abrir el ${fecha(d.desde)}</small></div>
+      <div class="cubo entra"><div class="eti">Entró</div><b>${money(t.valor_entradas)}</b>
+        <small>${cant(suma(entradas, 'movimientos'))} movimientos</small></div>
+      <div class="cubo sale"><div class="eti">Salió</div><b>${money(t.valor_salidas)}</b>
+        <small>${cant(suma(salidas, 'movimientos'))} movimientos</small></div>
+      <div class="cubo"><div class="eti">Terminó con</div><b>${money(t.valor_final)}</b>
+        <small>al cerrar el ${fecha(d.hasta)}</small></div>
+    </div>` : `
+    <div class="cuenta">
+      <div class="cubo"><div class="eti">Productos</div><b>${cant(t.productos)}</b>
+        <small>con historia aquí</small></div>
+      <div class="cubo"><div class="eti">Se movieron</div><b>${cant(t.con_movimiento)}</b>
+        <small>en el periodo</small></div>
+      <div class="cubo entra"><div class="eti">Entradas</div><b>${cant(suma(entradas, 'movimientos'))}</b>
+        <small>movimientos</small></div>
+      <div class="cubo sale"><div class="eti">Salidas</div><b>${cant(suma(salidas, 'movimientos'))}</b>
+        <small>movimientos</small></div>
+    </div>`;
+
+  const filaTipo = x => `<div class="tipo">
+      <span class="tipo-nom">${escapar(x.nombre)}
+        <small>${cant(x.movimientos)} ${x.movimientos === 1 ? 'movimiento' : 'movimientos'}</small></span>
+      <span class="tipo-n ${x.entrada ? 'mas' : 'menos'}">${x.entrada ? '+' : '−'}${cant(x.unidades)} und
+        ${ve && x.valor !== null && x.valor !== undefined ? `<small>${money(x.valor)}</small>` : ''}</span>
+    </div>`;
+
+  $('#cuerpo').innerHTML = `
+    ${cubos}
+    ${t.no_cuadran ? `<div class="aviso malo">${cant(t.no_cuadran)} producto(s) no cuadran:
+       lo que empezó más lo que entró menos lo que salió no da lo que terminó.
+       Eso solo pasa si alguien tocó el kardex por fuera del sistema.</div>` : ''}
+    ${tipos.length ? `<div class="ficha">
+      <div class="titulin">Qué movió el inventario</div>
+      ${entradas.map(filaTipo).join('')}${salidas.map(filaTipo).join('')}
+    </div>` : ''}
+    ${avisoTope(d)}
+    <div class="titulin" style="margin:4px 2px 10px">Por producto · toque uno para ver su kardex</div>
+    ${lista.map(p => `
+      <button class="prod ${p.movimientos ? '' : 'quieto'} ${p.cuadra ? '' : 'descuadre'}"
+              data-p="${escapar(p.producto_id)}">
+        <span class="prod-txt">
+          <b>${escapar(p.nombre)}${p.cuadra ? '' : '<span class="sello">no cuadra</span>'}</b>
+          <small>${escapar(p.sku)}${p.categoria ? ' · ' + escapar(p.categoria) : ''} ·
+            ${p.movimientos ? cant(p.movimientos) + ' mov.' : 'sin movimiento'}</small>
+        </span>
+        <span class="prod-fin">
+          <span class="saldo">${cant(p.inicial)} <i>→</i> ${cant(p.final)}</span>
+          <small>${Number(p.entradas) ? `<span class="mas">+${cant(p.entradas)}</span>` : ''}
+                 ${Number(p.salidas)  ? `<span class="menos">−${cant(p.salidas)}</span>` : ''}
+                 ${ve ? ` · ${money(p.valor_final)}` : ''}</small>
+        </span>
+      </button>`).join('')}`;
+}
+
+function pintarDia(){
+  const d = S.datos, t = d.totales, ve = d.puede_ver_costos;
+  const todos = d.productos || [];
+  const lista = todos.filter(p => Number(p.final) !== 0);
+  const ceros = todos.length - lista.length;
+
+  if (!lista.length){
+    $('#cuerpo').innerHTML = `<div class="vacio"><b>Nada en existencia</b>
+      <p>${todos.length ? 'Al cierre del ' + fecha(d.hasta) + ' todo estaba en cero.'
+                        : 'Para el ' + fecha(d.hasta) + ' todavía no había entrado mercadería aquí.'}</p></div>`;
+    return;
+  }
+
+  $('#cuerpo').innerHTML = `
+    <div class="ficha">
+      <div class="titulin">Al cierre del ${fecha(d.hasta)}</div>
+      <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+        ${ve ? `<b class="num" style="font-size:22px">${money(t.valor_final)}</b>
+                <span style="font-size:13px;color:var(--tenue)">en inventario, al costo</span>`
+             : `<b class="num" style="font-size:22px">${cant(lista.length)}</b>
+                <span style="font-size:13px;color:var(--tenue)">productos con existencia</span>`}
+      </div>
+      ${ve ? `<small style="display:block;margin-top:6px;font-size:12.5px;color:var(--tenue)">
+        ${cant(lista.length)} productos con existencia${ceros ? ' · ' + cant(ceros) + ' en cero no se muestran' : ''}</small>`
+           : ceros ? `<small style="display:block;margin-top:6px;font-size:12.5px;color:var(--tenue)">
+        ${cant(ceros)} en cero no se muestran</small>` : ''}
+    </div>
+    ${avisoTope(d)}
+    ${lista.map(p => `
+      <button class="prod" data-p="${escapar(p.producto_id)}">
+        <span class="prod-txt">
+          <b>${escapar(p.nombre)}</b>
+          <small>${escapar(p.sku)}${p.categoria ? ' · ' + escapar(p.categoria) : ''}
+            · último mov. ${fecha(p.ultimo)}</small>
+        </span>
+        <span class="prod-fin">
+          <span class="saldo ${Number(p.final) < 0 ? 'menos' : ''}">${cant(p.final)} ${escapar(p.unidad || '')}</span>
+          ${ve ? `<small>${money(p.valor_final)}</small>` : ''}
+        </span>
+      </button>`).join('')}`;
+}
+
+/* ================= kardex de un producto ================= */
+$('#cuerpo').addEventListener('click', e => {
+  const b = e.target.closest('[data-p]');
+  if (b) abrirKardex(b.dataset.p);
+});
+
+async function abrirKardex(id){
+  const dia = S.vista === 'dia';
+  // En "al día" el kardex muestra el mes hasta ese día: un solo día casi
+  // nunca explica por qué quedó lo que quedó.
+  const hasta = dia ? S.dia : S.hasta;
+  const desde = dia ? hasta.slice(0, 8) + '01' : S.desde;
+
+  $('#hoja').className = 'hoja ancha';
+  $('#hoja').innerHTML = '<div class="vacio"><span class="girando"></span></div>';
+  ver('#velo');
+
+  const { data:k, error } = await sb.rpc('fn_kardex_producto', {
+    p_producto_id:id, p_desde:desde, p_hasta:hasta, p_sucursal_id:S.sucursal });
+  if (error){ aviso('No se pudo leer el kardex', limpiarError(error)); return; }
+
+  const ve = k.puede_ver_costos;
+  const movs = k.movimientos || [];
+
+  $('#hoja').innerHTML = `
+    <h2>${escapar(k.nombre)}</h2>
+    <p class="sub">${escapar(k.sku)} · ${escapar(k.sucursal)} · del ${fecha(k.desde)} al ${fecha(k.hasta)}</p>
+    <div class="mini">
+      <div><small>Empezó</small><b>${cant(k.inicial)}</b></div>
+      <div><small>Entró</small><b class="mas">+${cant(k.entradas)}</b></div>
+      <div><small>Salió</small><b class="menos">−${cant(k.salidas)}</b></div>
+      <div><small>Terminó</small><b>${cant(k.final)}</b></div>
+    </div>
+    ${k.truncado ? `<div class="aviso ojo">Son ${cant(k.total_movimientos)} movimientos;
+      se muestran los últimos ${cant(movs.length)}. Acorte las fechas para ver los anteriores.</div>` : ''}
+    ${movs.length ? movs.map(m => `
+      <div class="mov">
+        <div class="mov-txt">
+          <b>${escapar(m.nombre_tipo)}${m.documento ? ' · ' + escapar(m.documento) : ''}</b>
+          <small>${fechaHora(m.fecha)}${m.usuario ? ' · ' + escapar(m.usuario) : ''}${
+            m.lote ? ' · lote ' + escapar(m.lote) : ''}${
+            m.notas ? ' · «' + escapar(m.notas) + '»' : ''}${
+            ve && m.costo_unitario !== null && m.costo_unitario !== undefined
+              ? '<br>a ' + money(m.costo_unitario) + ' c/u · promedio queda en ' + money(m.costo_promedio) : ''}</small>
+        </div>
+        <div class="mov-fin">
+          <b class="${Number(m.cantidad) > 0 ? 'mas' : 'menos'}">${firmado(m.cantidad)}</b>
+          <small>queda ${cant(m.saldo)}</small>
+        </div>
+      </div>`).join('')
+    : `<div class="vacio" style="padding:20px"><b>Sin movimientos en estas fechas</b>
+         <p>Quedó igual: ${cant(k.final)}.</p></div>`}
+    <button class="btn secundario" style="width:100%;margin-top:14px" id="k-cerrar">Cerrar</button>`;
+  $('#k-cerrar').onclick = cerrarHoja;
+}
+
+/* ================= CSV para Excel ================= */
+function celda(v){
+  if (v === null || v === undefined) return '';
+  const s = String(v);
+  // Un nombre que empieza con =, +, - o @ Excel lo ejecuta como formula.
+  const seguro = /^[=+\-@]/.test(s) && isNaN(Number(s)) ? "'" + s : s;
+  return /[";\n,]/.test(seguro) ? '"' + seguro.replace(/"/g, '""') + '"' : seguro;
+}
+
+function armarCsv(d, vista){
+  const ve = d.puede_ver_costos;
+  const cab = vista === 'dia'
+    ? ['Producto', 'SKU', 'Categoría', 'Unidad', 'Existencia', ...(ve ? ['Valor'] : []), 'Último movimiento']
+    : ['Producto', 'SKU', 'Categoría', 'Unidad', 'Inicial', 'Entradas', 'Salidas', 'Final', 'Movimientos',
+       ...(ve ? ['Valor inicial', 'Valor entradas', 'Valor salidas', 'Valor final'] : [])];
+  const filas = (d.productos || [])
+    .filter(p => vista !== 'dia' || Number(p.final) !== 0)
+    .map(p => vista === 'dia'
+      ? [p.nombre, p.sku, p.categoria, p.unidad, p.final, ...(ve ? [p.valor_final] : []),
+         p.ultimo ? String(p.ultimo).slice(0, 10) : '']
+      : [p.nombre, p.sku, p.categoria, p.unidad, p.inicial, p.entradas, p.salidas, p.final, p.movimientos,
+         ...(ve ? [p.valor_inicial, p.valor_entradas, p.valor_salidas, p.valor_final] : [])]);
+  // ; como separador: Excel en español no reconoce la coma
+  return '﻿' + [cab, ...filas].map(f => f.map(celda).join(';')).join('\r\n');
+}
+
+$('#b-csv').addEventListener('click', () => {
+  const d = S.datos;
+  if (!d || !(d.productos || []).length){
+    aviso('Nada que descargar', 'Primero elija unas fechas que tengan movimiento.');
+    return;
+  }
+  const nombre = S.vista === 'dia'
+    ? `existencia-${d.hasta}.csv`
+    : `movimientos-${d.desde}-a-${d.hasta}.csv`;
+  const blob = new Blob([armarCsv(d, S.vista)], { type:'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = nombre;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+});
+
+/* ================= al aire ================= */
+arrancar();
+
+if ('serviceWorker' in navigator)
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>

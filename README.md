@@ -16,6 +16,7 @@ después de cada cobro y funciona sin internet.
 index.html                          POS: catálogo, ticket, cobro, bloqueo por PIN
 pedidos.html                        tablero de pedidos en tiempo real
 compras.html                        entrada de mercadería y cuentas por pagar
+movimientos.html                    inventario por fecha: periodo, existencia al día, kardex
 ui.css                              sistema visual: tokens, menú lateral, componentes
 menu.js                             menú lateral compartido
 escaner.js                          escáner de códigos con la cámara
@@ -237,6 +238,28 @@ libera al cobrar, al cancelar o al entregar.
 de cada línea, el total se recalcula solo y el cliente ve el monto correcto.
 
 Las tarjetas que llevan más de 20 minutos esperando se marcan en rojo.
+
+## Movimientos (inventario por fecha)
+
+`movimientos.html`, para supervisor en adelante. Dos vistas:
+
+- **Periodo:** por producto, con cuánto empezó, cuánto entró, cuánto salió y
+  con cuánto terminó; y en total, qué movió el inventario (compras, ventas,
+  merma, ajustes). Atajos de hoy, ayer, esta semana, este mes y mes pasado.
+- **Existencia al día:** cuánto había de cada cosa al cierre de una fecha,
+  por ejemplo el cierre del mes pasado.
+
+Tocando un producto se abre su kardex: cada movimiento con su documento
+(ticket, factura, conteo, merma), quién lo hizo y lo que quedó. Todo se
+descarga en CSV para Excel.
+
+No guarda nada nuevo: el kardex ya trae el saldo después de cada movimiento,
+así que el saldo a cualquier hora es el del último movimiento antes de esa
+hora. Las fechas se cortan a la hora de Honduras (`app.zona`). El gerente ve
+lempiras; el supervisor solo cantidades. Si un producto no cuadra
+(inicial + entradas − salidas ≠ final) la pantalla lo marca.
+
+Funciones: `fn_inventario_por_fecha`, `fn_kardex_producto` (migración 025).
 
 ## Pendiente
 

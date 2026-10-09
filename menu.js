@@ -30,6 +30,7 @@ const ICONOS = {
   lupa:      '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
   auditar:   '<path d="M3 6h10M3 12h7M3 18h7"/><circle cx="17" cy="15" r="4"/><path d="m20.5 18.5 2 2"/>',
   merma:     '<path d="M3 6h18l-1.5 13a2 2 0 0 1-2 1.8H6.5a2 2 0 0 1-2-1.8z"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="m10 11 4 5M14 11l-4 5"/>',
+  calendario:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/>',
   todos:     '<path d="M4 6h16M4 12h16M4 18h16"/>',
   salir:     '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>'
 };
@@ -50,6 +51,7 @@ const MODULOS = [
   { id:'conteo',  nombre:'Conteo',      url:'conteo.html',  icono:'inventario', nivel:1 },
   { id:'auditoria', nombre:'Auditoría', url:'auditoria.html', icono:'auditar', nivel:1 },
   { id:'merma',   nombre:'Merma',       url:'merma.html',   icono:'merma',   nivel:1 },
+  { id:'movimientos', nombre:'Movimientos', url:'movimientos.html', icono:'calendario', nivel:2 },
   { id:'catalogo', nombre:'Catálogos',  url:'catalogo.html', icono:'inventario', nivel:1 }
 ];
 
