@@ -61,8 +61,30 @@ const PERFIL = (ve = true) => ({
   ultima_venta:dia(-1)+'T22:00:00Z',
   vendido_30d:142,
   conteo_abierto:null,
+  ajustes_pendientes:[],
+  puede_aprobar:ve,
   puede_ver_costos:ve
 });
+
+const PENDIENTE = {
+  ajuste_id:'aj1', numero:'AJ-S01-000001', ubicacion:'Piso de ventas',
+  ubicacion_id:'u1', lote_id:null, lote:null,
+  sistema:18, contado:14, diferencia:-4, motivo:'Conté el estante',
+  solicitado_por:'Ana', solicitado_en:dia(0)+'T14:00:00Z' };
+
+const BANDEJA = [{
+  ajuste_id:'aj1', numero:'AJ-S01-000001', estado:'pendiente',
+  producto_id:'p1', producto:'Leche entera 1 L', sku:'LEC1L', unidad:'UND',
+  lote:null, vence:null, ubicacion:'Piso de ventas', sucursal:'Central',
+  sistema:18, contado:14, diferencia:-4, valor:-72.8, motivo:'Conté el estante',
+  solicitado_por:'Ana', solicitado_en:dia(0)+'T14:00:00Z',
+  resuelto_por:null, resuelto_en:null, nota:null, aplicado:null }];
+
+const POR_LOTE = [
+  { ubicacion_id:'u1', ubicacion:'Piso de ventas', es_predeterminada:true, orden:10, cantidad:18 },
+  { ubicacion_id:'u2', ubicacion:'Refrigerador', es_predeterminada:false, orden:20, cantidad:12 },
+  { ubicacion_id:'u3', ubicacion:'Bodega', es_predeterminada:false, orden:200, cantidad:30 }
+];
 
 const lunes = k => {
   const x = new Date();
@@ -145,7 +167,17 @@ const base = (rol = 'gerente', nivel = 3, extra = {}) => ({
     fn_agregar_a_conteo:{ data:{ conteo_id:'c9', numero:'C-S01-000004',
                                  alcance:'seleccion', conteo_nuevo:true, agregadas:4,
                                  ya_estaba:false, lineas_producto:4,
-                                 producto:'Leche entera 1 L' }, error:null }
+                                 producto:'Leche entera 1 L' }, error:null },
+    fn_ajustes:{ data:[], error:null },
+    fn_existencia_ubicacion_lote:{ data:POR_LOTE, error:null },
+    fn_solicitar_ajuste: a => ({ data:{
+      ajuste_id:'ajN', numero:'AJ-S01-000009',
+      ubicacion:'Piso de ventas', producto:'Leche entera 1 L',
+      sistema:18, contado:a.p_cantidad, diferencia:a.p_cantidad - 18,
+      puede_aprobar:nivel >= 3 }, error:null }),
+    fn_resolver_ajuste:{ data:{ numero:'AJ-S01-000001', estado:'aprobado',
+      ubicacion:'Piso de ventas', producto:'Leche entera 1 L',
+      diferencia:-4, queda_en:14, existencia_total:56, valor:-72.8 }, error:null }
   }, ...extra });
 
 /* ===================================================================== */
@@ -558,6 +590,215 @@ console.log('\n=== PRODUCTOS RAROS ===');
   await esperar(140);
   chk('un producto ajeno no se pinta', !d.querySelector('.ficha'));
   chk('y avisa por qué', /no es de su negocio/.test(d.querySelector('#hoja').textContent));
+}
+
+console.log('\n=== LA BANDEJA DE APROBACIÓN EN LA PORTADA ===');
+{
+  const estado = base();
+  const { d } = await montar(estado);
+  chk('sin pendientes no estorba', !d.querySelector('.pend'));
+}
+{
+  const estado = base();
+  estado.rpc.fn_ajustes = { data:BANDEJA, error:null };
+  const { d, estado:e } = await montar(estado);
+  chk('pide solo los pendientes',
+      e.llamadas.find(l => l.fn === 'fn_ajustes').args.p_estado === 'pendiente');
+  chk('muestra la bandeja', !!d.querySelector('.pend'));
+  chk('en singular con uno solo', /Un ajuste espera/.test(d.querySelector('.pend').textContent));
+  chk('dice de cuánto a cuánto', /de 18 a 14/.test(d.querySelector('.pend').textContent));
+  chk('y la diferencia con signo', d.querySelector('.pend-dif').textContent === '−4');
+  chk('el gerente puede tocar para revisar',
+      /Toque uno para revisarlo/.test(d.querySelector('.pend-espera').textContent));
+}
+{
+  const estado = base('auxiliar', 1);
+  estado.rpc.fn_ajustes = { data:BANDEJA, error:null };
+  const { d } = await montar(estado);
+  chk('la auxiliar también ve la bandeja', !!d.querySelector('.pend'));
+  chk('pero le dice que la aprueba el gerente',
+      /El gerente los aprueba/.test(d.querySelector('.pend-espera').textContent));
+}
+
+console.log('\n=== EDITAR INVENTARIO ===');
+{
+  const estado = base();
+  const { d, p, w, estado:e } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  chk('hay botón de editar', !!d.querySelector('#btn-editar'));
+
+  d.querySelector('#btn-editar').click();
+  await esperar(150);
+  chk('pide el desglose del lote',
+      e.llamadas.some(l => l.fn === 'fn_existencia_ubicacion_lote'));
+  chk('arranca por el lote que vence primero',
+      e.llamadas.find(l => l.fn === 'fn_existencia_ubicacion_lote').args.p_lote_id === 'lo0');
+  chk('una fila por ubicación', d.querySelectorAll('.edit-fila').length === 3);
+  chk('cada una trae lo que dice el sistema',
+      [...d.querySelectorAll('.edit-fila input')].map(i => i.value).join(',') === '18,12,30');
+  chk('y el nombre del lugar, que es lo que se elige',
+      [...d.querySelectorAll('.edit-nom b')].map(e => e.textContent).join(',')
+        === 'Piso de ventas,Refrigerador,Bodega');
+  chk('avisa que da de baja mercadería',
+      /da de.*baja o alta/is.test(d.querySelector('#hoja').textContent));
+  chk('y manda a Mover de lugar si está en otro lado',
+      /Mover de lugar/.test(d.querySelector('#hoja').textContent));
+  chk('pide el motivo', !!d.querySelector('#ed-motivo'));
+
+  // sin cambiar nada
+  d.querySelector('#ed-si').click();
+  await esperar();
+  chk('sin cambios no manda nada',
+      /No cambió ningún número/.test(d.querySelector('#ed-error').textContent));
+  chk('y no llamó al servidor',
+      !e.llamadas.some(l => l.fn === 'fn_solicitar_ajuste'));
+
+  // el renglón se marca al cambiar
+  const inp = d.querySelectorAll('.edit-fila input')[0];
+  inp.value = '14';
+  inp.dispatchEvent(new w.Event('input', { bubbles:true }));
+  chk('marca la fila cambiada',
+      inp.closest('.edit-fila').classList.contains('cambiada'));
+  chk('y muestra la diferencia',
+      inp.closest('.edit-fila').querySelector('.edit-dif').textContent === '−4');
+
+  inp.value = '-9';
+  inp.dispatchEvent(new w.Event('input', { bubbles:true }));
+  chk('el campo no acepta negativos', inp.value === '9');
+
+  inp.value = '14';
+  inp.dispatchEvent(new w.Event('input', { bubbles:true }));
+  d.querySelector('#ed-motivo').value = 'Conté el estante';
+  d.querySelector('#ed-si').click();
+  await esperar(160);
+  const sol = e.llamadas.filter(l => l.fn === 'fn_solicitar_ajuste');
+  chk('manda un solo ajuste, el que cambió', sol.length === 1);
+  chk('con ubicación, cantidad, lote y motivo',
+      sol[0].args.p_ubicacion_id === 'u1' && sol[0].args.p_cantidad === 14 &&
+      sol[0].args.p_lote_id === 'lo0' && sol[0].args.p_motivo === 'Conté el estante');
+  chk('dice que se envió a aprobación',
+      /Enviado a aprobación/.test(d.querySelector('#hoja').textContent));
+  chk('y que el inventario no cambió todavía',
+      /no cambió.*todavía/is.test(d.querySelector('#hoja').textContent));
+}
+{
+  // Dos ubicaciones cambiadas a la vez
+  const estado = base();
+  const { d, p, w, estado:e } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  d.querySelector('#btn-editar').click();
+  await esperar(150);
+  const campos = d.querySelectorAll('.edit-fila input');
+  campos[0].value = '14'; campos[0].dispatchEvent(new w.Event('input', { bubbles:true }));
+  campos[2].value = '33'; campos[2].dispatchEvent(new w.Event('input', { bubbles:true }));
+  d.querySelector('#ed-si').click();
+  await esperar(200);
+  const sol = e.llamadas.filter(l => l.fn === 'fn_solicitar_ajuste');
+  chk('manda uno por cada lugar cambiado', sol.length === 2);
+  chk('y no manda el que quedó igual',
+      !sol.some(x => x.args.p_ubicacion_id === 'u2'));
+}
+{
+  // Un lugar que ya tiene un pendiente queda trabado
+  const estado = base();
+  const perfil = PERFIL(true);
+  perfil.ajustes_pendientes = [{ ...PENDIENTE, lote_id:'lo0' }];
+  estado.rpc.fn_consultar_producto = { data:perfil, error:null };
+  const { d, p } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  d.querySelector('#btn-editar').click();
+  await esperar(150);
+  const primera = d.querySelectorAll('.edit-fila')[0];
+  chk('la fila con ajuste pendiente no se puede escribir',
+      primera.querySelector('input').disabled === true);
+  chk('y lo dice', /ya tiene un ajuste esperando/.test(primera.textContent));
+  chk('las otras sí',
+      d.querySelectorAll('.edit-fila')[1].querySelector('input').disabled === false);
+}
+{
+  const estado = base();
+  estado.rpc.fn_solicitar_ajuste = { data:null,
+    error:{ message:'Ya hay un ajuste pendiente de aprobacion para Leche en Piso de ventas' } };
+  const { d, p, w } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  d.querySelector('#btn-editar').click();
+  await esperar(150);
+  const inp = d.querySelectorAll('.edit-fila input')[0];
+  inp.value = '14'; inp.dispatchEvent(new w.Event('input', { bubbles:true }));
+  d.querySelector('#ed-si').click();
+  await esperar(160);
+  chk('si el servidor lo rechaza se ve el motivo',
+      /Ya hay un ajuste pendiente/.test(d.querySelector('#ed-error').textContent));
+  chk('y la hoja sigue abierta', !!d.querySelector('.edit-fila'));
+}
+
+console.log('\n=== APROBAR Y RECHAZAR DESDE EL PRODUCTO ===');
+{
+  const estado = base();
+  const perfil = PERFIL(true);
+  perfil.ajustes_pendientes = [PENDIENTE];
+  estado.rpc.fn_consultar_producto = { data:perfil, error:null };
+  const { d, p, estado:e } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  chk('el pendiente sale arriba del todo',
+      d.querySelector('#cuerpo').firstElementChild.classList.contains('pend'));
+  chk('con quién lo pidió y por qué',
+      /Ana/.test(d.querySelector('.pend').textContent) &&
+      /Conté el estante/.test(d.querySelector('.pend').textContent));
+  chk('el gerente ve los dos botones',
+      !!d.querySelector('[data-aprobar]') && !!d.querySelector('[data-rechazar]'));
+
+  d.querySelector('[data-aprobar]').click();
+  await esperar(200);
+  const r = e.llamadas.find(l => l.fn === 'fn_resolver_ajuste');
+  chk('aprueba en el servidor', r && r.args.p_aprobar === true);
+  chk('dice en cuánto queda el lugar', /queda en/.test(d.querySelector('#hoja').textContent));
+  chk('y la existencia total del producto', /56/.test(d.querySelector('#hoja').textContent));
+  chk('vuelve a leer la ficha',
+      e.llamadas.filter(l => l.fn === 'fn_consultar_producto').length >= 2);
+}
+{
+  const estado = base('auxiliar', 1);
+  const perfil = PERFIL(false);
+  perfil.ajustes_pendientes = [PENDIENTE];
+  perfil.puede_aprobar = false;
+  estado.rpc.fn_consultar_producto = { data:perfil, error:null };
+  const { d, p } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  chk('la auxiliar ve el pendiente', !!d.querySelector('.pend'));
+  chk('pero no puede aprobarlo', !d.querySelector('[data-aprobar]'));
+  chk('ni rechazarlo', !d.querySelector('[data-rechazar]'));
+  chk('y se le explica', /El gerente lo aprueba/.test(d.querySelector('.pend').textContent));
+}
+{
+  const estado = base();
+  const perfil = PERFIL(true);
+  perfil.ajustes_pendientes = [PENDIENTE];
+  estado.rpc.fn_consultar_producto = { data:perfil, error:null };
+  const { d, p, estado:e } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  d.querySelector('[data-rechazar]').click();
+  await esperar();
+  chk('rechazar abre su hoja', !!d.querySelector('#rz-motivo'));
+  d.querySelector('#rz-si').click();
+  await esperar();
+  chk('y exige el motivo',
+      /Diga por qué se rechaza/.test(d.querySelector('#rz-error').textContent));
+  chk('sin motivo no llama al servidor',
+      !e.llamadas.some(l => l.fn === 'fn_resolver_ajuste'));
+  d.querySelector('#rz-motivo').value = 'Hay que volver a contarlo';
+  d.querySelector('#rz-si').click();
+  await esperar(200);
+  const r = e.llamadas.find(l => l.fn === 'fn_resolver_ajuste');
+  chk('con motivo sí lo manda',
+      r && r.args.p_aprobar === false && r.args.p_nota === 'Hay que volver a contarlo');
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);

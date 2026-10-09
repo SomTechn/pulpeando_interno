@@ -132,6 +132,50 @@
 .acciones-ficha .btn:hover{border-color:#C9D6E8}
 .acciones-ficha .btn:active{transform:scale(.99)}
 
+/* ajustes esperando aprobacion */
+.pend{background:#FFF9EC;border:1px solid #F3E2BC;border-radius:var(--r-md);
+  padding:14px 16px;margin-bottom:12px}
+.pend .titulin{color:#8A5A00}
+.pend-fila{display:flex;align-items:center;gap:12px;padding:9px 0;
+  border-bottom:1px solid #F3E2BC}
+.pend-fila:last-of-type{border-bottom:none}
+.pend-txt{flex:1;min-width:0}
+.pend-txt b{display:block;font-size:13.5px;line-height:1.35;overflow-wrap:anywhere}
+.pend-txt small{display:block;font-size:12px;color:#8A5A00;margin-top:2px;
+  line-height:1.4}
+.pend-dif{flex:0 0 auto;font-family:var(--num);font-size:16px;font-weight:700;
+  color:var(--rojo);white-space:nowrap}
+.pend-dif.mas{color:var(--verde-oscuro)}
+.pend-acc{display:flex;gap:9px;margin-top:11px}
+.pend-acc .btn{flex:1;height:44px;font-size:14px}
+.pend-acc .btn.si{background:var(--verde);color:#fff}
+.pend-acc .btn.no{background:var(--panel);border:1px solid #F3E2BC;color:#8A5A00}
+.pend-espera{font-size:12.5px;color:#8A5A00;margin-top:10px;line-height:1.45}
+
+/* editar inventario: una fila por ubicacion */
+.edit-fila{display:flex;align-items:center;gap:11px;padding:9px 0;
+  border-bottom:1px solid var(--linea)}
+.edit-fila:last-child{border-bottom:none}
+.edit-nom{flex:1;min-width:0}
+/* El nombre del lugar se parte en dos renglones antes que recortarse:
+   "Refrigerador de la entrada" cortado no sirve para elegir donde contar. */
+.edit-nom b{display:block;font-size:14px;font-weight:600;line-height:1.3;
+  overflow-wrap:anywhere}
+.edit-nom small{display:block;font-size:11.5px;color:var(--tenue);margin-top:2px}
+/* min-width:auto de los controles de formulario le gana al flex-basis: sin
+   width y min-width el campo se queda con 230 de los 320 de la hoja y el
+   nombre del lugar desaparece. */
+.edit-fila input{flex:0 0 auto;width:92px;min-width:0;height:46px;
+  border:1.5px solid var(--linea);border-radius:var(--r-sm);padding:0 10px;
+  outline:none;text-align:right;font-family:var(--num);font-size:16px;
+  font-weight:600;background:var(--panel)}
+.edit-fila input:focus{border-color:var(--azul)}
+.edit-fila.cambiada input{border-color:var(--ambar);background:#FFF9EC}
+.edit-dif{flex:0 0 46px;text-align:right;font-family:var(--num);font-size:13px;
+  font-weight:700;color:var(--tenue)}
+.edit-dif.menos{color:var(--rojo)}
+.edit-dif.mas{color:var(--verde-oscuro)}
+
 .entrada{height:50px;border:1.5px solid var(--linea);border-radius:var(--r-md);
   padding:0 14px;outline:none;font-size:15px;background:var(--panel);width:100%}
 .entrada:focus{border-color:var(--azul)}
@@ -162,6 +206,9 @@ select.entrada{appearance:none;
 }
 @media (max-width:420px){
   .datos{grid-template-columns:1fr}
+  .edit-fila{gap:8px}
+  .edit-fila input{width:80px}
+  .edit-dif{flex:0 0 38px;font-size:12px}
   .gnum{font-size:11px}
   .gpie div{font-size:10px}
 }
@@ -262,7 +309,8 @@ const S = {
   ctx:null, sucursal:null, moneda:'L', menu:null, nivel:0,
   vista:'inicio',        // inicio · resultados · ficha
   busqueda:'', resultados:[],
-  prod:null, semanas:[], cargando:false
+  prod:null, semanas:[], cargando:false,
+  pendientes:[], puedeAprobar:false
 };
 
 const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
@@ -332,6 +380,7 @@ async function arrancar(){
   }
 
   S.sucursal = data.sucursales[0]?.id || null;
+  S.puedeAprobar = S.nivel >= 3;      // gerente para arriba
   $('#h-usuario').textContent = data.usuario.nombre;
   $('#h-sucursal').textContent = data.sucursales[0]?.nombre || '';
   $('#app').classList.remove('oculto');
@@ -345,8 +394,18 @@ async function arrancar(){
   if (await hayCamara()) ver('#btn-camara');
   $('#btn-camara').addEventListener('click', escanearCodigo);
 
+  await cargarPendientes();
   pintar();
   $('#buscar').focus();
+}
+
+/* Los ajustes que estan esperando aprobacion. En la portada de esta pantalla
+   porque es la que mas se abre: un ajuste pendiente que nadie ve es
+   inventario que nadie corrige. */
+async function cargarPendientes(){
+  const { data, error } = await sb.rpc('fn_ajustes',
+    { p_estado:'pendiente', p_sucursal_id:S.sucursal, p_limite:30 });
+  S.pendientes = error ? [] : (data || []);
 }
 
 /* ================= buscar ================= */
@@ -419,6 +478,7 @@ async function abrir(id){
   }
 
   S.prod = perfil.data;
+  S.puedeAprobar = !!perfil.data.puede_aprobar;
   S.semanas = semanas.error ? [] : (semanas.data || []);
   pintar();
   // El campo queda listo para el siguiente escaneo sin tocar nada.
@@ -441,13 +501,39 @@ function pintar(){
 }
 
 function pintarInicio(){
-  $('#cuerpo').innerHTML = `
+  const n = S.pendientes.length;
+  const bandeja = n ? `
+    <div class="pend">
+      <div class="titulin">${n === 1 ? 'Un ajuste espera aprobación'
+                                     : n + ' ajustes esperan aprobación'}</div>
+      ${S.pendientes.map(a => `
+        <button class="pend-fila" style="width:100%;text-align:left"
+                data-abrir="${a.producto_id}">
+          <div class="pend-txt">
+            <b>${escapar(a.producto)}</b>
+            <small>${escapar(a.ubicacion)}${a.lote ? ' · lote ' + escapar(a.lote) : ''} ·
+              de ${cant(a.sistema)} a ${cant(a.contado)} · ${escapar(a.solicitado_por || '')}</small>
+          </div>
+          <span class="pend-dif ${Number(a.diferencia) > 0 ? 'mas' : ''}">${conSigno(a.diferencia)}</span>
+        </button>`).join('')}
+      <div class="pend-espera">${S.puedeAprobar
+        ? 'Toque uno para revisarlo y aprobarlo.'
+        : 'El gerente los aprueba. Mientras tanto el inventario no cambia.'}</div>
+    </div>` : '';
+
+  $('#cuerpo').innerHTML = bandeja + `
     <div class="vacio">
       <b>¿Qué quiere saber de un producto?</b>
       <p>Escanee el código de barras o escriba el nombre. Verá el precio, cuánto
          hay en el piso de ventas y en la bodega, las ventas de las últimas
          semanas y los vencimientos.</p>
     </div>`;
+}
+
+/* -3 en vez de -3, +5 en vez de 5: el signo es el dato */
+function conSigno(n){
+  const x = Number(n) || 0;
+  return (x > 0 ? '+' : x < 0 ? '−' : '') + cant(Math.abs(x));
 }
 
 function pintarResultados(){
@@ -567,7 +653,32 @@ function pintarFicha(){
     ? `Agregar al conteo ${abierto.numero}`
     : 'Generar conteo';
 
-  $('#cuerpo').innerHTML = `
+  /* Lo que este producto tiene esperando aprobacion. Va arriba del todo:
+     sin esto dos personas piden el mismo ajuste y la segunda solo se entera
+     por un error. */
+  const pend = p.ajustes_pendientes || [];
+  const bloquePend = pend.length ? `
+    <div class="pend">
+      <div class="titulin">${pend.length === 1 ? 'Ajuste esperando aprobación'
+                                               : 'Ajustes esperando aprobación'}</div>
+      ${pend.map(a => `
+        <div class="pend-fila">
+          <div class="pend-txt">
+            <b>${escapar(a.ubicacion)}${a.lote ? ' · lote ' + escapar(a.lote) : ''}</b>
+            <small>De ${cant(a.sistema)} a ${cant(a.contado)} · pedido por
+              ${escapar(a.solicitado_por || '—')}${a.motivo ? ' · «' + escapar(a.motivo) + '»' : ''}</small>
+          </div>
+          <span class="pend-dif ${Number(a.diferencia) > 0 ? 'mas' : ''}">${conSigno(a.diferencia)}</span>
+        </div>
+        ${p.puede_aprobar ? `<div class="pend-acc">
+          <button class="btn no" data-rechazar="${a.ajuste_id}">Rechazar</button>
+          <button class="btn si" data-aprobar="${a.ajuste_id}">Aprobar</button>
+        </div>` : ''}`).join('')}
+      ${p.puede_aprobar ? '' :
+        '<div class="pend-espera">El gerente lo aprueba. Mientras tanto el inventario sigue como está.</div>'}
+    </div>` : '';
+
+  $('#cuerpo').innerHTML = bloquePend + `
     <div class="ficha">
       <div class="ficha-enc">
         <div class="ficha-id">
@@ -597,6 +708,7 @@ function pintarFicha(){
     </div>
 
     <div class="acciones-ficha">
+      <button class="btn secundario" id="btn-editar">Editar inventario</button>
       <button class="btn secundario" id="btn-mover">Mover de lugar</button>
       <button class="btn secundario" id="btn-conteo">${escapar(textoConteo)}</button>
     </div>
@@ -613,6 +725,7 @@ function pintarFicha(){
       <div class="datos">${datos}</div>
     </div>`;
 
+  $('#btn-editar').addEventListener('click', () => hojaEditar());
   $('#btn-mover').addEventListener('click', hojaMover);
   $('#btn-conteo').addEventListener('click', hojaConteo);
 }
@@ -662,6 +775,225 @@ function fecha(v){
   if (!v) return '—';
   const [a, m, d] = String(v).slice(0,10).split('-').map(Number);
   return `${d} ${MESES[m-1]} ${a}`;
+}
+
+/* ================= editar inventario =================
+
+   Corregir lo que hay en un lugar NO cambia el inventario de una vez: se
+   manda a aprobacion. Bajar una existencia es la forma mas comoda de tapar
+   un faltante, asi que lo pide uno y lo aprueba otro.
+   ===================================================== */
+async function hojaEditar(loteElegido){
+  const p = S.prod;
+  const lotes = p.lotes || [];
+  const haySinLote = Number(p.sin_lote) > 0;
+
+  // Por omision el lote que vence primero: es el que se toca mas.
+  const lote = loteElegido === undefined
+    ? (lotes.length ? lotes[0].lote_id : null)
+    : (loteElegido || null);
+
+  $('#hoja').innerHTML = '<div class="vacio"><span class="girando"></span></div>';
+  ver('#velo');
+
+  const { data, error } = await sb.rpc('fn_existencia_ubicacion_lote', {
+    p_producto_id:p.producto_id, p_lote_id:lote, p_sucursal_id:S.sucursal });
+
+  if (error){ cerrarHoja(); aviso('No se pudo leer el inventario', limpiarError(error)); return; }
+  const lugares = data || [];
+
+  // Lo que ya esta esperando aprobacion no se puede volver a pedir.
+  const trabado = u => (p.ajustes_pendientes || []).find(a =>
+    a.ubicacion_id === u.ubicacion_id && (a.lote_id || null) === lote);
+
+  const selLote = (lotes.length || haySinLote) ? `
+    <div class="campo-g">
+      <label for="ed-lote">¿De qué lote?</label>
+      <select class="entrada" id="ed-lote">
+        ${lotes.map(l => `<option value="${l.lote_id}" ${l.lote_id === lote ? 'selected' : ''}
+          >${escapar(l.codigo || 'Lote')} (${cant(l.cantidad)})${l.vence ? ' · vence ' + fecha(l.vence) : ''}</option>`).join('')}
+        ${haySinLote ? `<option value="" ${lote === null ? 'selected' : ''}
+          >Sin lote (${cant(p.sin_lote)})</option>` : ''}
+      </select>
+    </div>` : '';
+
+  const filas = lugares.map(u => {
+    const t = trabado(u);
+    const n = Number(u.cantidad) || 0;
+    return `<div class="edit-fila" data-ub="${u.ubicacion_id}" data-sis="${n}">
+      <div class="edit-nom">
+        <b>${escapar(u.ubicacion)}</b>
+        <small>${t ? 'ya tiene un ajuste esperando' : 'el sistema dice ' + cant(n)}</small>
+      </div>
+      <span class="edit-dif"></span>
+      <input inputmode="decimal" value="${cant(n)}" ${t ? 'disabled' : ''}
+             aria-label="Contado en ${escapar(u.ubicacion)}">
+    </div>`;
+  }).join('');
+
+  $('#hoja').innerHTML = `
+    <h2>Editar inventario</h2>
+    <p class="sub">${escapar(p.nombre)}. Escriba lo que contó en cada lugar.</p>
+    ${selLote}
+    <div style="margin:${selLote ? '14px' : '0'} 0 2px">${filas}</div>
+    <div class="aviso ojo" style="margin-top:14px">Esto da de <b>baja o alta
+      mercadería del negocio</b>. Si lo que falta está en otro lugar de la
+      tienda, no es un ajuste: use <b>Mover de lugar</b>.</div>
+    <div class="campo-g">
+      <label for="ed-motivo">¿Por qué no cuadra?</label>
+      <input class="entrada" id="ed-motivo" placeholder="Se quebraron dos, conté el estante…">
+    </div>
+    <div class="aviso malo oculto" id="ed-error"></div>
+    <div class="acciones">
+      <button class="btn secundario" id="ed-no">Cancelar</button>
+      <button class="btn principal-b" id="ed-si">Actualizar</button>
+    </div>`;
+
+  // El renglon se marca en cuanto el numero deja de ser el del sistema
+  $('#hoja').querySelectorAll('.edit-fila input').forEach(inp => {
+    inp.addEventListener('input', e => {
+      e.target.value = e.target.value.replace(/[^0-9.]/g, '');
+      const fila = e.target.closest('.edit-fila');
+      const sis  = Number(fila.dataset.sis);
+      const val  = e.target.value.trim();
+      const dif  = val === '' ? 0 : Number(val) - sis;
+      fila.classList.toggle('cambiada', val !== '' && dif !== 0);
+      const d = fila.querySelector('.edit-dif');
+      d.textContent = (val === '' || dif === 0) ? '' : conSigno(dif);
+      d.className = 'edit-dif ' + (dif > 0 ? 'mas' : dif < 0 ? 'menos' : '');
+    });
+    inp.addEventListener('focus', e => e.target.select());
+  });
+
+  $('#ed-lote')?.addEventListener('change', e => hojaEditar(e.target.value));
+  $('#ed-no').onclick = cerrarHoja;
+  $('#ed-si').onclick = () => mandarAjustes(lote);
+}
+
+async function mandarAjustes(lote){
+  const err = $('#ed-error');
+  const fallar = t => { err.textContent = t; err.classList.remove('oculto'); };
+  err.classList.add('oculto');
+
+  const cambios = [];
+  for (const fila of $('#hoja').querySelectorAll('.edit-fila')){
+    const inp = fila.querySelector('input');
+    if (inp.disabled) continue;
+    const txt = inp.value.trim();
+    if (txt === '') continue;
+    const n = Number(txt);
+    if (!Number.isFinite(n) || n < 0)
+      return fallar('Hay una cantidad que no se entiende.');
+    if (n === Number(fila.dataset.sis)) continue;
+    cambios.push({ ubicacion:fila.dataset.ub, cantidad:n,
+                   nombre:fila.querySelector('.edit-nom b').textContent });
+  }
+
+  if (!cambios.length)
+    return fallar('No cambió ningún número. Escriba lo que contó y vuelva a intentar.');
+
+  const motivo = $('#ed-motivo').value.trim() || null;
+  const b = $('#ed-si');
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+
+  const hechos = [], fallos = [];
+  for (const c of cambios){
+    const { data, error } = await sb.rpc('fn_solicitar_ajuste', {
+      p_producto_id:S.prod.producto_id, p_ubicacion_id:c.ubicacion,
+      p_cantidad:c.cantidad, p_lote_id:lote, p_motivo:motivo });
+    if (error) fallos.push(c.nombre + ': ' + limpiarError(error));
+    else hechos.push(data);
+  }
+
+  b.disabled = false; b.textContent = 'Actualizar';
+
+  if (!hechos.length) return fallar(fallos.join(' · '));
+
+  const puede = hechos[0].puede_aprobar;
+  $('#hoja').innerHTML = `
+    <h2>${hechos.length === 1 ? 'Enviado a aprobación' : 'Enviados a aprobación'}</h2>
+    <p class="sub">${escapar(S.prod.nombre)}</p>
+    ${hechos.map(h => `<div class="pend-fila">
+      <div class="pend-txt">
+        <b>${escapar(h.ubicacion)} · ${escapar(h.numero)}</b>
+        <small>De ${cant(h.sistema)} a ${cant(h.contado)}</small>
+      </div>
+      <span class="pend-dif ${Number(h.diferencia) > 0 ? 'mas' : ''}">${conSigno(h.diferencia)}</span>
+    </div>`).join('')}
+    ${fallos.length ? `<div class="aviso malo" style="margin-top:12px">${escapar(fallos.join(' · '))}</div>` : ''}
+    <div class="aviso ojo" style="margin-top:12px">El inventario <b>no cambió
+      todavía</b>. ${puede ? 'Usted puede aprobarlo desde el producto.'
+                          : 'Cambia cuando el gerente lo apruebe.'}</div>
+    <div class="acciones">
+      <button class="btn principal-b" id="ed-listo" style="flex:1">Entendido</button>
+    </div>`;
+  $('#ed-listo').onclick = async () => {
+    cerrarHoja();
+    await cargarPendientes();
+    await recargarFicha();
+  };
+}
+
+/* ================= aprobar o rechazar ================= */
+async function aprobarAjuste(id){
+  const { data, error } = await sb.rpc('fn_resolver_ajuste',
+    { p_ajuste_id:id, p_aprobar:true });
+  if (error){ aviso('No se pudo aprobar', limpiarError(error)); return; }
+
+  await cargarPendientes();
+  await recargarFicha();
+  $('#hoja').innerHTML = `
+    <h2>${escapar(data.numero)}</h2>
+    <p class="sub">${escapar(data.producto)}</p>
+    <div class="aviso bien">${escapar(data.ubicacion)} queda en
+      <b>${cant(data.queda_en)}</b>. La existencia total del producto es
+      ahora <b>${cant(data.existencia_total)}</b>.</div>
+    ${data.valor !== null && data.valor !== undefined
+      ? `<div class="aviso ojo">El ajuste vale ${money(data.valor)} al costo promedio.</div>` : ''}
+    <button class="btn principal-b" style="width:100%" id="ap-ok">Entendido</button>`;
+  ver('#velo');
+  $('#ap-ok').onclick = cerrarHoja;
+}
+
+function hojaRechazar(id){
+  $('#hoja').innerHTML = `
+    <h2>Rechazar el ajuste</h2>
+    <p class="sub">El inventario se queda como está. Quien lo pidió verá el
+      motivo.</p>
+    <div class="campo-g">
+      <label for="rz-motivo">¿Por qué se rechaza?</label>
+      <input class="entrada" id="rz-motivo" placeholder="Hay que volver a contarlo…">
+    </div>
+    <div class="aviso malo oculto" id="rz-error"></div>
+    <div class="acciones">
+      <button class="btn secundario" id="rz-no">Mejor no</button>
+      <button class="btn principal-b" id="rz-si">Rechazar</button>
+    </div>`;
+  ver('#velo');
+  $('#rz-motivo').focus();
+  $('#rz-no').onclick = cerrarHoja;
+  $('#rz-si').onclick = async () => {
+    const motivo = $('#rz-motivo').value.trim();
+    const err = $('#rz-error');
+    if (!motivo){
+      err.textContent = 'Diga por qué se rechaza: quien lo pidió necesita saberlo.';
+      err.classList.remove('oculto');
+      return;
+    }
+    const b = $('#rz-si');
+    b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+    const { error } = await sb.rpc('fn_resolver_ajuste',
+      { p_ajuste_id:id, p_aprobar:false, p_nota:motivo });
+    b.disabled = false; b.textContent = 'Rechazar';
+    if (error){
+      err.textContent = limpiarError(error);
+      err.classList.remove('oculto');
+      return;
+    }
+    cerrarHoja();
+    await cargarPendientes();
+    await recargarFicha();
+  };
 }
 
 /* ================= mover de lugar ================= */
@@ -819,6 +1151,10 @@ function hojaConteo(){
 
 /* ================= clics de la lista ================= */
 $('#cuerpo').addEventListener('click', e => {
+  const ap = e.target.closest('[data-aprobar]');
+  if (ap){ aprobarAjuste(ap.dataset.aprobar); return; }
+  const rz = e.target.closest('[data-rechazar]');
+  if (rz){ hojaRechazar(rz.dataset.rechazar); return; }
   const b = e.target.closest('[data-abrir]');
   if (b) abrir(b.dataset.abrir);
 });
