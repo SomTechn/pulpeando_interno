@@ -53,8 +53,10 @@
 .etiqueta.vence{background:var(--ambar);color:#4A3500}
 .etiqueta.bajo{background:var(--rojo)}
 .prod.agotado{opacity:.45;pointer-events:none}
+/* Ancho fijo de 24px no le daba a dos cifras ni a "0.75": crece con el texto. */
 .en-ticket{
-  position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;
+  position:absolute;top:8px;right:8px;min-width:24px;height:24px;
+  padding:0 7px;border-radius:12px;
   background:var(--verde);color:#fff;display:grid;place-items:center;
   font-size:12px;font-weight:800;font-family:var(--num);
 }
@@ -89,29 +91,84 @@
   place-items:center;background:var(--fondo);font-weight:800;font-size:13px;color:#8A99B3}
 .cl-fila-txt{flex:1;min-width:0}
 .cl-fila-txt b{display:block;font-size:14px;font-weight:600}
+.una-linea{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cl-fila-txt small{display:block;font-size:12px;color:var(--tenue);margin-top:1px}
 .cl-fila-fin{font-family:var(--num);font-size:13px;font-weight:700;flex:0 0 auto;text-align:right}
 .cl-fila-fin small{display:block;font-family:var(--ui);font-size:10.5px;font-weight:700;
   color:var(--tenue)}
 .cl-deuda{color:var(--ambar)}
 .cl-tope{color:var(--rojo)}
+
+/* aviso corto que se va solo: en la caja no hay donde ponerlo fijo */
+.aviso-caja{position:fixed;left:50%;bottom:26px;transform:translate(-50%,16px);
+  background:var(--tinta);color:#fff;font-size:13.5px;font-weight:600;
+  padding:13px 18px;border-radius:12px;max-width:min(92vw,440px);line-height:1.4;
+  box-shadow:0 10px 30px rgba(16,26,43,.3);opacity:0;pointer-events:none;
+  transition:opacity .18s,transform .18s;z-index:90}
+.aviso-caja.visible{opacity:1;transform:translate(-50%,0)}
 .lineas{flex:1;overflow-y:auto;padding:6px 16px}
 .lineas-enc{
-  display:grid;grid-template-columns:1fr 96px 84px;gap:8px;padding:10px 0 8px;
+  display:grid;grid-template-columns:1fr 124px 84px;gap:8px;padding:10px 0 8px;
   font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
   color:#9AA8BC;border-bottom:1px solid var(--linea);
 }
 .lineas-enc span:nth-child(2){text-align:center}
 .lineas-enc span:last-child{text-align:right}
-.linea{display:grid;grid-template-columns:1fr 96px 84px;gap:8px;align-items:center;
+.linea{display:grid;grid-template-columns:1fr 124px 84px;gap:8px;align-items:center;
   padding:11px 0;border-bottom:1px solid var(--fondo)}
+/* La linea en la que esta parado el teclado. En Maxi la ultima escaneada
+   queda marcada: la cajera mira ahi para confirmar lo que acaba de pasar. */
+.linea.puesto{background:#EEF4FF;box-shadow:-13px 0 0 #EEF4FF, 13px 0 0 #EEF4FF;
+  border-radius:3px}
+.linea.puesto .linea-nom{font-weight:700}
 .linea-nom{font-size:14px;font-weight:600;line-height:1.3}
 .linea-nom small{display:block;font-size:11px;color:var(--tenue);font-weight:500;margin-top:2px}
-.qty{display:flex;align-items:center;justify-content:center;gap:2px}
-.qty button{width:30px;height:30px;border-radius:8px;background:var(--fondo);
-  font-size:16px;font-weight:700;color:var(--tenue);line-height:1}
+.linea-nom em{font-style:normal;color:var(--azul);font-weight:700}
+
+/* la cantidad pendiente: se escribe 3 y * antes de escanear */
+.multi{position:absolute;right:68px;top:50%;transform:translateY(-50%);
+  background:var(--azul);color:#fff;font-family:var(--num);font-size:15px;
+  font-weight:800;padding:5px 11px;border-radius:9px;letter-spacing:-.02em;
+  pointer-events:none}
+.buscador{position:relative}
+
+/* la tira de atajos: lo que Maxi tiene impreso en el teclado */
+.atajos{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.atajo{display:inline-flex;align-items:center;gap:6px;background:var(--fondo);
+  border:0;border-radius:9px;padding:9px 11px;font:inherit;font-size:12px;
+  font-weight:600;color:var(--tenue);cursor:pointer;min-height:40px}
+.atajo:hover{background:var(--linea)}
+.atajo kbd{font-family:var(--num);font-size:10.5px;font-weight:800;background:#fff;
+  border:1px solid var(--linea);border-bottom-width:2px;border-radius:5px;
+  padding:1px 5px;color:var(--tinta)}
+.atajo b{color:var(--tinta);font-weight:700}
+.atajo.pend b{color:var(--ambar)}
+@media (max-width:820px){ .atajos{display:none} }
+/* 40px: los ± se tocan todo el dia en una tablet, y a 30 se falla. */
+.qty{display:flex;align-items:center;justify-content:center;gap:3px}
+.qty button{width:40px;height:40px;border-radius:9px;background:var(--fondo);
+  font-size:17px;font-weight:700;color:var(--tenue);line-height:1;flex:0 0 auto}
 .qty button:active{background:var(--linea)}
-.qty span{width:32px;text-align:center;font-family:var(--num);font-weight:600;font-size:14px}
+/* La cantidad es un boton: tocarla abre el teclado de cantidad, que es como
+   se pone "0.75" en una tablet donde no hay F2. nowrap para que "0.75 LB" no
+   se parta en dos renglones. */
+.qty span{flex:1;min-width:34px;text-align:center;font-family:var(--num);
+  font-weight:700;font-size:14px;white-space:nowrap;cursor:pointer;
+  padding:9px 2px;border-radius:7px}
+.qty span:hover{background:var(--fondo)}
+
+/* En celular el ticket es un cajon angosto: el nombre arriba, y abajo la
+   cantidad con el importe. En una sola fila el nombre quedaba en cuatro
+   renglones y la cantidad sin sitio. */
+@media (max-width:560px){
+  .lineas-enc{display:none}
+  .linea{grid-template-columns:1fr auto;
+         grid-template-areas:'nom nom' 'qty imp';row-gap:8px;padding:13px 0}
+  .linea-nom{grid-area:nom}
+  .qty{grid-area:qty;justify-content:flex-start;flex:0 0 auto}
+  .qty span{flex:0 0 auto;min-width:46px}
+  .linea-total{grid-area:imp;align-self:center;font-size:15px}
+}
 .linea-total{text-align:right;font-family:var(--num);font-weight:600;font-size:14px}
 .totales{padding:14px 16px;border-top:1px solid var(--linea);background:#FCFDFE}
 .tot{display:flex;justify-content:space-between;align-items:center;padding:5px 0;
@@ -142,14 +199,15 @@
 .metodo{padding:13px 6px;border-radius:var(--r-sm);border:1.5px solid var(--linea);
   font-size:12.5px;font-weight:700;color:var(--tenue);text-align:center}
 .metodo.activo{border-color:var(--azul);background:var(--azul-suave);color:var(--azul)}
+.rotulo b{font-family:var(--num);color:var(--tinta);font-weight:800}
 .rotulo{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
   color:#9AA8BC;margin-bottom:8px}
 .recibido{width:100%;height:56px;border:1.5px solid var(--linea);border-radius:var(--r-md);
   padding:0 16px;font-family:var(--num);font-size:24px;font-weight:600;text-align:right;outline:none}
 .recibido:focus{border-color:var(--azul)}
 .rapidos{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:10px 0 16px}
-.rapido{padding:12px 4px;border-radius:var(--r-sm);background:var(--fondo);
-  font-family:var(--num);font-size:13px;font-weight:600}
+.rapido{padding:12px 4px;min-height:40px;border-radius:var(--r-sm);
+  background:var(--fondo);font-family:var(--num);font-size:13px;font-weight:600}
 .cambio{display:flex;justify-content:space-between;align-items:center;background:#E7F7EE;
   color:var(--verde-oscuro);border-radius:var(--r-md);padding:14px 18px;margin-bottom:16px;
   font-weight:700}
@@ -164,6 +222,46 @@
 .switch.on{background:var(--azul)}
 .switch.on::after{transform:translateX(19px)}
 /* .listo, .marca-ok y .doc viven en ui.css: los comparte la pantalla de fiado */
+/* El vuelto se canta en voz alta. Grande de verdad: la cajera lo lee de un
+   vistazo y el cliente lo ve desde el otro lado del mostrador. */
+.entregar b{font-size:clamp(38px,13vw,62px);line-height:1;letter-spacing:-.035em;
+  display:block;margin-top:2px}
+.entregar-de{margin-top:10px;padding-top:9px;border-top:1px solid rgba(92,66,0,.22);
+  font-size:12.5px;font-weight:700;color:#5C4200;display:flex;
+  justify-content:space-between;gap:10px}
+.entregar-de span{font-family:var(--num);white-space:nowrap}
+
+/* dividir el pago en dos partes */
+.partir{background:none;border:0;font:inherit;font-size:12.5px;font-weight:700;
+  color:var(--azul);cursor:pointer;padding:10px 2px;min-height:40px;
+  text-align:left;display:block}
+.partes{border:1.5px solid var(--linea);border-radius:var(--r-md);padding:12px;
+  margin-bottom:14px}
+.parte{display:flex;align-items:center;gap:9px}
+.parte + .parte{margin-top:9px;padding-top:9px;border-top:1px dashed var(--linea)}
+.parte label{flex:0 0 58px;font-size:11.5px;font-weight:800;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--tenue)}
+/* min-width:0 en los dos: un input o un select traen min-width:auto, que vale
+   su ancho natural (un input vacio pide ~230px) y le gana a flex-basis. Sin
+   esto el campo se come la fila y el desplegable queda en 20px. */
+.parte select{flex:1 1 auto;min-width:0;height:44px;border:1.5px solid var(--linea);
+  border-radius:var(--r-sm);padding:0 9px;font:inherit;font-size:14px;
+  background:#fff;color:inherit}
+.parte input{flex:0 0 104px;min-width:0;height:44px;border:1.5px solid var(--linea);
+  border-radius:var(--r-sm);padding:0 10px;font-family:var(--num);font-size:16px;
+  font-weight:700;text-align:right;background:#fff;color:inherit}
+/* En celular el rotulo se pone encima: asi el desplegable no queda tan
+   angosto que "Transferencia" no se lea. */
+@media (max-width:480px){
+  .parte{flex-wrap:wrap;row-gap:6px}
+  .parte label{flex:0 0 100%}
+}
+.parte input:focus,.parte select:focus{border-color:var(--azul);outline:0}
+.parte .fijo{flex:0 0 108px;font-family:var(--num);font-size:16px;font-weight:700;
+  text-align:right;color:var(--tinta)}
+.partes-cerrar{background:none;border:0;font:inherit;font-size:12px;font-weight:700;
+  color:var(--tenue);cursor:pointer;padding:11px 2px 2px;min-height:40px}
+
 .entregar{background:var(--ambar);border-radius:var(--r-md);padding:16px;margin-bottom:16px}
 .entregar small{display:block;font-size:12px;font-weight:800;color:#5C4200;
   text-transform:uppercase;margin-bottom:3px}
@@ -198,8 +296,10 @@
   }
   .movil-btn b{font-family:var(--num);font-size:17px}
   .movil-btn:disabled{background:#CBD5E1}
-  .movil-conteo{width:26px;height:26px;border-radius:50%;background:var(--verde);
-    display:grid;place-items:center;font-size:12px;font-family:var(--num);font-weight:700}
+  /* crece con el texto: con dos cifras o con "0.75" no cabia en 26px */
+  .movil-conteo{min-width:26px;height:26px;padding:0 8px;border-radius:13px;
+    background:var(--verde);display:grid;place-items:center;font-size:12px;
+    font-family:var(--num);font-weight:700}
 }
 </style>
 </head>
@@ -285,7 +385,8 @@
       <div class="barra-fin">
         <span class="pill online" id="h-red">En línea</span>
         <span class="pill num" id="h-ventas">0 ventas</span>
-        <button class="pill" id="h-bloquear" style="background:var(--tinta);color:#fff">Bloquear</button>
+        <button class="pill" id="h-bloquear"
+          style="background:var(--tinta);color:#fff;min-height:40px;padding:0 15px">Bloquear</button>
       </div>
     </header>
 
@@ -297,6 +398,7 @@
                  stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
             <input id="buscar" placeholder="Buscar producto o escanear código" autocomplete="off">
           </label>
+          <span class="multi oculto" id="multi"></span>
           <button class="btn-camara oculto" id="btn-camara">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -305,6 +407,7 @@
             <span class="etq-camara">Escanear</span>
           </button>
         </div>
+        <div class="atajos" id="atajos"></div>
         <div class="grid" id="grid"></div>
       </section>
 
@@ -349,16 +452,25 @@
         <span>Emitir factura fiscal</span>
         <button class="switch" id="sw-fiscal" aria-label="Emitir factura fiscal"></button>
       </div>
-      <div class="rotulo">Forma de pago</div>
+      <div class="partes oculto" id="partes">
+        <div class="parte">
+          <label for="p1-metodo">Parte 1</label>
+          <select id="p1-metodo"></select>
+          <input id="p1-monto" inputmode="decimal" value="0.00">
+        </div>
+        <button class="partes-cerrar" id="no-partir">Cobrar de una sola forma</button>
+      </div>
+      <div class="rotulo" id="rot-metodo">Forma de pago</div>
       <div class="metodos" id="metodos">
         <button class="metodo activo" data-m="efectivo">Efectivo</button>
         <button class="metodo" data-m="tarjeta">Tarjeta</button>
         <button class="metodo" data-m="transferencia">Transfer.</button>
         <button class="metodo oculto" data-m="credito" id="metodo-fiado">Fiado</button>
       </div>
+      <button class="partir" id="btn-partir">+ Dividir el pago en dos formas</button>
       <div class="aviso ojo oculto" id="cobro-fiado"></div>
       <div id="bloque-efectivo">
-        <div class="rotulo">Recibe</div>
+        <div class="rotulo" id="rot-recibe">Recibe</div>
         <input class="recibido num" id="recibido" inputmode="decimal" value="0.00">
         <div class="rapidos" id="rapidos"></div>
       </div>
@@ -377,12 +489,20 @@
         <p class="doc" id="listo-doc">—</p>
         <div class="entregar" id="caja-entregar">
           <small>Entregar de cambio</small><b class="num" id="listo-cambio">—</b>
+          <div class="entregar-de oculto" id="listo-cuentas">
+            <span id="listo-recibio"></span><span id="listo-era"></span>
+          </div>
         </div>
         <p class="sub" id="listo-aviso"></p>
         <button class="btn principal-b" style="width:100%" id="btn-terminar">Listo</button>
       </div>
     </div>
   </div>
+</div>
+
+<!-- ============ HOJA SUELTA (cantidad, suspendidas) ============ -->
+<div class="velo oculto" id="velo-hoja">
+  <div class="hoja" id="hoja"></div>
 </div>
 
 <!-- ================= ELEGIR CLIENTE ================= -->
@@ -442,11 +562,25 @@ const S = {
   desbloqueo:null, catalogo:[], categorias:[], ticket:[],
   categoria:'todas', busqueda:'', metodo:'efectivo', fiscal:false, recibido:0,
   cliente:null, clientes:[], clientesLeidos:false, buscaCliente:'',
-  ventas:0, acumulado:0, pin:'', moneda:'L', enLinea:navigator.onLine
+  ventas:0, acumulado:0, pin:'', moneda:'L', enLinea:navigator.onLine,
+  /* cobro: S.metodo es el metodo del RESTO; con pago partido, p1 es la otra */
+  partido:false, p1:{ metodo:'tarjeta', monto:0 },
+  /* teclado: el puesto es la linea en la que esta parado, y el multiplicador
+     es la cantidad escrita antes de escanear (en Maxi: 3 y luego *). */
+  puesto:null, multi:null
 };
 
 const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
   {minimumFractionDigits:2, maximumFractionDigits:2});
+
+/* Redondeos, arriba del todo porque medio archivo los usa.
+     tres  cantidades: la base guarda numeric(14,3)
+     dos   dinero */
+const tres = n => Math.round((Number(n) || 0) * 1000) / 1000;
+const dos  = n => Math.round((Number(n) || 0) * 100) / 100;
+
+const NOMBRE_METODO = { efectivo:'Efectivo', tarjeta:'Tarjeta',
+                        transferencia:'Transferencia', credito:'Fiado', otro:'Otro' };
 
 function limpiarError(e){
   // Antes se cortaba hasta el primer ":", lo que se comia la mitad de los
@@ -518,7 +652,7 @@ function refrescarCobro(){
       m.classList.toggle('activo', m.dataset.m === 'efectivo'));
     ver('#bloque-efectivo');
   }
-  pintarFiado(t.total);
+  pintarFiado(resto(t.total));
   pintarCambio();
 }
 
@@ -660,7 +794,7 @@ async function cargarCatalogo(){
   const clave = 'cat-' + S.sucursal;
   if (S.enLinea){
     const { data, error } = await sb.from('v_pos_catalogo')
-      .select('producto_id,sku,nombre,imagen_url,categoria_id,categoria,precio,existencia,stock_bajo,vence_el,codigos,tasa_impuesto')
+      .select('producto_id,sku,nombre,imagen_url,unidad_base,categoria_id,categoria,precio,existencia,stock_bajo,vence_el,codigos,tasa_impuesto')
       .eq('sucursal_id', S.sucursal).order('nombre');
     if (!error && data){ S.catalogo = data; await DB.guardarCatalogo(clave, data); }
   }
@@ -691,12 +825,18 @@ function pintarMenuCategorias(){
 
 const diasPara = f => f ? Math.round((new Date(f) - new Date()) / 86400000) : null;
 
-function pintarGrid(){
+/* Lo que la busqueda deja a la vista. Se saca aparte porque el Enter del
+   buscador lo necesita: si quedo uno solo, ese es el que entra al ticket. */
+function visibles(){
   const q = S.busqueda.toLowerCase().trim();
-  const lista = S.catalogo.filter(p =>
+  return S.catalogo.filter(p =>
     (S.categoria === 'todas' || p.categoria_id === S.categoria) &&
     (!q || p.nombre.toLowerCase().includes(q) || (p.sku||'').toLowerCase().includes(q)
         || (p.codigos||[]).some(c => c.toLowerCase() === q)));
+}
+
+function pintarGrid(){
+  const lista = visibles();
 
   if (!lista.length){
     $('#grid').innerHTML = `<div class="vacio" style="grid-column:1/-1"><div>🔍</div>
@@ -713,7 +853,7 @@ function pintarGrid(){
     else if (p.stock_bajo)          etq = '<span class="etiqueta bajo">Stock bajo</span>';
     const fondo = p.imagen_url ? `style="background-image:url('${escapar(p.imagen_url)}')"` : '';
     return `<button class="prod ${p.existencia<=0?'agotado':''}" data-p="${p.producto_id}">
-      ${etq}${t ? `<span class="en-ticket">${t.cantidad}</span>` : ''}
+      ${etq}${t ? `<span class="en-ticket">${cantTxt(t.cantidad)}</span>` : ''}
       <div class="prod-img" ${fondo}>${p.imagen_url ? '' : escapar(p.nombre[0]||'·')}</div>
       <div class="prod-txt">
         <div class="prod-nom">${escapar(p.nombre)}</div>
@@ -737,16 +877,39 @@ $('#buscar').addEventListener('keydown', e => {
   const ahora = Date.now();
   if (ahora - ultimoT > 120) bufer = '';
   ultimoT = ahora;
+
+  /* Como en Maxi: se escribe la cantidad y se presiona * (o x). Lo que se
+     escanee despues entra con esa cantidad. Solo cuenta si lo escribio una
+     persona: la pistola nunca manda un asterisco suelto. */
+  if ((e.key === '*' || e.key === 'x' || e.key === 'X') && !bufer){
+    const n = Number(e.target.value.trim().replace(',', '.'));
+    if (n > 0){
+      e.preventDefault();
+      S.multi = tres(n); pintarMulti();
+      e.target.value = ''; S.busqueda = ''; pintarGrid();
+      return;
+    }
+  }
+
   if (e.key === 'Enter'){
+    e.preventDefault();
     const cod = (bufer || e.target.value).trim();
-    if (porCodigo(cod)){ e.target.value = ''; S.busqueda = ''; pintarGrid(); }
     bufer = '';
-  } else if (e.key.length === 1) bufer += e.key;
+    if (!cod) return;
+    if (porCodigo(cod)){ e.target.value = ''; S.busqueda = ''; pintarGrid(); return; }
+    // Sin código: si la búsqueda dejó un solo producto, ese es.
+    const unico = visibles();
+    if (unico.length === 1 && agregar(unico[0].producto_id)){
+      e.target.value = ''; S.busqueda = ''; pintarGrid();
+    }
+    return;
+  }
+  if (e.key.length === 1) bufer += e.key;
 });
 
 function porCodigo(cod){
   const p = S.catalogo.find(x => (x.codigos||[]).includes(cod) || x.sku === cod);
-  if (p){ agregar(p.producto_id); return true; }
+  if (p) return agregar(p.producto_id);
   return false;
 }
 
@@ -768,22 +931,81 @@ $('#btn-camara').addEventListener('click', async () => {
   });
 });
 
-/* ================= ticket ================= */
-function agregar(id){
+/* ================= ticket =================
+
+   La cantidad es decimal a proposito: hay producto que se vende por peso y la
+   cajera lo digita (0.75 LB de queso). La base guarda numeric(14,3), asi que
+   tres decimales es el limite real; redondear aqui evita mandar un numero que
+   el servidor va a recortar de todos modos.
+   ========================================== */
+/* "3" se ve mejor que "3.000"; "0.75" tiene que verse completo. */
+function cantTxt(n){
+  const x = Number(n) || 0;
+  return Number.isInteger(x) ? String(x)
+       : String(tres(x)).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+function agregar(id, cuanto){
   const p = S.catalogo.find(x => x.producto_id === id);
-  if (!p || p.existencia <= 0 || !p.precio) return;
+  if (!p || p.existencia <= 0 || !p.precio) return false;
+  // Lo escrito antes de escanear manda; si no hay nada escrito, es una unidad.
+  const suma = tres(cuanto != null ? cuanto : (S.multi != null ? S.multi : 1));
+  if (suma <= 0) return false;
+  S.multi = null;
+
   const l = S.ticket.find(x => x.producto_id === id);
-  if (l){ if (l.cantidad < p.existencia) l.cantidad++; }
-  else S.ticket.push({ producto_id:id, cantidad:1 });
+  if (l) l.cantidad = Math.min(tres(l.cantidad + suma), Number(p.existencia));
+  else   S.ticket.push({ producto_id:id, cantidad:Math.min(suma, Number(p.existencia)) });
+  S.puesto = id;
+  pintar();
+  return true;
+}
+
+/* Poner la cantidad exacta, no sumarle: es lo que hace la tecla de cantidad. */
+function fijarCant(id, n){
+  const l = S.ticket.find(x => x.producto_id === id); if (!l) return;
+  const p = S.catalogo.find(x => x.producto_id === id);
+  const v = tres(n);
+  if (v <= 0){ quitarLinea(id); return; }
+  l.cantidad = Math.min(v, Number(p.existencia));
+  S.puesto = id;
   pintar();
 }
+
+function quitarLinea(id){
+  const i = S.ticket.findIndex(x => x.producto_id === id);
+  if (i < 0) return;
+  S.ticket.splice(i, 1);
+  // El puesto pasa a la linea que ocupo su lugar, o a la anterior si era la ultima.
+  const sig = S.ticket[Math.min(i, S.ticket.length - 1)];
+  S.puesto = sig ? sig.producto_id : null;
+  pintar();
+}
+
 function cambiarCant(id, d){
   const l = S.ticket.find(x => x.producto_id === id); if (!l) return;
   const p = S.catalogo.find(x => x.producto_id === id);
-  l.cantidad += d;
-  if (l.cantidad <= 0) S.ticket = S.ticket.filter(x => x.producto_id !== id);
-  else if (l.cantidad > p.existencia) l.cantidad = p.existencia;
+  l.cantidad = tres(l.cantidad + d);
+  if (l.cantidad <= 0){ quitarLinea(id); return; }
+  if (l.cantidad > p.existencia) l.cantidad = Number(p.existencia);
+  S.puesto = id;
   pintar();
+}
+
+/* Moverse por el ticket con las flechas. */
+function mover(paso){
+  if (!S.ticket.length){ S.puesto = null; return; }
+  const i = S.ticket.findIndex(x => x.producto_id === S.puesto);
+  const j = i < 0 ? (paso > 0 ? 0 : S.ticket.length - 1)
+                  : Math.max(0, Math.min(S.ticket.length - 1, i + paso));
+  S.puesto = S.ticket[j].producto_id;
+  pintarTicket();
+  // scrollIntoView no existe en todos lados: si no está, no pasa nada.
+  $(`.linea[data-l="${S.puesto}"]`)?.scrollIntoView?.({ block:'nearest' });
+}
+
+function lineaPuesto(){
+  return S.ticket.find(x => x.producto_id === S.puesto) || null;
 }
 function totales(){
   let bruto = 0, imp = 0;
@@ -797,6 +1019,9 @@ function totales(){
 }
 function pintarTicket(){
   const cont = $('#lineas');
+  // Primero se limpia el puesto: si apunta a una linea que ya no esta, no hay
+  // que pintar la marca en ningun lado.
+  if (!S.ticket.some(x => x.producto_id === S.puesto)) S.puesto = null;
   if (!S.ticket.length){
     cont.innerHTML = `<div class="vacio"><div>🧺</div>
       <p>Escanee o toque un producto<br>para empezar la venta</p></div>`;
@@ -804,36 +1029,388 @@ function pintarTicket(){
     cont.innerHTML = `<div class="lineas-enc"><span>Producto</span><span>Cant.</span><span>Importe</span></div>` +
       S.ticket.map(l => {
         const p = S.catalogo.find(x => x.producto_id === l.producto_id);
-        return `<div class="linea">
-          <div class="linea-nom">${escapar(p.nombre)}<small class="num">${money(p.precio)} c/u</small></div>
+        const aqui = l.producto_id === S.puesto;
+        // La unidad va con el precio, no junto a la cantidad: ahi hay sitio y
+        // de paso explica de que es el precio ("L 60.00 por LB").
+        const u = p.unidad_base && p.unidad_base !== 'UND' ? p.unidad_base : '';
+        return `<div class="linea ${aqui ? 'puesto' : ''}" data-l="${p.producto_id}">
+          <div class="linea-nom">${escapar(p.nombre)}<small class="num">${money(p.precio)}
+            ${u ? 'por ' + escapar(u) : 'c/u'}</small></div>
           <div class="qty">
-            <button data-menos="${p.producto_id}">−</button>
-            <span class="num">${l.cantidad}</span>
-            <button data-mas="${p.producto_id}">+</button>
+            <button data-menos="${p.producto_id}" aria-label="Quitar uno">−</button>
+            <span class="num" data-cant="${p.producto_id}" role="button"
+                  title="Cambiar la cantidad">${cantTxt(l.cantidad)}</span>
+            <button data-mas="${p.producto_id}" aria-label="Agregar uno">+</button>
           </div>
           <div class="linea-total">${money(p.precio * l.cantidad)}</div>
         </div>`;
       }).join('');
   }
+  pintarAtajos();
   const t = totales();
   $('#t-sub2').textContent = money(t.sub);
   $('#t-isv').textContent = money(t.imp);
   $('#t-total').textContent = money(t.total);
   $('#btn-total').textContent = money(t.total);
   $('#btn-cobrar').disabled = !S.ticket.length;
-  $('#movil-conteo').textContent = S.ticket.reduce((s,l)=>s+l.cantidad,0);
+  $('#movil-conteo').textContent = cantTxt(S.ticket.reduce((s,l)=>s+l.cantidad,0));
   $('#movil-total').textContent = money(t.total);
   $('#movil-ver').disabled = !S.ticket.length;
 }
-function pintar(){ pintarTicket(); pintarGrid(); }
+function pintar(){ pintarTicket(); pintarGrid(); pintarMulti(); }
 
 $('#lineas').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.mas)   cambiarCant(b.dataset.mas, 1);
-  if (b.dataset.menos) cambiarCant(b.dataset.menos, -1);
+  const b = e.target.closest('button');
+  if (b){
+    if (b.dataset.mas)   cambiarCant(b.dataset.mas, 1);
+    if (b.dataset.menos) cambiarCant(b.dataset.menos, -1);
+    return;
+  }
+  // Tocar la cantidad abre el teclado de cantidad: es el camino para el
+  // producto por peso en tablet, donde no hay F2.
+  const c = e.target.closest('[data-cant]');
+  if (c){ S.puesto = c.dataset.cant; hojaCantidad(); return; }
+  const ln = e.target.closest('.linea');
+  if (ln){ S.puesto = ln.dataset.l; pintarTicket(); }
 });
+
+/* =================== teclado ===================
+
+   La caja de un supermercado se maneja sin soltar la pistola: la mano
+   izquierda en el teclado, la derecha en el lector. Los atajos siguen los de
+   Maxi para no tener que reaprender nada:
+
+     escribir y Enter   busca o agrega por codigo
+     3 y luego *        la proxima que se escanee entra de a 3
+     F2                 cambiar la cantidad de la linea donde esta parado
+     F3                 volver al buscador
+     F4 / Supr          quitar esa linea
+     F7 / F8            suspender la venta / retomar una suspendida
+     F10                cobrar
+     flechas            moverse por el ticket
+     Esc                cerrar lo que este abierto
+
+   El lector de pistola teclea muy rapido y termina en Enter, asi que lo que
+   venga a mas de ~120 ms entre teclas se trata como escritura de persona.
+   =============================================== */
+const ATAJOS = [
+  { k:'F2',  t:'Cantidad',  fn:() => hojaCantidad(),  linea:true },
+  { k:'F3',  t:'Buscar',    fn:() => { $('#buscar').focus(); $('#buscar').select(); } },
+  { k:'F4',  t:'Quitar',    fn:() => { const l = lineaPuesto(); if (l) quitarLinea(l.producto_id); }, linea:true },
+  { k:'F7',  t:'Suspender', fn:() => suspender(), linea:true },
+  { k:'F8',  t:'Retomar',   fn:() => hojaSuspendidas() },
+  { k:'F10', t:'Cobrar',    fn:() => $('#btn-cobrar').click(), linea:true }
+];
+
+function pintarAtajos(){
+  const z = $('#atajos'); if (!z) return;
+  const hay = S.ticket.length > 0;
+  const esperando = guardadas().length;
+  z.innerHTML = ATAJOS.map(a => {
+    const flojo = a.linea && !hay;
+    const cuenta = a.k === 'F8' && esperando ? ` <b>${esperando}</b>` : '';
+    if (a.k === 'F8' && !esperando) return '';
+    return `<button class="atajo ${a.k === 'F8' ? 'pend' : ''}" data-k="${a.k}"
+      ${flojo ? 'disabled style="opacity:.45"' : ''}><kbd>${a.k}</kbd>${a.t}${cuenta}</button>`;
+  }).join('');
+}
+$('#atajos').addEventListener('click', e => {
+  const b = e.target.closest('[data-k]'); if (!b || b.disabled) return;
+  ATAJOS.find(a => a.k === b.dataset.k)?.fn();
+});
+
+function pintarMulti(){
+  const z = $('#multi');
+  ver('#multi', S.multi != null);
+  if (S.multi != null) z.textContent = '× ' + cantTxt(S.multi);
+}
+
+const hojaAbierta = () => [...document.querySelectorAll('.velo')]
+  .some(v => !v.classList.contains('oculto'));
+
+document.addEventListener('keydown', e => {
+  // Con la caja bloqueada o una hoja encima, el teclado es de ellas.
+  if ($('#app').classList.contains('oculto')) return;
+  if (hojaAbierta()){
+    if (e.key === 'Escape') cerrarLoQueEste();
+    return;
+  }
+
+  const a = ATAJOS.find(x => x.k === e.key);
+  if (a){ e.preventDefault(); if (!(a.linea && !S.ticket.length)) a.fn(); return; }
+
+  if (e.key === 'Escape'){
+    e.preventDefault();
+    S.multi = null; pintarMulti();
+    $('#buscar').value = ''; S.busqueda = ''; pintarGrid();
+    return;
+  }
+  if (e.key === 'Delete' && S.ticket.length){
+    e.preventDefault();
+    const l = lineaPuesto(); if (l) quitarLinea(l.producto_id);
+    return;
+  }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+    e.preventDefault(); mover(e.key === 'ArrowDown' ? 1 : -1); return;
+  }
+  if ((e.key === '+' || e.key === '-') && S.ticket.length && e.target !== $('#buscar')){
+    e.preventDefault();
+    const l = lineaPuesto(); if (l) cambiarCant(l.producto_id, e.key === '+' ? 1 : -1);
+    return;
+  }
+  // Cualquier otra tecla util va al buscador aunque el foco se haya perdido:
+  // la cajera escanea sin mirar donde esta el cursor.
+  if (e.target !== $('#buscar') && !e.ctrlKey && !e.altKey && !e.metaKey
+      && e.key.length === 1){
+    $('#buscar').focus();
+  }
+});
+
+function cerrarLoQueEste(){
+  ['#velo-cobro','#velo-cliente','#velo-hoja'].forEach(v => {
+    const z = $(v); if (z && !z.classList.contains('oculto')) ver(v, false);
+  });
+  $('#buscar')?.focus();
+}
+
+/* =============== cantidad de la linea ===============
+
+   Dos formas de poner la cantidad, porque en una pulperia se piden las dos:
+
+     por cantidad   "deme media libra de queso"  → 0.5
+     por monto      "deme 20 lempiras de queso"  → 20 / precio
+
+   Lo de por monto se muestra con el importe que de verdad va a salir: al
+   dividir queda una cantidad de tres decimales y el total casi nunca cae
+   exacto en los 20. Mas vale que lo vea antes que despues en el ticket.
+   ==================================================== */
+function hojaCantidad(){
+  const l = lineaPuesto(); if (!l) return;
+  const p = S.catalogo.find(x => x.producto_id === l.producto_id);
+  if (!p) return;
+
+  $('#hoja').innerHTML = `
+    <h2>Cantidad</h2>
+    <p class="sub"><b>${escapar(p.nombre)}</b> · ${money(p.precio)} por
+      ${escapar(p.unidad_base || 'unidad')}</p>
+    <div class="metodos" id="cn-modo" style="margin-top:4px">
+      <button class="metodo activo" data-m="cantidad">Por cantidad</button>
+      <button class="metodo" data-m="monto">Por monto</button>
+    </div>
+    <div class="rotulo" id="cn-rot">¿Cuántas ${escapar(p.unidad_base || 'unidades')}?</div>
+    <input class="recibido num" id="cn-valor" inputmode="decimal"
+           value="${cantTxt(l.cantidad)}">
+    <div class="cambio" id="cn-caja"><span id="cn-eti">Importe</span>
+      <b class="num" id="cn-res">—</b></div>
+    <div class="aviso ojo" style="margin-top:10px">Hay
+      <b>${cantTxt(p.existencia)} ${escapar(p.unidad_base || '')}</b> en existencia.</div>
+    <div class="aviso malo oculto" id="cn-error"></div>
+    <div class="acciones">
+      <button class="btn secundario" id="cn-no">Cancelar</button>
+      <button class="btn principal-b" id="cn-si">Poner</button>
+    </div>`;
+  ver('#velo-hoja');
+  const campo = $('#cn-valor');
+  campo.focus(); campo.select();
+
+  let modo = 'cantidad';
+  const leido = () => Number(campo.value.trim().replace(',', '.')) || 0;
+  const aCantidad = () => modo === 'cantidad' ? tres(leido())
+                        : (p.precio > 0 ? tres(leido() / p.precio) : 0);
+
+  const pintarRes = () => {
+    const n = aCantidad();
+    $('#cn-res').textContent = modo === 'cantidad'
+      ? money(n * p.precio)
+      : cantTxt(n) + ' ' + (p.unidad_base || '');
+    $('#cn-eti').textContent = modo === 'cantidad' ? 'Importe' : 'Son';
+    // Por monto el importe real casi nunca cae exacto: se dice cual es.
+    const real = n * p.precio;
+    if (modo === 'monto' && n > 0 && Math.abs(real - leido()) >= 0.005)
+      $('#cn-res').textContent += ' · ' + money(real);
+  };
+  pintarRes();
+
+  campo.addEventListener('input', e => {
+    e.target.value = e.target.value.replace(/[^0-9.,]/g, '');
+    pintarRes();
+  });
+  campo.addEventListener('keydown', e => { if (e.key === 'Enter') $('#cn-si').click(); });
+
+  $('#cn-modo').addEventListener('click', e => {
+    const b = e.target.closest('.metodo'); if (!b) return;
+    modo = b.dataset.m;
+    document.querySelectorAll('#cn-modo .metodo').forEach(m => m.classList.toggle('activo', m === b));
+    $('#cn-rot').textContent = modo === 'cantidad'
+      ? `¿Cuántas ${p.unidad_base || 'unidades'}?` : '¿De cuánto?';
+    campo.value = ''; campo.focus(); pintarRes();
+  });
+
+  $('#cn-no').onclick = () => { ver('#velo-hoja', false); $('#buscar').focus(); };
+  $('#cn-si').onclick = () => {
+    const n = aCantidad();
+    const err = $('#cn-error');
+    err.classList.add('oculto');
+    if (n <= 0){ err.textContent = 'Ponga una cantidad mayor a cero.';
+                 err.classList.remove('oculto'); return; }
+    if (n > Number(p.existencia)){
+      err.textContent = `Solo hay ${cantTxt(p.existencia)} ${p.unidad_base || ''} en existencia.`;
+      err.classList.remove('oculto'); return;
+    }
+    fijarCant(l.producto_id, n);
+    ver('#velo-hoja', false);
+    $('#buscar').focus();
+  };
+}
 $('#movil-ver').addEventListener('click', () => $('#ticket').classList.add('abierto'));
 $('#cerrar-ticket').addEventListener('click', () => $('#ticket').classList.remove('abierto'));
+
+/* =============== suspender y retomar ===============
+
+   El cliente se acuerda de que le falta algo y se devuelve a la gondola. En
+   Maxi la cajera deja ese ticket en espera y atiende al siguiente.
+
+   Se guardan en el navegador de esta caja, no en el servidor, por dos
+   razones: funciona sin internet (que es justo cuando mas se encola gente) y
+   un ticket suspendido vive minutos, no dias. Sobrevive a que se recargue la
+   pantalla, que es lo que de verdad importa.
+   =================================================== */
+const LLAVE_SUSP = () => `pulp:susp:${S.sucursal || '-'}:${S.caja || '-'}`;
+
+function guardadas(){
+  try{
+    const x = JSON.parse(localStorage.getItem(LLAVE_SUSP()) || '[]');
+    return Array.isArray(x) ? x : [];
+  }catch(e){ return []; }
+}
+function guardar(lista){
+  try{ localStorage.setItem(LLAVE_SUSP(), JSON.stringify(lista)); }
+  catch(e){ /* navegador con el almacenamiento bloqueado: no se cae la caja */ }
+}
+
+function suspender(){
+  if (!S.ticket.length) return;
+  const t = totales();
+  const lista = guardadas();
+  lista.unshift({
+    id: 'sp' + Date.now(),
+    creada: new Date().toISOString(),
+    ticket: S.ticket.map(l => ({ ...l })),
+    cliente: S.cliente ? { id:S.cliente.id, nombre:S.cliente.nombre } : null,
+    total: t.total,
+    piezas: S.ticket.length,
+    // El nombre se guarda ahora: si despues cambia el catalogo, la lista de
+    // suspendidas seguiria diciendo que era.
+    /* Solo el primero. La cajera reconoce el ticket en espera por el monto y
+       la hora; tres nombres completos se comian cinco renglones. */
+    que: (S.catalogo.find(x => x.producto_id === S.ticket[0].producto_id) || {}).nombre || '—'
+  });
+  guardar(lista.slice(0, 20));
+  S.ticket = []; S.puesto = null; S.multi = null; S.cliente = null;
+  pintarCliente(); pintarMulti(); pintar();
+  $('#buscar').focus();
+}
+
+function hojaSuspendidas(){
+  const lista = guardadas();
+  if (!lista.length){
+    $('#hoja').innerHTML = `
+      <h2>Ventas en espera</h2>
+      <p class="sub">No hay ninguna. Con <b>F7</b> deja la venta de ahora en
+        espera y atiende al siguiente; con <b>F8</b> la retoma.</p>
+      <div class="acciones" style="grid-template-columns:1fr">
+        <button class="btn secundario" id="sp-no">Cerrar</button>
+      </div>`;
+    ver('#velo-hoja');
+    $('#sp-no').onclick = () => { ver('#velo-hoja', false); $('#buscar').focus(); };
+    return;
+  }
+
+  $('#hoja').innerHTML = `
+    <h2>Ventas en espera</h2>
+    <p class="sub">${lista.length === 1 ? 'Hay una' : 'Hay ' + lista.length} guardada${lista.length === 1 ? '' : 's'} en esta caja.</p>
+    <div class="cl-lista">
+      ${lista.map(s => `
+        <button class="cl-fila" data-sp="${s.id}">
+          <div class="cl-fila-txt">
+            <b class="una-linea">${escapar(
+              typeof s.que === 'string' ? s.que : [].concat(s.que || []).join(', '))}${
+              s.piezas > 1 ? ' y ' + (s.piezas - 1) + ' más' : ''}</b>
+            <small>${escapar(hora(s.creada))}${s.cliente ? ' · ' + escapar(s.cliente.nombre) : ''}</small>
+          </div>
+          <div class="cl-fila-fin">${money(s.total)}
+            <small>${s.piezas} línea${s.piezas === 1 ? '' : 's'}</small></div>
+        </button>`).join('')}
+    </div>
+    <div class="aviso malo oculto" id="sp-error"></div>
+    <button class="partes-cerrar" id="sp-borrar">Borrar todas las que están en espera</button>
+    <div class="acciones" style="grid-template-columns:1fr">
+      <button class="btn secundario" id="sp-no">Cerrar</button>
+    </div>`;
+  ver('#velo-hoja');
+
+  $('#sp-no').onclick = () => { ver('#velo-hoja', false); $('#buscar').focus(); };
+  $('#sp-borrar').onclick = () => {
+    const b = $('#sp-borrar');
+    if (b.dataset.seguro !== '1'){
+      b.dataset.seguro = '1'; b.textContent = '¿Seguro? Toque otra vez para borrarlas';
+      return;
+    }
+    guardar([]); ver('#velo-hoja', false); pintarAtajos(); $('#buscar').focus();
+  };
+  document.querySelectorAll('[data-sp]').forEach(b =>
+    b.addEventListener('click', () => retomar(b.dataset.sp)));
+}
+
+function retomar(id){
+  const lista = guardadas();
+  const s = lista.find(x => x.id === id);
+  if (!s) return;
+
+  // Lo que hay en pantalla no se tira: se suspende primero y queda arriba.
+  if (S.ticket.length) suspender();
+
+  // El catalogo pudo cambiar: se deja lo que todavia existe y se dice el resto.
+  const perdidas = [];
+  S.ticket = s.ticket.filter(l => {
+    const p = S.catalogo.find(x => x.producto_id === l.producto_id);
+    if (!p || !p.precio){ perdidas.push(l); return false; }
+    if (l.cantidad > Number(p.existencia)) l.cantidad = Number(p.existencia);
+    return l.cantidad > 0;
+  });
+  S.cliente = s.cliente
+    ? (S.clientes.find(c => c.id === s.cliente.id) || s.cliente) : null;
+  S.puesto = S.ticket.length ? S.ticket[S.ticket.length - 1].producto_id : null;
+
+  guardar(guardadas().filter(x => x.id !== id));
+  pintarCliente(); pintar();
+  ver('#velo-hoja', false);
+  $('#buscar').focus();
+
+  if (perdidas.length) avisoCaja(
+    `${perdidas.length === 1 ? 'Un producto' : perdidas.length + ' productos'} de esa venta ` +
+    'ya no está disponible y se quitó del ticket.');
+}
+
+function hora(iso){
+  try{ return new Date(iso).toLocaleTimeString('es-HN',
+    { hour:'numeric', minute:'2-digit' }); }catch(e){ return ''; }
+}
+
+/* Un aviso corto que se va solo: no hay donde ponerlo fijo en la caja. */
+let avisoT = null;
+function avisoCaja(texto){
+  let z = $('#aviso-caja');
+  if (!z){
+    z = document.createElement('div');
+    z.id = 'aviso-caja'; z.className = 'aviso-caja';
+    document.body.appendChild(z);
+  }
+  z.textContent = texto;
+  z.classList.add('visible');
+  clearTimeout(avisoT);
+  avisoT = setTimeout(() => z.classList.remove('visible'), 4200);
+}
 
 /* ================= bloqueo ================= */
 function bloquear(){
@@ -1009,18 +1586,37 @@ function fiadoDisponible(){
   return Math.max(lim - (Number(c.saldo) || 0), 0);
 }
 
-/* ================= cobro ================= */
+/* ================= cobro =================
+
+   El pago puede venir en dos formas a la vez ("la mitad con tarjeta y el
+   resto en efectivo"). Se limita a DOS partes a proposito: cubre lo que de
+   verdad pasa en el mostrador y cabe en la pantalla de un celular. El
+   servidor ya aceptaba varias formas desde que existe fn_registrar_venta;
+   esto solo las arma.
+
+   S.metodo es el metodo del RESTO (la ultima parte), que es la que puede ser
+   en efectivo y generar vuelto. Asi el camino de siempre —una sola forma—
+   sigue siendo exactamente el de antes.
+   ========================================= */
+/* Lo que falta cubrir con el metodo principal. */
+function resto(total){
+  return dos(total - (S.partido ? Math.min(Math.max(S.p1.monto, 0), total) : 0));
+}
+
 $('#btn-cobrar').addEventListener('click', () => {
   if (!S.ticket.length) return;
   const t = totales();
   S.recibido = 0; S.metodo = 'efectivo'; S.fiscal = false;
+  S.partido = false; S.p1 = { metodo:'tarjeta', monto:0 };
+  pintarPartes(t.total);
   $('#cobro-total').textContent = money(t.total);
   $('#cobro-items').textContent =
-    S.ticket.reduce((s,l)=>s+l.cantidad,0) + ' productos · ' + S.ticket.length + ' líneas';
+    cantTxt(S.ticket.reduce((s,l)=>s+l.cantidad,0)) + ' productos · ' +
+    S.ticket.length + (S.ticket.length === 1 ? ' línea' : ' líneas');
   $('#recibido').value = '0.00';
   $('#sw-fiscal').classList.remove('on');
   document.querySelectorAll('.metodo').forEach(m => m.classList.toggle('activo', m.dataset.m === 'efectivo'));
-  pintarFiado(t.total);
+  pintarFiado(resto(t.total));
   ver('#bloque-efectivo'); ver('#cobro-error', false);
   pintarRapidos(t.total); pintarCambio();
   ver('#paso-cobro'); ver('#paso-listo', false);
@@ -1051,34 +1647,103 @@ function pintarFiado(total){
   ver('#cobro-fiado', !!nota);
   if (nota) $('#cobro-fiado').textContent = nota;
 }
+/* Los billetes rapidos se calculan sobre lo que falta en efectivo, no sobre
+   el total: con pago partido, "Exacto" de L 200 cuando solo faltan 50
+   entregaria un vuelto inventado. */
 function pintarRapidos(total){
-  const base = [total, Math.ceil(total/50)*50, Math.ceil(total/100)*100, Math.ceil(total/500)*500];
-  const unicos = [...new Set(base.map(n => Math.round(n)))].slice(0,4);
+  const falta = resto(total);
+  const base = [falta, Math.ceil(falta/50)*50, Math.ceil(falta/100)*100, Math.ceil(falta/500)*500];
+  const unicos = [...new Set(base.map(n => Math.round(n)))].filter(n => n > 0).slice(0,4);
   $('#rapidos').innerHTML = unicos.map(n =>
-    `<button class="rapido" data-r="${n}">${n === Math.round(total) ? 'Exacto' : money(n)}</button>`).join('');
+    `<button class="rapido" data-r="${n}">${n === Math.round(falta) ? 'Exacto' : money(n)}</button>`).join('');
 }
+
+function pintarPartes(total){
+  ver('#partes', S.partido);
+  ver('#btn-partir', !S.partido);
+  $('#rot-recibe').textContent = S.partido ? 'Recibe en efectivo' : 'Recibe';
+
+  if (!S.partido){
+    $('#rot-metodo').textContent = 'Forma de pago';
+    return;
+  }
+
+  /* Cuanto falta va en el rotulo de los metodos y no en una fila aparte: los
+     botones de abajo ya dicen con que se cobra el resto, y repetirlo hacia
+     crecer la hoja hasta que el boton de confirmar no cabia en el celular. */
+  $('#rot-metodo').innerHTML =
+    `El resto <b class="num" id="p2-monto">${money(resto(total))}</b> se cobra con`;
+
+  // La parte 1 nunca es fiado: el fiado es el resto, para que el control de
+  // limite mire una sola cifra.
+  const ops = ['tarjeta','transferencia','efectivo','otro'];
+  const sel = $('#p1-metodo');
+  sel.innerHTML = ops.map(m =>
+    `<option value="${m}" ${m === S.p1.metodo ? 'selected' : ''}>${NOMBRE_METODO[m]}</option>`).join('');
+}
+
 function pintarCambio(){
   const t = totales(), c = $('#cambio-caja');
+  const falta = resto(t.total);
+  pintarPartes(t.total);
+
+  // Partido pero sin monto en la parte 1: todavia no hay nada que dividir.
+  const partidoMal = S.partido && (S.p1.monto <= 0 || S.p1.monto >= t.total);
+
   if (S.metodo === 'credito'){
     c.classList.remove('falta');
     c.querySelector('span').textContent = 'Queda fiado a ' + (S.cliente?.nombre || '');
-    $('#cambio').textContent = money(t.total);
-    $('#confirmar-cobro').disabled = false;
+    $('#cambio').textContent = money(falta);
+    $('#confirmar-cobro').disabled = partidoMal;
     return;
   }
   if (S.metodo !== 'efectivo'){
     c.classList.remove('falta');
-    c.querySelector('span').textContent = 'Pago con ' + S.metodo;
-    $('#cambio').textContent = money(t.total);
-    $('#confirmar-cobro').disabled = false;
+    c.querySelector('span').textContent = 'Pago con ' + (NOMBRE_METODO[S.metodo] || S.metodo);
+    $('#cambio').textContent = money(falta);
+    $('#confirmar-cobro').disabled = partidoMal;
     return;
   }
-  const dif = S.recibido - t.total;
+  const dif = dos(S.recibido - falta);
   c.classList.toggle('falta', dif < 0);
   c.querySelector('span').textContent = dif < 0 ? 'Falta' : 'Cambio';
   $('#cambio').textContent = money(Math.abs(dif));
-  $('#confirmar-cobro').disabled = dif < 0;
+  $('#confirmar-cobro').disabled = dif < 0 || partidoMal;
 }
+
+$('#btn-partir').addEventListener('click', () => {
+  const t = totales();
+  S.partido = true;
+  // Arranca con la mitad redondeada: casi siempre hay que cambiarla, pero
+  // deja ver de una vez como queda repartido.
+  S.p1 = { metodo:'tarjeta', monto:dos(t.total / 2) };
+  S.metodo = 'efectivo';
+  document.querySelectorAll('.metodo').forEach(m =>
+    m.classList.toggle('activo', m.dataset.m === 'efectivo'));
+  ver('#bloque-efectivo', true);
+  $('#p1-monto').value = S.p1.monto.toFixed(2);
+  S.recibido = 0; $('#recibido').value = '0.00';
+  pintarRapidos(t.total); pintarCambio();
+  $('#p1-monto').focus(); $('#p1-monto').select();
+});
+
+$('#no-partir').addEventListener('click', () => {
+  const t = totales();
+  S.partido = false; S.p1 = { metodo:'tarjeta', monto:0 };
+  S.recibido = 0; $('#recibido').value = '0.00';
+  pintarRapidos(t.total); pintarCambio();
+});
+
+$('#p1-metodo').addEventListener('change', e => {
+  S.p1.metodo = e.target.value; pintarCambio();
+});
+$('#p1-monto').addEventListener('input', e => {
+  e.target.value = e.target.value.replace(/[^0-9.]/g, '');
+  const t = totales();
+  S.p1.monto = dos(parseFloat(e.target.value) || 0);
+  S.recibido = 0; $('#recibido').value = '0.00';
+  pintarRapidos(t.total); pintarCambio();
+});
 $('#metodos').addEventListener('click', e => {
   const b = e.target.closest('.metodo'); if (!b) return;
   S.metodo = b.dataset.m;
@@ -1093,6 +1758,19 @@ $('#rapidos').addEventListener('click', e => {
 $('#recibido').addEventListener('input', e => {
   S.recibido = parseFloat(e.target.value.replace(/[^0-9.]/g,'')) || 0; pintarCambio();
 });
+/* Enter cierra la venta sin soltar el teclado, que es como se cobra en Maxi.
+   Si todavia falta plata el boton esta desactivado y Enter no hace nada. */
+$('#recibido').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const b = $('#confirmar-cobro');
+  if (!b.disabled) b.click();
+});
+$('#p1-monto').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  $('#recibido').focus(); $('#recibido').select();
+});
 $('#sw-fiscal').addEventListener('click', () => {
   S.fiscal = !S.fiscal; $('#sw-fiscal').classList.toggle('on', S.fiscal);
 });
@@ -1101,8 +1779,17 @@ $('#cancelar-cobro').addEventListener('click', () => ver('#velo-cobro', false));
 $('#confirmar-cobro').addEventListener('click', async () => {
   const b = $('#confirmar-cobro'), t = totales();
   const items = S.ticket.map(l => ({ producto_id:l.producto_id, cantidad:l.cantidad }));
-  const pagos = [{ metodo:S.metodo, monto:Number(t.total.toFixed(2)),
-                   recibido:S.metodo === 'efectivo' ? S.recibido : null }];
+
+  /* El servidor suma 'monto' para ver si alcanza, y 'recibido' (o el monto, si
+     no viene) para sacar el vuelto. Por eso la parte que no es efectivo va sin
+     recibido: cubre justo lo suyo y no infla el cambio. */
+  const falta = resto(t.total);
+  const pagos = [];
+  if (S.partido && S.p1.monto > 0)
+    pagos.push({ metodo:S.p1.metodo, monto:dos(S.p1.monto) });
+  pagos.push({ metodo:S.metodo, monto:falta,
+               recibido:S.metodo === 'efectivo' ? S.recibido : null });
+
   const clienteId = S.cliente?.id || null;
 
   ver('#cobro-error', false);
@@ -1115,7 +1802,7 @@ $('#confirmar-cobro').addEventListener('click', async () => {
     S.metodo = 'efectivo';
     document.querySelectorAll('.metodo').forEach(m =>
       m.classList.toggle('activo', m.dataset.m === 'efectivo'));
-    ver('#bloque-efectivo'); pintarFiado(t.total); pintarCambio();
+    ver('#bloque-efectivo'); pintarFiado(resto(t.total)); pintarCambio();
     return;
   }
 
@@ -1125,7 +1812,8 @@ $('#confirmar-cobro').addEventListener('click', async () => {
     await DB.encolar({ items, pagos, fiscal:S.fiscal, sucursal:S.sucursal,
                        turno:S.turno, cliente:clienteId, creada:new Date().toISOString() });
     descontarLocal();
-    mostrarListo({ offline:true, cambio:Math.max(S.recibido - t.total, 0) });
+    mostrarListo({ offline:true, cambio:Math.max(dos(S.recibido - falta), 0),
+                   recibido:S.metodo === 'efectivo' ? S.recibido : 0, era:falta });
     b.disabled = false; b.textContent = 'Confirmar cobro';
     return;
   }
@@ -1158,7 +1846,8 @@ $('#confirmar-cobro').addEventListener('click', async () => {
   }
 
   mostrarListo({ documento:data.documento, numero:data.numero_fiscal || data.numero,
-                 cambio:Number(data.cambio), fiado, cliente:S.cliente?.nombre });
+                 cambio:Number(data.cambio), fiado, cliente:S.cliente?.nombre,
+                 recibido:S.metodo === 'efectivo' ? S.recibido : 0, era:falta });
 });
 
 function descontarLocal(){
@@ -1168,7 +1857,8 @@ function descontarLocal(){
   });
 }
 
-function mostrarListo({ documento, numero, cambio, offline, fiado, cliente }){
+function mostrarListo({ documento, numero, cambio, offline, fiado, cliente,
+                        recibido, era }){
   $('#listo-icono').textContent = offline ? '⏳' : '✓';
   $('#listo-icono').classList.toggle('espera', !!offline);
   $('#listo-titulo').textContent = offline ? 'Venta guardada sin internet'
@@ -1177,6 +1867,14 @@ function mostrarListo({ documento, numero, cambio, offline, fiado, cliente }){
   $('#listo-doc').textContent = offline ? 'Se enviará al recuperar la señal' : numero;
   ver('#caja-entregar', cambio > 0);
   $('#listo-cambio').textContent = money(cambio);
+  /* La resta a la vista: el cliente que reclama el vuelto ve de dónde sale,
+     y la cajera no tiene que acordarse de con cuánto le pagaron. */
+  const hayCuenta = cambio > 0 && recibido > 0;
+  ver('#listo-cuentas', hayCuenta);
+  if (hayCuenta){
+    $('#listo-recibio').textContent = 'Recibió ' + money(recibido);
+    $('#listo-era').textContent = 'En efectivo ' + money(era);
+  }
   $('#listo-aviso').textContent = offline
     ? 'El inventario se descargará cuando la venta se envíe. La caja se bloqueó.'
     : fiado > 0
@@ -1187,7 +1885,7 @@ function mostrarListo({ documento, numero, cambio, offline, fiado, cliente }){
 }
 
 $('#btn-terminar').addEventListener('click', async () => {
-  S.ticket = [];
+  S.ticket = []; S.puesto = null; S.multi = null;
   S.cliente = null; pintarCliente();
   ver('#velo-cobro', false);
   $('#ticket').classList.remove('abierto');
