@@ -239,27 +239,29 @@ de cada línea, el total se recalcula solo y el cliente ve el monto correcto.
 
 Las tarjetas que llevan más de 20 minutos esperando se marcan en rojo.
 
-## Movimientos (inventario por fecha)
+## Movimientos: control de inventario
 
-`movimientos.html`, para supervisor en adelante. Dos vistas:
+`movimientos.html`, para supervisor en adelante. Se escanea o digita un
+producto (nombre, SKU o código de barras), o se elige una categoría o un
+departamento completo, y se ve una tabla por día (o por periodo) con:
 
-- **Periodo:** por producto, con cuánto empezó, cuánto entró, cuánto salió y
-  con cuánto terminó; y en total, qué movió el inventario (compras, ventas,
-  merma, ajustes). Atajos de hoy, ayer, esta semana, este mes y mes pasado.
-- **Existencia al día:** cuánto había de cada cosa al cierre de una fecha,
-  por ejemplo el cierre del mes pasado.
+fecha · código · código de barras · descripción · costo · precio retail ·
+inv. inicial · compras · ventas · merma por daño · ajustes de conteos ·
+**inv. teórico** (inicial + compras − ventas − merma) · **inv. final** (el del
+sistema) · **merma desconocida** (final − teórico) y su valor.
 
-Tocando un producto se abre su kardex: cada movimiento con su documento
-(ticket, factura, conteo, merma), quién lo hizo y lo que quedó. Todo se
-descarga en CSV para Excel.
+Arriba, la merma por daño, los ajustes y la merma desconocida del periodo, y
+los ajustes día por día para saber cuándo apareció una diferencia. Las filas
+con diferencia se marcan en rojo y se pueden filtrar; tocando una se ve cada
+movimiento de ese día con su documento y quién lo hizo. Todo sale en CSV.
 
-No guarda nada nuevo: el kardex ya trae el saldo después de cada movimiento,
-así que el saldo a cualquier hora es el del último movimiento antes de esa
-hora. Las fechas se cortan a la hora de Honduras (`app.zona`). El gerente ve
-lempiras; el supervisor solo cantidades. Si un producto no cuadra
-(inicial + entradas − salidas ≠ final) la pantalla lo marca.
+La pestaña **Existencia al día** da cuánto había de cada cosa al cierre de una
+fecha. No se guarda nada nuevo: el kardex ya trae el saldo después de cada
+movimiento. Las fechas se cortan a la hora de Honduras. Costo y lempiras solo
+para gerente.
 
-Funciones: `fn_inventario_por_fecha`, `fn_kardex_producto` (migración 025).
+Funciones: `fn_control_inventario`, `fn_categorias_arbol` (026),
+`fn_inventario_por_fecha`, `fn_kardex_producto` (025).
 
 ## Pendiente
 

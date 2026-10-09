@@ -23,14 +23,13 @@
 .pes.activo{border-color:var(--azul);background:var(--azul-suave);color:var(--azul)}
 
 .fechas{display:flex;gap:8px;align-items:center;flex:0 0 auto;margin-bottom:8px}
-.fechas input,.fechas select{flex:1;height:46px;border:1.5px solid var(--linea);
+.fechas input,.fechas select{flex:1;height:44px;border:1.5px solid var(--linea);
   border-radius:var(--r-md);padding:0 12px;outline:none;font-size:14px;
   background:var(--panel);min-width:0}
 .fechas input:focus,.fechas select:focus{border-color:var(--azul)}
 .fechas span{color:var(--tenue);font-size:13px;flex:0 0 auto}
 
-/* Atajos de fecha: lo que se pregunta el 90% de las veces */
-.atajos{display:flex;gap:6px;overflow-x:auto;flex:0 0 auto;margin-bottom:10px;
+.atajos{display:flex;gap:6px;overflow-x:auto;flex:0 0 auto;margin-bottom:8px;
   scrollbar-width:none;padding-bottom:2px}
 .atajos::-webkit-scrollbar{display:none}
 .atajo{flex:0 0 auto;height:32px;padding:0 13px;border-radius:999px;
@@ -38,14 +37,26 @@
   font-weight:700;color:var(--tenue);white-space:nowrap}
 .atajo.activo{background:var(--tinta);border-color:var(--tinta);color:#fff}
 
-.filtros{display:flex;gap:8px;align-items:center;flex:0 0 auto;margin-bottom:12px}
-.filtros .entrada{flex:1;height:44px;font-size:14px;min-width:0}
-.interruptor{flex:0 0 auto;display:flex;align-items:center;gap:7px;height:44px;
-  padding:0 12px;border-radius:var(--r-md);border:1px solid var(--linea);
-  background:var(--panel);font-size:12.5px;font-weight:700;color:var(--tenue);
-  white-space:nowrap}
-.interruptor input{width:17px;height:17px;accent-color:var(--azul)}
-.btn-csv{flex:0 0 auto;height:44px;padding:0 13px;border-radius:var(--r-md);
+.filtros{display:flex;gap:8px;align-items:center;flex:0 0 auto;margin-bottom:8px}
+.busca{flex:1;display:flex;gap:8px;min-width:0}
+.busca .entrada{flex:1;height:44px;font-size:14px;min-width:0}
+.escanear{flex:0 0 44px;height:44px;border-radius:var(--r-md);background:var(--tinta);
+  color:#fff;display:grid;place-items:center}
+.filtros select{flex:0 1 230px;height:44px;border:1.5px solid var(--linea);
+  border-radius:var(--r-md);padding:0 10px;outline:none;font-size:13.5px;
+  background:var(--panel);min-width:0}
+.opciones{display:flex;gap:8px;align-items:center;flex:0 0 auto;margin-bottom:12px}
+.segmento{display:flex;background:var(--fondo);border-radius:var(--r-md);padding:3px;
+  flex:0 0 auto}
+.segmento button{height:36px;padding:0 13px;border-radius:9px;font-size:12.5px;
+  font-weight:800;color:var(--tenue)}
+.segmento button.activo{background:var(--panel);color:var(--tinta);
+  box-shadow:0 1px 3px rgba(15,23,41,.12)}
+.interruptor{display:flex;align-items:center;gap:7px;height:42px;padding:0 12px;
+  border-radius:var(--r-md);border:1px solid var(--linea);background:var(--panel);
+  font-size:12.5px;font-weight:700;color:var(--tenue);white-space:nowrap}
+.interruptor input{width:17px;height:17px;accent-color:#9F1239}
+.btn-csv{margin-left:auto;flex:0 0 auto;height:42px;padding:0 13px;border-radius:var(--r-md);
   border:1px solid var(--linea);background:var(--panel);font-size:12.5px;
   font-weight:800;color:var(--tenue)}
 
@@ -56,52 +67,81 @@
 .titulin{font-size:11.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
   color:#9AA8BC;margin-bottom:10px}
 
-/* Inicial → entradas → salidas → final, en ese orden: es la cuenta que se
-   lee de izquierda a derecha y que tiene que cuadrar. */
-.cuenta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;
-  margin-bottom:12px}
+/* Las tres cosas que se persiguen, juntas: lo que se sabe por que se perdio,
+   lo que corrigieron los conteos y lo que nadie explica. */
+.tres{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px}
 .cubo{border-radius:var(--r-md);padding:13px 14px;border:1px solid var(--linea);
   background:var(--panel);min-width:0}
 .cubo .eti{font-size:11px;font-weight:800;letter-spacing:.04em;
-  text-transform:uppercase;color:var(--tenue);margin-bottom:6px}
+  text-transform:uppercase;color:var(--tenue);margin-bottom:6px;line-height:1.3}
 .cubo b{display:block;font-family:var(--num);font-size:19px;font-weight:700;
   line-height:1.1;letter-spacing:-.03em;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis}
 .cubo small{display:block;font-size:11.5px;color:var(--tenue);margin-top:4px}
-.cubo.entra{background:#E7F7EE;border-color:#C7EBD6}
-.cubo.entra .eti,.cubo.entra b{color:var(--verde-oscuro)}
-.cubo.sale{background:#FFEDF1;border-color:#F6CBD6}
-.cubo.sale .eti,.cubo.sale b{color:#9F1239}
+.cubo.dano{background:#FFF4E0;border-color:#F3E2BC}
+.cubo.dano .eti{color:#8A5A00}
+.cubo.desc{background:#FFEDF1;border-color:#F6CBD6}
+.cubo.desc .eti,.cubo.desc b{color:#9F1239}
+.cubo.ok{background:#E7F7EE;border-color:#C7EBD6}
+.cubo.ok .eti,.cubo.ok b{color:var(--verde-oscuro)}
 
-.tipo{display:flex;align-items:center;gap:10px;padding:9px 0;
-  border-bottom:1px solid var(--linea)}
-.tipo:last-child{border-bottom:none;padding-bottom:0}
-.tipo-nom{flex:1;min-width:0;font-size:13.5px}
-.tipo-nom small{display:block;font-size:11.5px;color:var(--tenue);margin-top:2px}
-.tipo-n{flex:0 0 auto;font-family:var(--num);font-size:14px;font-weight:700;
-  text-align:right;white-space:nowrap}
-.tipo-n small{display:block;font-size:11.5px;font-weight:500;color:var(--tenue)}
-.mas{color:var(--verde-oscuro)}
-.menos{color:#9F1239}
+.dia{display:flex;align-items:center;gap:10px;padding:8px 0;
+  border-bottom:1px solid var(--linea);font-size:13px}
+.dia:last-child{border-bottom:none;padding-bottom:0}
+.dia-f{flex:0 0 92px;font-weight:700}
+.dia-d{flex:1;min-width:0;color:var(--tenue);font-size:12px;line-height:1.45}
+.dia-v{flex:0 0 auto;font-family:var(--num);font-weight:700;text-align:right;white-space:nowrap}
 
-/* un producto de la lista */
+/* ===== la tabla de control ===== */
+.marco{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);
+  overflow:auto;max-height:70vh;margin-bottom:12px;-webkit-overflow-scrolling:touch}
+table.control{border-collapse:separate;border-spacing:0;font-size:12.5px;width:max-content;
+  min-width:100%}
+.control th,.control td{padding:8px 10px;border-bottom:1px solid var(--linea);
+  white-space:nowrap;text-align:right;background:var(--panel)}
+.control th{position:sticky;top:0;z-index:2;font-size:10.5px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.03em;color:var(--tenue);background:#F7F9FC;
+  line-height:1.25;vertical-align:bottom}
+.control td{font-family:var(--num);font-variant-numeric:tabular-nums}
+.control .tx{text-align:left;font-family:var(--ui, inherit)}
+/* Fecha y descripcion quedan fijas al correr la tabla de lado: sin eso, en
+   el telefono se pierde de que producto es cada numero. */
+.control .fija1{position:sticky;left:0;z-index:1}
+.control .fija2{position:sticky;left:var(--ancho-fecha, 0);z-index:1;
+  max-width:190px;overflow:hidden;text-overflow:ellipsis;
+  box-shadow:6px 0 6px -6px rgba(15,23,41,.18)}
+.control th.fija1,.control th.fija2{z-index:3}
+.control .desc-nom{font-family:inherit;font-weight:700;color:var(--tinta)}
+.control tr.fila{cursor:pointer}
+.control tr.fila:hover td{background:#F7F9FC}
+.control tr.mal td{background:#FFF5F7}
+.control tr.mal:hover td{background:#FFEDF1}
+.control td.calc{background:#F5F7FB;font-weight:700}
+.control tr.mal td.calc{background:#FCEFF3}
+.control td.dif{font-weight:800}
+.control td.dif.neg{color:#9F1239}
+.control td.dif.pos{color:#8A5A00}
+.control td.cero{color:#B4C0D2}
+.control tfoot td{position:sticky;bottom:0;background:#EEF2F8;font-weight:800;
+  border-top:1.5px solid var(--linea);border-bottom:none;z-index:1}
+.control tfoot td.fija1,.control tfoot td.fija2{z-index:2}
+
+.leyenda{font-size:12px;color:var(--tenue);line-height:1.6;margin:-2px 2px 14px}
+.leyenda b{color:var(--tinta)}
+
+/* existencia al dia */
 .prod{display:flex;align-items:center;gap:12px;width:100%;text-align:left;
   background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);
   padding:12px 14px;margin-bottom:8px}
 .prod-txt{flex:1;min-width:0}
-.prod-txt b{display:block;font-size:14px;font-weight:700;line-height:1.3;
-  overflow-wrap:anywhere}
+.prod-txt b{display:block;font-size:14px;font-weight:700;line-height:1.3;overflow-wrap:anywhere}
 .prod-txt small{display:block;font-size:11.5px;color:var(--tenue);margin-top:3px}
 .prod-fin{flex:0 0 auto;text-align:right}
 .prod-fin .saldo{font-family:var(--num);font-size:15px;font-weight:700;white-space:nowrap}
-.prod-fin .saldo i{font-style:normal;color:var(--claro);font-weight:500}
-.prod-fin small{display:block;font-family:var(--num);font-size:12px;margin-top:3px;
-  white-space:nowrap}
-.prod.quieto .prod-txt b{color:var(--tenue)}
-.prod.descuadre{border-color:#F6CBD6;background:#FFF7F9}
-.sello{display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;
-  font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;
-  background:#FFEDF1;color:#9F1239;margin-left:4px}
+.prod-fin small{display:block;font-family:var(--num);font-size:12px;margin-top:3px;white-space:nowrap}
+
+.mas{color:var(--verde-oscuro)}
+.menos{color:#9F1239}
 
 /* kardex de un producto */
 .hoja.ancha{max-width:620px}
@@ -132,12 +172,26 @@
 @media (max-width:820px){
   .zona{padding:12px 14px 0}
   .ficha{padding:14px 15px}
-  .cuenta{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .filtros{flex-wrap:wrap}
+  .busca{flex:1 1 100%}
+  .filtros select{flex:1 1 100%}
+  .opciones{flex-wrap:wrap}
+  /* En el telefono los filtros corren con el contenido: fijos se comian
+     media pantalla y la tabla quedaba en una rendija. */
+  .zona{overflow-y:auto}
+  .cuerpo{flex:none;overflow:visible}
+  .marco{max-height:75vh}
+  .control .fija2{max-width:128px;white-space:normal;line-height:1.3;min-width:110px}
+  .control th,.control td{padding:8px 8px}
 }
 @media (max-width:430px){
-  .filtros{flex-wrap:wrap}
-  .filtros .entrada{flex:1 1 100%}
-  .interruptor{flex:1}
+  .tres{gap:6px}
+  .cubo{padding:10px 9px}
+  .cubo .eti{font-size:9.5px}
+  .cubo b{font-size:14px}
+  .cubo small{font-size:10.5px}
+  .btn-csv{margin-left:0}
+  .interruptor span.largo{display:none}
   .mini b{font-size:13.5px}
 }
 </style>
@@ -194,7 +248,7 @@
 
     <div class="zona">
       <div class="pestanas" id="pestanas">
-        <button class="pes activo" data-v="periodo">Periodo</button>
+        <button class="pes activo" data-v="control">Control de inventario</button>
         <button class="pes" data-v="dia">Existencia al día</button>
       </div>
 
@@ -207,10 +261,28 @@
       <div class="atajos" id="atajos"></div>
 
       <div class="filtros">
-        <input class="entrada" id="f-buscar" type="search"
-               placeholder="Buscar producto, SKU o código" autocomplete="off">
-        <label class="interruptor" id="l-movidos">
-          <input type="checkbox" id="f-movidos"> Solo con movimiento
+        <div class="busca">
+          <input class="entrada" id="f-buscar" type="search" enterkeyhint="search"
+                 placeholder="Escanee o digite producto, SKU o código" autocomplete="off">
+          <button class="escanear oculto" id="b-escanear" aria-label="Escanear código">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/>
+              <path d="M7 12h10"/></svg>
+          </button>
+        </div>
+        <select id="f-categoria" aria-label="Categoría o departamento">
+          <option value="">Todas las categorías</option>
+        </select>
+      </div>
+
+      <div class="opciones" id="opciones">
+        <div class="segmento" id="modo">
+          <button class="activo" data-m="dia">Por día</button>
+          <button data-m="periodo">Periodo</button>
+        </div>
+        <label class="interruptor">
+          <input type="checkbox" id="f-diferencia"> Solo con diferencia
         </label>
         <button class="btn-csv" id="b-csv" title="Descargar para Excel">CSV</button>
       </div>
@@ -234,6 +306,7 @@ if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin co
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { montarMenu, escapar } from './menu.js';
+import { escanear, hayCamara } from './escaner.js';
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth:{ persistSession:true, autoRefreshToken:true }
@@ -241,9 +314,11 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 const S = {
   ctx:null, sucursal:null, moneda:'L', menu:null, nivel:0,
-  vista:'periodo',          // periodo · dia
+  vista:'control',          // control · dia
+  porDia:true,              // en control: una fila por dia, o una por periodo
+  soloDif:false,
   desde:null, hasta:null, dia:null, atajo:'mes',
-  buscar:'', movidos:false,
+  buscar:'', categoria:'',
   datos:null, cargando:false, pedido:0
 };
 
@@ -251,16 +326,23 @@ const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
   { minimumFractionDigits:2, maximumFractionDigits:2 });
 const cant = n => (Number(n)||0).toLocaleString('es-HN', { maximumFractionDigits:3 });
 const firmado = n => (Number(n) > 0 ? '+' : Number(n) < 0 ? '−' : '') + cant(Math.abs(Number(n)||0));
+const firmadoL = n => (Number(n) < 0 ? '−' : Number(n) > 0 ? '+' : '') + money(Math.abs(Number(n)||0));
 
 /* Las fechas se arman con la hora local del aparato: toISOString daria la
    fecha de Greenwich, y a las 7 de la noche en Honduras ya seria mañana. */
 const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
 const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const DIAS  = ['dom','lun','mar','mié','jue','vie','sáb'];
 function fecha(v){
   if (!v) return '—';
   const [a, m, d] = String(v).slice(0,10).split('-').map(Number);
   return `${d} ${MESES[m-1]} ${a}`;
+}
+function fechaCorta(v){
+  if (!v) return '—';
+  const [a, m, d] = String(v).slice(0,10).split('-').map(Number);
+  return `${DIAS[new Date(a, m-1, d).getDay()]} ${d} ${MESES[m-1]}`;
 }
 function fechaHora(v){
   if (!v) return '—';
@@ -277,7 +359,7 @@ function limpiarError(e){
   // PostgREST responde en ingles cuando la funcion no existe en la base:
   // casi siempre es que falta correr la migracion de este modulo.
   if (/Could not find the function|schema cache/i.test(m))
-    return 'Falta instalar esta función en la base de datos. Ejecute la migración 025_inventario_por_fecha.sql en el SQL Editor de Supabase.';
+    return 'Falta instalar esta función en la base de datos. Ejecute las migraciones 025 y 026 en el SQL Editor de Supabase.';
   return m;
 }
 
@@ -313,24 +395,19 @@ function rango(atajo){
   switch (atajo){
     case 'hoy':    return [iso(hoy), iso(hoy)];
     case 'ayer':   return [iso(d(-1)), iso(d(-1))];
-    case 'semana': {
-      // la semana empieza el lunes
-      const lunes = d(-((hoy.getDay() + 6) % 7));
-      return [iso(lunes), iso(hoy)];
-    }
-    case '7':      return [iso(d(-6)), iso(hoy)];
+    case 'semana': return [iso(d(-((hoy.getDay() + 6) % 7))), iso(hoy)];   // desde el lunes
     case 'mes':    return [iso(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), iso(hoy)];
     case 'pasado': return [iso(new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)),
                            iso(new Date(hoy.getFullYear(), hoy.getMonth(), 0))];
   }
 }
 
-const ATAJOS_PERIODO = [['hoy','Hoy'], ['ayer','Ayer'], ['semana','Esta semana'],
+const ATAJOS_CONTROL = [['hoy','Hoy'], ['ayer','Ayer'], ['semana','Esta semana'],
                         ['mes','Este mes'], ['pasado','Mes pasado']];
 const ATAJOS_DIA = [['hoy','Hoy'], ['ayer','Ayer'], ['cierre','Cierre del mes pasado']];
 
 function pintarAtajos(){
-  const lista = S.vista === 'periodo' ? ATAJOS_PERIODO : ATAJOS_DIA;
+  const lista = S.vista === 'control' ? ATAJOS_CONTROL : ATAJOS_DIA;
   $('#atajos').innerHTML = lista.map(([k, n]) =>
     `<button class="atajo ${S.atajo === k ? 'activo' : ''}" data-a="${k}">${n}</button>`).join('');
 }
@@ -339,11 +416,8 @@ $('#atajos').addEventListener('click', e => {
   const b = e.target.closest('[data-a]');
   if (!b) return;
   S.atajo = b.dataset.a;
-  if (S.vista === 'periodo'){
-    [S.desde, S.hasta] = rango(S.atajo);
-  } else {
-    S.dia = S.atajo === 'cierre' ? rango('pasado')[1] : rango(S.atajo)[0];
-  }
+  if (S.vista === 'control') [S.desde, S.hasta] = rango(S.atajo);
+  else S.dia = S.atajo === 'cierre' ? rango('pasado')[1] : rango(S.atajo)[0];
   pintarFechas(); cargar();
 });
 
@@ -353,9 +427,11 @@ function pintarFechas(){
   $('#f-hasta').value = S.hasta;
   ver('#f-hasta', !dia); ver('#f-a', !dia);
   $('#f-desde').setAttribute('aria-label', dia ? 'Día' : 'Desde');
-  ver('#l-movidos', !dia);
+  ver('#opciones', !dia);
   $('#pestanas').querySelectorAll('.pes').forEach(b =>
     b.classList.toggle('activo', b.dataset.v === S.vista));
+  $('#modo').querySelectorAll('button').forEach(b =>
+    b.classList.toggle('activo', (b.dataset.m === 'dia') === S.porDia));
   pintarAtajos();
 }
 
@@ -404,7 +480,30 @@ async function arrancar(){
   [S.desde, S.hasta] = rango('mes');
   S.dia = rango('hoy')[0];
   pintarFechas();
+
+  cargarCategorias();
+  try{ if (await hayCamara()) ver('#b-escanear'); }catch(e){}
   cargar();
+}
+
+/* Departamentos y sus categorias. Si la funcion aun no esta instalada el
+   filtro simplemente no aparece: no vale la pena tumbar la pantalla. */
+async function cargarCategorias(){
+  const { data, error } = await sb.rpc('fn_categorias_arbol');
+  if (error || !Array.isArray(data) || !data.length){ ver('#f-categoria', false); return; }
+  const raiz = data.filter(c => !c.padre_id);
+  const hijos = id => data.filter(c => c.padre_id === id);
+  let html = '<option value="">Todas las categorías</option>';
+  for (const c of raiz){
+    const h = hijos(c.id);
+    if (h.length){
+      html += `<option value="${escapar(c.id)}">${escapar(c.nombre)} · departamento completo</option>`;
+      html += h.map(x => `<option value="${escapar(x.id)}">&nbsp;&nbsp;&nbsp;${escapar(x.nombre)}</option>`).join('');
+    } else {
+      html += `<option value="${escapar(c.id)}">${escapar(c.nombre)}</option>`;
+    }
+  }
+  $('#f-categoria').innerHTML = html;
 }
 
 /* ================= filtros ================= */
@@ -417,6 +516,17 @@ $('#pestanas').addEventListener('click', e => {
   else [S.desde, S.hasta] = rango('mes');
   pintarFechas(); cargar();
 });
+
+$('#modo').addEventListener('click', e => {
+  const b = e.target.closest('[data-m]');
+  if (!b) return;
+  const porDia = b.dataset.m === 'dia';
+  if (porDia === S.porDia) return;
+  S.porDia = porDia;
+  pintarFechas(); cargar();
+});
+
+$('#f-diferencia').addEventListener('change', e => { S.soloDif = e.target.checked; pintar(); });
 
 $('#f-desde').addEventListener('change', e => {
   if (!e.target.value) return;
@@ -432,12 +542,26 @@ $('#f-sucursal').addEventListener('change', e => {
   $('#h-sucursal').textContent = e.target.selectedOptions[0]?.textContent || '';
   cargar();
 });
-$('#f-movidos').addEventListener('change', e => { S.movidos = e.target.checked; cargar(); });
+$('#f-categoria').addEventListener('change', e => { S.categoria = e.target.value; cargar(); });
 
 let espera = null;
 $('#f-buscar').addEventListener('input', e => {
   clearTimeout(espera);
   espera = setTimeout(() => { S.buscar = e.target.value.trim(); cargar(); }, 350);
+});
+// El lector de pistola USB teclea rapido y termina en Enter: se busca ya.
+$('#f-buscar').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  clearTimeout(espera);
+  S.buscar = e.target.value.trim(); cargar();
+});
+
+$('#b-escanear').addEventListener('click', async () => {
+  const codigo = await escanear({ titulo:'Escanear producto' });
+  if (!codigo) return;
+  $('#f-buscar').value = codigo;
+  S.buscar = codigo;
+  cargar();
 });
 
 /* ================= cargar ================= */
@@ -459,11 +583,16 @@ async function cargar(){
   const turno = ++S.pedido;
   S.cargando = true; pintar();
 
-  const { data, error } = await sb.rpc('fn_inventario_por_fecha', {
-    p_desde:desde, p_hasta:hasta, p_sucursal_id:S.sucursal,
-    p_buscar:S.buscar || null,
-    p_solo_movidos: dia ? false : S.movidos
-  });
+  const { data, error } = dia
+    ? await sb.rpc('fn_inventario_por_fecha', {
+        p_desde:desde, p_hasta:hasta, p_sucursal_id:S.sucursal,
+        p_buscar:S.buscar || null, p_categoria_id:S.categoria || null,
+        p_solo_movidos:false })
+    : await sb.rpc('fn_control_inventario', {
+        p_desde:desde, p_hasta:hasta, p_sucursal_id:S.sucursal,
+        p_buscar:S.buscar || null, p_categoria_id:S.categoria || null,
+        p_por_dia:S.porDia });
+
   if (turno !== S.pedido) return;
   S.cargando = false;
   if (error){
@@ -473,6 +602,7 @@ async function cargar(){
     return;
   }
   S.datos = data;
+  S.datosVista = S.vista;
   pintar();
 }
 
@@ -483,89 +613,169 @@ function pintar(){
     return;
   }
   if (!S.datos) return;
-  return S.vista === 'dia' ? pintarDia() : pintarPeriodo();
+  return S.datosVista === 'dia' ? pintarDia() : pintarControl();
 }
 
-function avisoTope(d){
-  return d.truncado
-    ? `<div class="aviso ojo">Se muestran los primeros ${cant(d.limite)} productos de
-         ${cant(d.totales.productos)}. Busque uno en particular para ver los demás.</div>`
-    : '';
+/* Las columnas de la tabla. ve = solo para quien ve costos; calc = columna
+   calculada (se pinta distinto para que se lea como resultado). */
+function columnas(d){
+  const ve = d.puede_ver_costos;
+  return [
+    d.por_dia && { k:'dia',     t:'Fecha',          tx:true, fija:1 },
+    { k:'nombre',  t:'Descripción',    tx:true, fija:2 },
+    { k:'sku',     t:'Código',         tx:true },
+    { k:'barras',  t:'Código de barras', tx:true },
+    ve && { k:'costo', t:'Costo', dinero:true },
+    { k:'precio',  t:'Precio retail',  dinero:true },
+    { k:'inicial', t:'Inv. inicial' },
+    { k:'compras', t:'Compras' },
+    { k:'ventas',  t:'Ventas' },
+    { k:'merma_dano', t:'Merma por daño' },
+    d.hay_otros && { k:'otros', t:'Traslados / carga', firmado:true },
+    { k:'ajustes', t:'Ajustes (conteos)', firmado:true },
+    { k:'teorico', t:'Inv. teórico', calc:true },
+    { k:'final',   t:'Inv. final (sistema)', calc:true },
+    { k:'diferencia', t:'Merma desconocida', dif:true },
+    ve && { k:'valor_diferencia', t:'Merma desc. L', dif:true, dinero:true }
+  ].filter(Boolean);
 }
 
-function pintarPeriodo(){
+function celdaTabla(c, f){
+  const v = f[c.k];
+  const cls = [c.tx ? 'tx' : '', c.fija ? 'fija' + c.fija : '', c.calc ? 'calc' : ''];
+  let txt;
+  if (c.k === 'dia') txt = fechaCorta(v);
+  else if (c.k === 'nombre') txt = `<span class="desc-nom">${escapar(v)}</span>`;
+  else if (c.tx) txt = v ? escapar(v) : '<span style="color:#B4C0D2">—</span>';
+  else if (v === null || v === undefined) txt = '—';
+  else if (c.dif){
+    const n = Number(v);
+    cls.push('dif', n < 0 ? 'neg' : n > 0 ? 'pos' : 'cero');
+    txt = n === 0 ? '0' : (c.dinero ? firmadoL(n) : firmado(n));
+  }
+  else if (c.dinero) txt = money(v);
+  else if (c.firmado) { txt = Number(v) ? firmado(v) : '0'; if (!Number(v)) cls.push('cero'); }
+  else { txt = cant(v); if (!Number(v) && !c.calc && c.k !== 'inicial') cls.push('cero'); }
+  return `<td class="${cls.join(' ').trim()}">${txt}</td>`;
+}
+
+function pintarControl(){
   const d = S.datos, t = d.totales, ve = d.puede_ver_costos;
-  const lista = d.productos || [];
+  const todas = d.filas || [];
+  const filas = S.soloDif ? todas.filter(f => Number(f.diferencia) !== 0) : todas;
 
-  if (!lista.length){
+  if (!todas.length){
     $('#cuerpo').innerHTML = `<div class="vacio"><b>Sin movimientos</b>
-      <p>${S.buscar ? 'Ningún producto con ese nombre tuvo movimiento en estas fechas.'
-                    : 'No entró ni salió nada entre el ' + fecha(d.desde) + ' y el ' + fecha(d.hasta) + '.'}</p></div>`;
+      <p>${S.buscar || S.categoria
+        ? 'Ese producto o esa categoría no tuvo movimiento en estas fechas.'
+        : 'No entró ni salió nada entre el ' + fecha(d.desde) + ' y el ' + fecha(d.hasta) + '.'}</p></div>`;
     return;
   }
 
-  const tipos = d.por_tipo || [];
-  const entradas = tipos.filter(x => x.entrada);
-  const salidas  = tipos.filter(x => !x.entrada);
-  const suma = (l, k) => l.reduce((a, x) => a + (Number(x[k]) || 0), 0);
-
-  // Con costos, la cuenta va en lempiras: sumar libras de arroz con botellas
-  // de aceite no dice nada. Sin costos, se cuentan movimientos.
-  const cubos = ve ? `
-    <div class="cuenta">
-      <div class="cubo"><div class="eti">Empezó con</div><b>${money(t.valor_inicial)}</b>
-        <small>al abrir el ${fecha(d.desde)}</small></div>
-      <div class="cubo entra"><div class="eti">Entró</div><b>${money(t.valor_entradas)}</b>
-        <small>${cant(suma(entradas, 'movimientos'))} movimientos</small></div>
-      <div class="cubo sale"><div class="eti">Salió</div><b>${money(t.valor_salidas)}</b>
-        <small>${cant(suma(salidas, 'movimientos'))} movimientos</small></div>
-      <div class="cubo"><div class="eti">Terminó con</div><b>${money(t.valor_final)}</b>
-        <small>al cerrar el ${fecha(d.hasta)}</small></div>
-    </div>` : `
-    <div class="cuenta">
-      <div class="cubo"><div class="eti">Productos</div><b>${cant(t.productos)}</b>
-        <small>con historia aquí</small></div>
-      <div class="cubo"><div class="eti">Se movieron</div><b>${cant(t.con_movimiento)}</b>
-        <small>en el periodo</small></div>
-      <div class="cubo entra"><div class="eti">Entradas</div><b>${cant(suma(entradas, 'movimientos'))}</b>
-        <small>movimientos</small></div>
-      <div class="cubo sale"><div class="eti">Salidas</div><b>${cant(suma(salidas, 'movimientos'))}</b>
-        <small>movimientos</small></div>
+  const dif = Number(t.diferencia);
+  const hayDif = Number(t.con_diferencia) > 0;
+  const cubos = `
+    <div class="tres">
+      <div class="cubo dano"><div class="eti">Merma por daño</div>
+        <b>${ve ? money(t.valor_merma_dano) : cant(t.merma_dano) + ' und'}</b>
+        <small>${ve ? cant(t.merma_dano) + ' und · ' : ''}se sabe qué pasó</small></div>
+      <div class="cubo"><div class="eti">Ajustes de conteos</div>
+        <b>${ve ? firmadoL(t.valor_ajustes) : firmado(t.ajustes) + ' und'}</b>
+        <small>${ve ? firmado(t.ajustes) + ' und · ' : ''}lo que corrigieron</small></div>
+      <div class="cubo ${hayDif ? 'desc' : 'ok'}"><div class="eti">Merma desconocida</div>
+        <b>${ve ? firmadoL(t.valor_diferencia) : firmado(dif) + ' und'}</b>
+        <small>${hayDif
+          ? `${cant(t.con_diferencia)} ${S.porDia ? 'día(s)' : 'producto(s)'} con diferencia`
+          : 'todo lo que salió tiene explicación'}</small></div>
     </div>`;
 
-  const filaTipo = x => `<div class="tipo">
-      <span class="tipo-nom">${escapar(x.nombre)}
-        <small>${cant(x.movimientos)} ${x.movimientos === 1 ? 'movimiento' : 'movimientos'}</small></span>
-      <span class="tipo-n ${x.entrada ? 'mas' : 'menos'}">${x.entrada ? '+' : '−'}${cant(x.unidades)} und
-        ${ve && x.valor !== null && x.valor !== undefined ? `<small>${money(x.valor)}</small>` : ''}</span>
-    </div>`;
+  const dias = d.por_fecha || [];
+  const porFecha = dias.length ? `
+    <div class="ficha">
+      <div class="titulin">Ajustes y merma por día</div>
+      ${dias.map(x => {
+        const partes = [];
+        if (Number(x.ajustes)) partes.push(`ajustes ${firmado(x.ajustes)}`);
+        if (Number(x.merma_desconocida)) partes.push(`desconocida −${cant(x.merma_desconocida)}`);
+        if (Number(x.merma_dano)) partes.push(`daño −${cant(x.merma_dano)}`);
+        const desc = Number(x.ajustes) - Number(x.merma_desconocida);
+        // Lo que manda es la desconocida; si ese dia solo hubo daño, se
+        // muestra lo del daño en su color en vez de un L 0.00 que no dice nada.
+        const soloDano = desc === 0;
+        const valor = ve
+          ? (soloDano ? '−' + money(x.valor_merma_dano) : firmadoL(x.valor_diferencia))
+          : (soloDano ? '−' + cant(x.merma_dano) : firmado(desc));
+        return `<div class="dia">
+          <span class="dia-f">${fechaCorta(x.dia)}</span>
+          <span class="dia-d">${partes.join(' · ')} und</span>
+          <span class="dia-v" style="color:${soloDano ? '#8A5A00' : desc < 0 ? '#9F1239' : 'var(--tinta)'}">${valor}</span>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  const cols = columnas(d);
+  // Totales: sumar unidades solo tiene sentido con un producto, o en
+  // lempiras. Con varios productos se suman igual (es lo que pide el CSV),
+  // pero el valor que manda es el de lempiras.
+  const tot = { inicial:null, compras:0, ventas:0, merma_dano:0, otros:0, ajustes:0,
+                teorico:null, final:null, diferencia:0, valor_diferencia:0 };
+  for (const f of filas){
+    for (const k of ['compras','ventas','merma_dano','otros','ajustes','diferencia','valor_diferencia'])
+      tot[k] += Number(f[k]) || 0;
+  }
+  const unSolo = new Set(filas.map(f => f.producto_id)).size === 1;
+  if (unSolo && filas.length){
+    // Con un solo producto, inicial del primer dia y final del ultimo
+    tot.inicial = filas[0].inicial;
+    tot.final = filas[filas.length - 1].final;
+    tot.teorico = Number(tot.inicial) + tot.compras - tot.ventas - tot.merma_dano + tot.otros;
+  }
+
+  const pie = cols.map((c, i) => {
+    const cls = [c.tx ? 'tx' : '', c.fija ? 'fija' + c.fija : ''].join(' ').trim();
+    if (i === 0) return `<td class="${cls}">Total</td>`;
+    if (c.tx || c.k === 'costo' || c.k === 'precio') return `<td class="${cls}"></td>`;
+    const v = tot[c.k];
+    if (v === null || v === undefined) return `<td></td>`;
+    if (c.dif) return `<td class="dif ${v < 0 ? 'neg' : v > 0 ? 'pos' : 'cero'}">${
+      c.dinero ? firmadoL(v) : (v ? firmado(v) : '0')}</td>`;
+    if (c.firmado) return `<td>${v ? firmado(v) : '0'}</td>`;
+    return `<td>${cant(v)}</td>`;
+  }).join('');
 
   $('#cuerpo').innerHTML = `
     ${cubos}
-    ${t.no_cuadran ? `<div class="aviso malo">${cant(t.no_cuadran)} producto(s) no cuadran:
-       lo que empezó más lo que entró menos lo que salió no da lo que terminó.
-       Eso solo pasa si alguien tocó el kardex por fuera del sistema.</div>` : ''}
-    ${tipos.length ? `<div class="ficha">
-      <div class="titulin">Qué movió el inventario</div>
-      ${entradas.map(filaTipo).join('')}${salidas.map(filaTipo).join('')}
-    </div>` : ''}
-    ${avisoTope(d)}
-    <div class="titulin" style="margin:4px 2px 10px">Por producto · toque uno para ver su kardex</div>
-    ${lista.map(p => `
-      <button class="prod ${p.movimientos ? '' : 'quieto'} ${p.cuadra ? '' : 'descuadre'}"
-              data-p="${escapar(p.producto_id)}">
-        <span class="prod-txt">
-          <b>${escapar(p.nombre)}${p.cuadra ? '' : '<span class="sello">no cuadra</span>'}</b>
-          <small>${escapar(p.sku)}${p.categoria ? ' · ' + escapar(p.categoria) : ''} ·
-            ${p.movimientos ? cant(p.movimientos) + ' mov.' : 'sin movimiento'}</small>
-        </span>
-        <span class="prod-fin">
-          <span class="saldo">${cant(p.inicial)} <i>→</i> ${cant(p.final)}</span>
-          <small>${Number(p.entradas) ? `<span class="mas">+${cant(p.entradas)}</span>` : ''}
-                 ${Number(p.salidas)  ? `<span class="menos">−${cant(p.salidas)}</span>` : ''}
-                 ${ve ? ` · ${money(p.valor_final)}` : ''}</small>
-        </span>
-      </button>`).join('')}`;
+    ${porFecha}
+    ${d.truncado ? `<div class="aviso ojo">Se muestran las primeras ${cant(d.limite)} filas de
+      ${cant(t.filas)}. Escanee un producto o elija una categoría para ver menos.</div>` : ''}
+    ${filas.length ? `
+    <div class="marco" id="marco">
+      <table class="control">
+        <thead><tr>${cols.map(c =>
+          `<th class="${[c.tx ? 'tx' : '', c.fija ? 'fija' + c.fija : ''].join(' ').trim()}">${c.t}</th>`).join('')}</tr></thead>
+        <tbody>${filas.map(f => `
+          <tr class="fila ${Number(f.diferencia) !== 0 ? 'mal' : ''}"
+              data-p="${escapar(f.producto_id)}" data-d="${escapar(f.dia || '')}">
+            ${cols.map(c => celdaTabla(c, f)).join('')}
+          </tr>`).join('')}</tbody>
+        <tfoot><tr>${pie}</tr></tfoot>
+      </table>
+    </div>` : `<div class="vacio" style="padding:24px"><b>Ninguna diferencia</b>
+      <p>En estas fechas todo lo que salió tiene explicación.</p></div>`}
+    <p class="leyenda">
+      <b>Inv. teórico</b> = inicial + compras − ventas − merma por daño${d.hay_otros ? ' ± traslados' : ''}:
+      lo que debería haber si solo hubiera pasado lo que tiene explicación.<br>
+      <b>Merma desconocida</b> = inv. final − inv. teórico: lo que corrigieron los
+      conteos y la merma que se marcó «no se sabe». En rojo, lo que falta.
+      Toque una fila para ver cada movimiento.
+    </p>`;
+
+  // La segunda columna fija empieza donde termina la primera
+  const th = document.querySelector('.control th.fija1');
+  if (th){
+    const ancho = th.offsetWidth || 96;
+    $('#marco').style.setProperty('--ancho-fecha', ancho + 'px');
+  }
 }
 
 function pintarDia(){
@@ -595,7 +805,8 @@ function pintarDia(){
            : ceros ? `<small style="display:block;margin-top:6px;font-size:12.5px;color:var(--tenue)">
         ${cant(ceros)} en cero no se muestran</small>` : ''}
     </div>
-    ${avisoTope(d)}
+    ${d.truncado ? `<div class="aviso ojo">Se muestran los primeros ${cant(d.limite)} productos de
+      ${cant(t.productos)}. Busque uno en particular para ver los demás.</div>` : ''}
     ${lista.map(p => `
       <button class="prod" data-p="${escapar(p.producto_id)}">
         <span class="prod-txt">
@@ -613,15 +824,20 @@ function pintarDia(){
 /* ================= kardex de un producto ================= */
 $('#cuerpo').addEventListener('click', e => {
   const b = e.target.closest('[data-p]');
-  if (b) abrirKardex(b.dataset.p);
+  if (b) abrirKardex(b.dataset.p, b.dataset.d || null);
 });
 
-async function abrirKardex(id){
-  const dia = S.vista === 'dia';
-  // En "al día" el kardex muestra el mes hasta ese día: un solo día casi
-  // nunca explica por qué quedó lo que quedó.
-  const hasta = dia ? S.dia : S.hasta;
-  const desde = dia ? hasta.slice(0, 8) + '01' : S.desde;
+async function abrirKardex(id, dia){
+  let desde, hasta;
+  if (S.datosVista === 'dia'){
+    // En "al dia" el kardex muestra el mes hasta ese dia: un solo dia casi
+    // nunca explica por que quedo lo que quedo.
+    hasta = S.dia; desde = hasta.slice(0, 8) + '01';
+  } else if (dia){
+    desde = hasta = dia;      // la fila de un dia: los movimientos de ese dia
+  } else {
+    desde = S.desde; hasta = S.hasta;
+  }
 
   $('#hoja').className = 'hoja ancha';
   $('#hoja').innerHTML = '<div class="vacio"><span class="girando"></span></div>';
@@ -636,7 +852,8 @@ async function abrirKardex(id){
 
   $('#hoja').innerHTML = `
     <h2>${escapar(k.nombre)}</h2>
-    <p class="sub">${escapar(k.sku)} · ${escapar(k.sucursal)} · del ${fecha(k.desde)} al ${fecha(k.hasta)}</p>
+    <p class="sub">${escapar(k.sku)} · ${escapar(k.sucursal)} · ${k.desde === k.hasta
+      ? 'el ' + fecha(k.desde) : 'del ' + fecha(k.desde) + ' al ' + fecha(k.hasta)}</p>
     <div class="mini">
       <div><small>Empezó</small><b>${cant(k.inicial)}</b></div>
       <div><small>Entró</small><b class="mas">+${cant(k.entradas)}</b></div>
@@ -677,31 +894,33 @@ function celda(v){
 
 function armarCsv(d, vista){
   const ve = d.puede_ver_costos;
-  const cab = vista === 'dia'
-    ? ['Producto', 'SKU', 'Categoría', 'Unidad', 'Existencia', ...(ve ? ['Valor'] : []), 'Último movimiento']
-    : ['Producto', 'SKU', 'Categoría', 'Unidad', 'Inicial', 'Entradas', 'Salidas', 'Final', 'Movimientos',
-       ...(ve ? ['Valor inicial', 'Valor entradas', 'Valor salidas', 'Valor final'] : [])];
-  const filas = (d.productos || [])
-    .filter(p => vista !== 'dia' || Number(p.final) !== 0)
-    .map(p => vista === 'dia'
-      ? [p.nombre, p.sku, p.categoria, p.unidad, p.final, ...(ve ? [p.valor_final] : []),
-         p.ultimo ? String(p.ultimo).slice(0, 10) : '']
-      : [p.nombre, p.sku, p.categoria, p.unidad, p.inicial, p.entradas, p.salidas, p.final, p.movimientos,
-         ...(ve ? [p.valor_inicial, p.valor_entradas, p.valor_salidas, p.valor_final] : [])]);
+  let cab, filas;
+  if (vista === 'dia'){
+    cab = ['Producto', 'SKU', 'Categoría', 'Unidad', 'Existencia', ...(ve ? ['Valor'] : []), 'Último movimiento'];
+    filas = (d.productos || []).filter(p => Number(p.final) !== 0).map(p =>
+      [p.nombre, p.sku, p.categoria, p.unidad, p.final, ...(ve ? [p.valor_final] : []),
+       p.ultimo ? String(p.ultimo).slice(0, 10) : '']);
+  } else {
+    const cols = columnas(d);
+    cab = [...cols.map(c => c.t), 'Departamento', 'Categoría'];
+    const lista = S.soloDif ? (d.filas || []).filter(f => Number(f.diferencia) !== 0) : (d.filas || []);
+    filas = lista.map(f => [...cols.map(c => f[c.k]), f.departamento, f.categoria]);
+  }
   // ; como separador: Excel en español no reconoce la coma
   return '﻿' + [cab, ...filas].map(f => f.map(celda).join(';')).join('\r\n');
 }
 
 $('#b-csv').addEventListener('click', () => {
   const d = S.datos;
-  if (!d || !(d.productos || []).length){
+  const hay = d && ((d.filas || d.productos || []).length);
+  if (!hay){
     aviso('Nada que descargar', 'Primero elija unas fechas que tengan movimiento.');
     return;
   }
-  const nombre = S.vista === 'dia'
+  const nombre = S.datosVista === 'dia'
     ? `existencia-${d.hasta}.csv`
-    : `movimientos-${d.desde}-a-${d.hasta}.csv`;
-  const blob = new Blob([armarCsv(d, S.vista)], { type:'text/csv;charset=utf-8' });
+    : `control-inventario-${d.desde}-a-${d.hasta}.csv`;
+  const blob = new Blob([armarCsv(d, S.datosVista)], { type:'text/csv;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = nombre;

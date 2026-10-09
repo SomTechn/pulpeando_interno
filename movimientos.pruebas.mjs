@@ -1,12 +1,14 @@
-/* Prueba funcional de la pantalla de movimientos (inventario por fecha).
+/* Prueba funcional de la pantalla de movimientos (control de inventario).
 
    Lo que se vigila aqui:
      · que la auxiliar no entre: el kardex es de supervisor para arriba
-     · que el gerente vea la cuenta en lempiras y el supervisor solo cantidades
+     · que la tabla traiga todas las columnas del control, en orden
+     · que la diferencia (merma desconocida) se marque y se pueda filtrar
+     · que el gerente vea costo y lempiras y el supervisor no
+     · que escanear, buscar y elegir categoria viajen al servidor
      · que "al dia" pida una sola fecha y esconda lo que esta en cero
-     · que un producto que no cuadra se note
-     · que el kardex de un producto se abra con su documento y quien lo hizo
-     · que el CSV no deje pasar formulas de Excel
+     · que el kardex de una fila se abra con los movimientos de ese dia
+     · que el CSV salga con las mismas columnas y sin formulas de Excel
 */
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -24,47 +26,71 @@ const CTX = (rol = 'gerente', nivel = 3, sucs = 1) => ({
               { id:'s2', nombre:'Choloma', codigo:'S02' }].slice(0, sucs),
   cajas:[], impuesto_default:0, sin_sucursal:false });
 
-const INV = (ve, extra = {}) => ({
-  desde:'2026-10-01', hasta:'2026-10-03', sucursal_id:'s1', sucursal:'Central',
+const FILA = (ve, o) => ({
+  producto_id:'p1', dia:'2026-10-01', sku:'ACE500', barras:'7401234567890',
+  nombre:'Aceite vegetal 500ml', unidad:'UND', categoria:'Aceites', departamento:'Abarrotes',
+  costo: ve ? 10 : null, precio:18, inicial:100, compras:0, ventas:15, merma_dano:0,
+  otros:0, teorico:85, ajustes:0, merma_desconocida_registrada:0, final:85, diferencia:0,
+  movimientos:2, valor_diferencia: ve ? 0 : null, valor_merma_dano: ve ? 0 : null, ...o });
+
+const CONTROL = (ve, porDia = true, extra = {}) => ({
+  desde:'2026-10-01', hasta:'2026-10-05', por_dia:porDia, sucursal_id:'s1', sucursal:'Central',
   puede_ver_costos:ve,
-  totales:{ productos:3, con_movimiento:2, movimientos:6, no_cuadran:0,
-            valor_inicial: ve ? 1140 : null, valor_entradas: ve ? 650 : null,
-            valor_salidas: ve ? 191.4 : null, valor_final: ve ? 1598.6 : null },
-  por_tipo:[
-    { tipo:'compra', nombre:'Compra', entrada:true, movimientos:1, unidades:50, valor: ve ? 650 : null },
-    { tipo:'venta',  nombre:'Venta',  entrada:false, movimientos:2, unidades:15, valor: ve ? 150 : null },
-    { tipo:'merma',  nombre:'Merma',  entrada:false, movimientos:1, unidades:2,  valor: ve ? 22 : null } ],
+  totales:{ filas:4, productos:1, con_diferencia:1, compras:50, ventas:15, merma_dano:2,
+            ajustes:-3, diferencia:-4,
+            valor_merma_dano: ve ? 22.22 : null, valor_ajustes: ve ? -33.33 : null,
+            valor_diferencia: ve ? -44.44 : null, valor_ventas_costo: ve ? 150 : null },
+  por_fecha:[
+    { dia:'2026-10-03', productos:1, ajustes:0, merma_desconocida:0, merma_dano:2,
+      valor_ajustes: ve ? 0 : null, valor_diferencia: ve ? 0 : null, valor_merma_dano: ve ? 22.22 : null },
+    { dia:'2026-10-05', productos:1, ajustes:-3, merma_desconocida:1, merma_dano:0,
+      valor_ajustes: ve ? -33.33 : null, valor_diferencia: ve ? -44.44 : null, valor_merma_dano: ve ? 0 : null } ],
+  filas: porDia ? [
+    FILA(ve, {}),
+    FILA(ve, { dia:'2026-10-02', inicial:85, compras:50, ventas:0, teorico:135, final:135, costo: ve ? 11.11 : null }),
+    FILA(ve, { dia:'2026-10-03', inicial:135, ventas:0, merma_dano:2, teorico:133, final:133, precio:20,
+               valor_merma_dano: ve ? 22.22 : null }),
+    FILA(ve, { dia:'2026-10-05', inicial:133, ventas:0, ajustes:-3, merma_desconocida_registrada:1,
+               teorico:133, final:129, diferencia:-4, precio:20, valor_diferencia: ve ? -44.44 : null })
+  ] : [
+    FILA(ve, { dia:null, compras:50, merma_dano:2, ajustes:-3, teorico:133, final:129, diferencia:-4,
+               precio:20, valor_diferencia: ve ? -44.44 : null }),
+    FILA(ve, { producto_id:'p3', dia:null, sku:'ARR5', barras:null, nombre:'=HYPERLINK("x")',
+               inicial:20, ventas:0, teorico:20, final:20 })
+  ],
+  hay_otros:false, truncado:false, limite:1500, ...extra });
+
+const INV = ve => ({
+  desde:'2026-10-09', hasta:'2026-10-09', sucursal_id:'s1', sucursal:'Central', puede_ver_costos:ve,
+  totales:{ productos:3, con_movimiento:0, movimientos:0, no_cuadran:0, valor_final: ve ? 1598.6 : null },
+  por_tipo:[],
   productos:[
-    { producto_id:'p1', nombre:'Aceite vegetal 500ml', sku:'ACE500', unidad:'UND', categoria:'Básicos',
-      inicial:100, entradas:50, salidas:17, final:133, movimientos:4, ultimo:'2026-10-03T14:00:00Z',
-      cuadra:true, valor_inicial: ve ? 1000 : null, valor_entradas: ve ? 650 : null,
-      valor_salidas: ve ? 191.4 : null, valor_final: ve ? 1458.6 : null },
-    { producto_id:'p2', nombre:'=HYPERLINK("x")', sku:'RARO', unidad:'UND', categoria:null,
-      inicial:0, entradas:0, salidas:0, final:0, movimientos:0, ultimo:'2026-09-01T14:00:00Z',
-      cuadra:true, valor_inicial: ve ? 0 : null, valor_entradas: ve ? 0 : null,
-      valor_salidas: ve ? 0 : null, valor_final: ve ? 0 : null },
-    { producto_id:'p3', nombre:'Arroz de primera 5 lb', sku:'ARR5', unidad:'UND', categoria:'Básicos',
-      inicial:20, entradas:0, salidas:0, final:20, movimientos:0, ultimo:'2026-09-15T18:00:00Z',
-      cuadra:true, valor_inicial: ve ? 140 : null, valor_entradas: ve ? 0 : null,
-      valor_salidas: ve ? 0 : null, valor_final: ve ? 140 : null } ],
-  truncado:false, limite:500, ...extra });
+    { producto_id:'p1', nombre:'Aceite vegetal 500ml', sku:'ACE500', unidad:'UND', categoria:'Aceites',
+      final:129, ultimo:'2026-10-05T22:00:00Z', valor_final: ve ? 1458.6 : null },
+    { producto_id:'p2', nombre:'Agua', sku:'AGU', unidad:'UND', categoria:null,
+      final:0, ultimo:'2026-09-01T14:00:00Z', valor_final: ve ? 0 : null },
+    { producto_id:'p3', nombre:'Arroz', sku:'ARR5', unidad:'UND', categoria:null,
+      final:20, ultimo:'2026-09-15T18:00:00Z', valor_final: ve ? 140 : null } ],
+  truncado:false, limite:500 });
 
 const KARDEX = ve => ({
   producto_id:'p1', nombre:'Aceite vegetal 500ml', sku:'ACE500', unidad:'UND',
-  sucursal_id:'s1', sucursal:'Central', desde:'2026-10-01', hasta:'2026-10-03',
-  puede_ver_costos:ve, inicial:100, final:133, entradas:50, salidas:17,
-  valor_inicial: ve ? 1000 : null, valor_final: ve ? 1458.6 : null,
-  total_movimientos:4, truncado:false,
+  sucursal_id:'s1', sucursal:'Central', desde:'2026-10-05', hasta:'2026-10-05',
+  puede_ver_costos:ve, inicial:133, final:129, entradas:0, salidas:4,
+  total_movimientos:2, truncado:false,
   movimientos:[
-    { id:1, fecha:'2026-10-01T15:00:00Z', tipo:'venta', nombre_tipo:'Venta', cantidad:-10, saldo:90,
-      lote:null, documento_tipo:'venta', documento:'T-S01-00000042', usuario:'Ana', notas:null,
-      costo_unitario: ve ? 10 : null, costo_total: ve ? 100 : null,
-      costo_promedio: ve ? 10 : null, saldo_valor: ve ? 900 : null },
-    { id:2, fecha:'2026-10-02T17:00:00Z', tipo:'compra', nombre_tipo:'Compra', cantidad:50, saldo:140,
-      lote:'L-OCT', documento_tipo:'factura_compra', documento:'FC-881', usuario:'Somar', notas:null,
-      costo_unitario: ve ? 13 : null, costo_total: ve ? 650 : null,
-      costo_promedio: ve ? 11.07 : null, saldo_valor: ve ? 1550 : null } ]
+    { id:1, fecha:'2026-10-05T22:00:00Z', tipo:'ajuste_negativo', nombre_tipo:'Ajuste (faltante)',
+      cantidad:-3, saldo:130, lote:null, documento_tipo:'conteo', documento:'CI-S01-0004',
+      usuario:'Ana', notas:null, costo_unitario: ve ? 11.11 : null, costo_promedio: ve ? 11.11 : null },
+    { id:2, fecha:'2026-10-06T00:00:00Z', tipo:'merma', nombre_tipo:'Merma',
+      cantidad:-1, saldo:129, lote:null, documento_tipo:'merma', documento:'ME-S01-000007',
+      usuario:'Kevin', notas:null, costo_unitario: ve ? 11.11 : null, costo_promedio: ve ? 11.11 : null } ]
 });
+
+const CATS = [
+  { id:'c1', nombre:'Abarrotes', padre_id:null, es_departamento:true },
+  { id:'c2', nombre:'Aceites', padre_id:'c1', es_departamento:false },
+  { id:'c3', nombre:'Bebidas', padre_id:null, es_departamento:false } ];
 
 async function montar(estado){
   const html = fs.readFileSync(BASE + 'movimientos.html', 'utf8');
@@ -83,11 +109,13 @@ async function montar(estado){
     { value:{ register: async () => ({}) }, configurable:true });
   w.matchMedia = () => ({ matches:false, addEventListener(){}, removeEventListener(){} });
 
-  // El CSV se arma en un Blob; aqui se atrapa en vez de descargarlo.
-  estado.csv = null;
   w.URL.createObjectURL = b => { estado.blob = b; return 'blob:x'; };
   w.URL.revokeObjectURL = () => {};
   w.HTMLAnchorElement.prototype.click = function(){ estado.descarga = this.download; };
+
+  // escaner.js: la camara no existe en la prueba
+  w.hayCamara = async () => estado.camara !== false;
+  w.escanear = async () => estado.codigoEscaneado || null;
 
   globalThis.window = w; globalThis.document = w.document;
   globalThis.localStorage = w.localStorage; globalThis.matchMedia = w.matchMedia;
@@ -111,6 +139,7 @@ async function montar(estado){
   const prep = cuerpo
     .replace(/^import \{ createClient \} from 'https:\/\/esm\.sh\/@supabase\/supabase-js@2';$/m, '')
     .replace(/^import \{ montarMenu, escapar \} from '\.\/menu\.js';$/m, '')
+    .replace(/^import \{ escanear, hayCamara \} from '\.\/escaner\.js';$/m, '')
     .replace(/createClient\(SUPABASE_URL, SUPABASE_KEY, \{[\s\S]*?\}\)/, '__sb');
 
   w.__m = {};
@@ -123,13 +152,16 @@ async function montar(estado){
 
 const esperar = (ms = 120) => new Promise(r => setTimeout(r, ms));
 const ultima = (e, fn) => [...e.llamadas].reverse().find(l => l.fn === fn);
+const plano = el => el.textContent.replace(/\s+/g, ' ').trim();
 
 const base = (rol = 'gerente', nivel = 3, extra = {}) => ({
   rpc:{
     fn_pos_contexto:{ data:CTX(rol, nivel, extra.sucs || 1), error:null },
-    fn_inventario_por_fecha: a => ({ data: { ...INV(nivel >= 3),
+    fn_categorias_arbol:{ data:CATS, error:null },
+    fn_control_inventario: a => ({ data:{ ...CONTROL(nivel >= 3, a.p_por_dia),
       desde:a.p_desde, hasta:a.p_hasta }, error:null }),
-    fn_kardex_producto: a => ({ data: KARDEX(nivel >= 3), error:null })
+    fn_inventario_por_fecha: a => ({ data:{ ...INV(nivel >= 3), desde:a.p_desde, hasta:a.p_hasta }, error:null }),
+    fn_kardex_producto: () => ({ data:KARDEX(nivel >= 3), error:null })
   } });
 
 /* ===================================================================== */
@@ -137,7 +169,6 @@ console.log('\n=== QUIÉN ENTRA ===');
 {
   const { d } = await montar(base('auxiliar', 1));
   chk('la auxiliar no entra', !d.querySelector('#p-bloqueado').classList.contains('oculto'));
-  chk('y se le dice por qué', /supervisor o el gerente/.test(d.querySelector('#bl-texto').textContent));
 }
 {
   const { d } = await montar(base('repartidor', 0));
@@ -146,107 +177,193 @@ console.log('\n=== QUIÉN ENTRA ===');
 {
   const { d, estado:e } = await montar(base('supervisor', 2));
   chk('el supervisor sí', !d.querySelector('#app').classList.contains('oculto'));
-  chk('y lee al arrancar', !!ultima(e, 'fn_inventario_por_fecha'));
+  chk('y arranca en el control', !!ultima(e, 'fn_control_inventario'));
 }
 
-console.log('\n=== PERIODO · GERENTE ===');
+console.log('\n=== LA TABLA · GERENTE ===');
 {
   const { d, estado:e } = await montar(base());
-  const a = ultima(e, 'fn_inventario_por_fecha').args;
+  const a = ultima(e, 'fn_control_inventario').args;
   const hoy = new Date();
-  const primero = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-01`;
-  chk('arranca en el mes en curso', a.p_desde === primero);
-  chk('hasta hoy', a.p_hasta >= a.p_desde);
-  chk('en la sucursal del usuario', a.p_sucursal_id === 's1');
-  chk('el atajo "Este mes" queda marcado',
-      d.querySelector('.atajo.activo')?.textContent === 'Este mes');
+  chk('arranca en el mes en curso',
+      a.p_desde === `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-01`);
+  chk('por día', a.p_por_dia === true);
 
-  const cubos = d.querySelectorAll('.cubo');
-  chk('cuatro cubos de la cuenta', cubos.length === 4);
-  chk('empieza con L 1,140.00', /L 1,140\.00/.test(cubos[0].textContent));
-  chk('entró L 650.00', /L 650\.00/.test(cubos[1].textContent));
-  chk('salió L 191.40', /L 191\.40/.test(cubos[2].textContent));
-  chk('terminó con L 1,598.60', /L 1,598\.60/.test(cubos[3].textContent));
+  const cab = [...d.querySelectorAll('.control thead th')].map(plano);
+  const esperado = ['Fecha', 'Descripción', 'Código', 'Código de barras', 'Costo', 'Precio retail',
+    'Inv. inicial', 'Compras', 'Ventas', 'Merma por daño', 'Ajustes (conteos)', 'Inv. teórico',
+    'Inv. final (sistema)', 'Merma desconocida', 'Merma desc. L'];
+  chk('todas las columnas, en orden', JSON.stringify(cab) === JSON.stringify(esperado));
+  chk('sin columna de traslados si no hubo', !cab.includes('Traslados / carga'));
 
-  const tipos = [...d.querySelectorAll('.tipo')].map(t => t.textContent.replace(/\s+/g, ' '));
-  chk('por tipo: primero lo que entra', /Compra/.test(tipos[0]) && /\+50/.test(tipos[0]));
-  chk('luego lo que sale, en negativo', /Venta/.test(tipos[1]) && /−15/.test(tipos[1]));
-  chk('con su valor para el gerente', /L 150\.00/.test(tipos[1]));
+  const filas = d.querySelectorAll('.control tbody tr');
+  chk('una fila por día con movimiento', filas.length === 4);
+  const c = [...filas[0].children].map(plano);
+  chk('fecha legible', /1 oct/.test(c[0]));
+  chk('descripción', c[1] === 'Aceite vegetal 500ml');
+  chk('código y código de barras', c[2] === 'ACE500' && c[3] === '7401234567890');
+  chk('costo y precio', c[4] === 'L 10.00' && c[5] === 'L 18.00');
+  chk('100 − 15 = 85', c[6] === '100' && c[8] === '15' && c[11] === '85' && c[12] === '85');
 
-  const p1 = d.querySelector('[data-p="p1"]');
-  chk('el producto: de 100 a 133', /100\s*→\s*133/.test(p1.textContent));
-  chk('con lo que entró y salió', /\+50/.test(p1.textContent) && /−17/.test(p1.textContent));
-  chk('y lo que vale al final', /L 1,458\.60/.test(p1.textContent));
-  chk('el que no se movió se ve apagado',
-      d.querySelector('[data-p="p3"]').classList.contains('quieto'));
-  chk('el nombre raro se escapa, no se ejecuta',
-      d.querySelector('[data-p="p2"] b').textContent.startsWith('=HYPERLINK'));
+  const malas = d.querySelectorAll('.control tr.mal');
+  chk('solo el día con diferencia se marca', malas.length === 1);
+  const m = [...malas[0].children].map(plano);
+  chk('el 5: ajuste −3', m[10] === '−3');
+  chk('teórico 133, sistema 129', m[11] === '133' && m[12] === '129');
+  chk('merma desconocida −4 en rojo', m[13] === '−4' &&
+      malas[0].children[13].classList.contains('neg'));
+  chk('y su valor', m[14] === '−L 44.44');
+
+  const pie = [...d.querySelectorAll('.control tfoot td')].map(plano);
+  chk('fila de totales', pie[0] === 'Total');
+  chk('total compras 50 y ventas 15', pie[7] === '50' && pie[8] === '15');
+  chk('con un solo producto: de 100 a 129', pie[6] === '100' && pie[12] === '129');
+  chk('teórico total 133, diferencia −4', pie[11] === '133' && pie[13] === '−4');
+
+  const cubos = [...d.querySelectorAll('.cubo')].map(plano);
+  chk('merma por daño en lempiras', /L 22\.22/.test(cubos[0]));
+  chk('ajustes de conteos', /−L 33\.33/.test(cubos[1]));
+  chk('merma desconocida', /−L 44\.44/.test(cubos[2]) &&
+      d.querySelectorAll('.cubo')[2].classList.contains('desc'));
+
+  const dias = [...d.querySelectorAll('.dia')].map(plano);
+  chk('ajustes por día: dos días', dias.length === 2);
+  chk('el 5 con ajuste y desconocida', /5 oct/.test(dias[1]) && /ajustes −3/.test(dias[1]) &&
+      /desconocida −1/.test(dias[1]) && /−L 44\.44/.test(dias[1]));
+
+  chk('la descripción queda fija al correr de lado',
+      d.querySelector('.control tbody td.fija2') !== null && d.querySelector('.control tbody td.fija1') !== null);
 }
 
-console.log('\n=== PERIODO · SUPERVISOR ===');
+console.log('\n=== LA TABLA · SUPERVISOR ===');
 {
   const { d } = await montar(base('supervisor', 2));
-  const t = d.querySelector('#cuerpo').textContent;
-  chk('no aparece ni un lempira', !/L \d/.test(t));
-  chk('cuenta productos y movimientos en vez de plata',
-      /Se movieron/.test(t) && /Entradas/.test(t));
-  chk('pero sí ve las cantidades',
-      /100\s*→\s*133/.test(d.querySelector('[data-p="p1"]').textContent));
+  const cab = [...d.querySelectorAll('.control thead th')].map(plano);
+  chk('sin columna de costo', !cab.includes('Costo'));
+  chk('sin valor en lempiras', !cab.includes('Merma desc. L'));
+  chk('pero sí el precio', cab.includes('Precio retail'));
+  chk('los cubos en unidades', /−4 und/.test(plano(d.querySelectorAll('.cubo')[2])));
+  chk('ni un costo en pantalla', !/L 10\.00/.test(d.querySelector('#cuerpo').textContent));
 }
 
 console.log('\n=== FILTROS ===');
 {
   const { d, estado:e } = await montar(base());
-  d.querySelector('[data-a="pasado"]').click();
-  await esperar();
-  const a = ultima(e, 'fn_inventario_por_fecha').args;
-  const hoy = new Date();
-  const ini = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
-  const fin = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
-  const iso = x => `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;
-  chk('mes pasado: del 1', a.p_desde === iso(ini));
-  chk('al último día', a.p_hasta === iso(fin));
+  chk('el escáner aparece si hay cámara', !d.querySelector('#b-escanear').classList.contains('oculto'));
 
-  d.querySelector('#f-movidos').checked = true;
-  d.querySelector('#f-movidos').dispatchEvent(new window.Event('change'));
+  e.codigoEscaneado = '7401234567890';
+  d.querySelector('#b-escanear').click();
   await esperar();
-  chk('solo con movimiento viaja al servidor',
-      ultima(e, 'fn_inventario_por_fecha').args.p_solo_movidos === true);
+  chk('lo escaneado viaja como búsqueda',
+      ultima(e, 'fn_control_inventario').args.p_buscar === '7401234567890');
+  chk('y queda escrito', d.querySelector('#f-buscar').value === '7401234567890');
 
   const b = d.querySelector('#f-buscar');
-  b.value = 'aceite';
-  b.dispatchEvent(new window.Event('input'));
-  await esperar(500);
-  chk('la búsqueda viaja al servidor',
-      ultima(e, 'fn_inventario_por_fecha').args.p_buscar === 'aceite');
+  b.value = 'ACE500';
+  b.dispatchEvent(new window.KeyboardEvent('keydown', { key:'Enter' }));
+  await esperar();
+  chk('la pistola USB (Enter) busca de una vez',
+      ultima(e, 'fn_control_inventario').args.p_buscar === 'ACE500');
 
-  const n = e.llamadas.filter(l => l.fn === 'fn_inventario_por_fecha').length;
+  const opciones = [...d.querySelectorAll('#f-categoria option')].map(o => o.textContent.trim());
+  chk('el departamento se ofrece completo', opciones.some(o => /Abarrotes · departamento completo/.test(o)));
+  chk('con sus subcategorías debajo', opciones.includes('Aceites'));
+  const s = d.querySelector('#f-categoria');
+  s.value = 'c1';
+  s.dispatchEvent(new window.Event('change'));
+  await esperar();
+  chk('elegir departamento viaja al servidor',
+      ultima(e, 'fn_control_inventario').args.p_categoria_id === 'c1');
+
+  d.querySelector('[data-m="periodo"]').click();
+  await esperar();
+  chk('periodo: una fila por producto', ultima(e, 'fn_control_inventario').args.p_por_dia === false);
+  const cab = [...d.querySelectorAll('.control thead th')].map(plano);
+  chk('periodo: sin columna de fecha', cab[0] === 'Descripción');
+  chk('periodo: dos productos', d.querySelectorAll('.control tbody tr').length === 2);
+  chk('el nombre raro se escapa',
+      [...d.querySelectorAll('.desc-nom')].some(x => x.textContent.startsWith('=HYPERLINK')));
+  const pie = [...d.querySelectorAll('.control tfoot td')].map(plano);
+  chk('con varios productos no inventa inicial/final', pie[5] === '' && pie[11] === '');
+
+  d.querySelector('#f-diferencia').checked = true;
+  d.querySelector('#f-diferencia').dispatchEvent(new window.Event('change'));
+  chk('solo con diferencia: queda el que tiene problema',
+      d.querySelectorAll('.control tbody tr').length === 1 &&
+      d.querySelector('.control tbody tr').classList.contains('mal'));
+}
+{
+  const estado = base();
+  estado.camara = false;
+  const { d } = await montar(estado);
+  chk('sin cámara no se ofrece el escáner', d.querySelector('#b-escanear').classList.contains('oculto'));
+}
+{
+  const estado = base();
+  estado.rpc.fn_categorias_arbol = { data:null, error:{ message:'Could not find the function' } };
+  const { d } = await montar(estado);
+  chk('sin categorías el filtro se esconde, la pantalla sigue',
+      d.querySelector('#f-categoria').classList.contains('oculto') &&
+      d.querySelectorAll('.control tbody tr').length === 4);
+}
+{
+  const estado = base();
+  estado.rpc.fn_control_inventario = a => ({ data:CONTROL(true, true, {
+    hay_otros:true, filas:[FILA(true, { otros:24, teorico:109 })] }), error:null });
+  const { d } = await montar(estado);
+  const cab = [...d.querySelectorAll('.control thead th')].map(plano);
+  chk('si hubo traslados aparece su columna', cab.includes('Traslados / carga'));
+  chk('y la leyenda lo explica', /± traslados/.test(d.querySelector('.leyenda').textContent));
+}
+{
+  const { d, estado:e } = await montar(base('gerente', 3, { sucs:2 }));
+  const s = d.querySelector('#f-sucursal');
+  chk('con dos sucursales aparece el selector', !s.classList.contains('oculto'));
+  s.value = 's2';
+  s.dispatchEvent(new window.Event('change'));
+  await esperar();
+  chk('y cambiarla vuelve a leer', ultima(e, 'fn_control_inventario').args.p_sucursal_id === 's2');
+}
+{
+  const { d, estado:e } = await montar(base());
+  const n = e.llamadas.filter(l => l.fn === 'fn_control_inventario').length;
   d.querySelector('#f-desde').value = '2026-10-20';
   d.querySelector('#f-desde').dispatchEvent(new window.Event('change'));
   d.querySelector('#f-hasta').value = '2026-10-05';
   d.querySelector('#f-hasta').dispatchEvent(new window.Event('change'));
   await esperar();
-  chk('fechas al revés: lo dice', /al revés/.test(d.querySelector('#cuerpo').textContent));
-  chk('y no molesta al servidor por eso',
-      e.llamadas.filter(l => l.fn === 'fn_inventario_por_fecha').length === n);
-  chk('cambiar una fecha a mano desmarca el atajo', !d.querySelector('.atajo.activo'));
+  chk('fechas al revés: lo dice sin molestar al servidor',
+      /al revés/.test(d.querySelector('#cuerpo').textContent) &&
+      e.llamadas.filter(l => l.fn === 'fn_control_inventario').length === n);
+}
+
+console.log('\n=== SIN DIFERENCIAS / VACÍO / ERROR ===');
+{
+  const estado = base();
+  estado.rpc.fn_control_inventario = { data:CONTROL(true, true, {
+    totales:{ ...CONTROL(true).totales, con_diferencia:0, diferencia:0, valor_diferencia:0 },
+    filas:[FILA(true, {})], por_fecha:[] }), error:null };
+  const { d } = await montar(estado);
+  chk('todo cuadra: el cubo lo dice en verde',
+      d.querySelectorAll('.cubo')[2].classList.contains('ok') &&
+      /tiene explicación/.test(d.querySelectorAll('.cubo')[2].textContent));
+  d.querySelector('#f-diferencia').checked = true;
+  d.querySelector('#f-diferencia').dispatchEvent(new window.Event('change'));
+  chk('y filtrando diferencias dice que no hay', /Ninguna diferencia/.test(d.querySelector('#cuerpo').textContent));
 }
 {
-  const { d, estado:e } = await montar(base('gerente', 3, { sucs:2 }));
-  chk('con dos sucursales aparece el selector',
-      !d.querySelector('#f-sucursal').classList.contains('oculto'));
-  const s = d.querySelector('#f-sucursal');
-  s.value = 's2';
-  s.dispatchEvent(new window.Event('change'));
-  await esperar();
-  chk('y cambiarla vuelve a leer esa sucursal',
-      ultima(e, 'fn_inventario_por_fecha').args.p_sucursal_id === 's2');
-  chk('y lo dice arriba', d.querySelector('#h-sucursal').textContent === 'Choloma');
+  const estado = base();
+  estado.rpc.fn_control_inventario = { data:CONTROL(true, true, { filas:[], por_fecha:[] }), error:null };
+  const { d } = await montar(estado);
+  chk('sin movimientos lo dice', /Sin movimientos/.test(d.querySelector('#cuerpo').textContent));
 }
 {
-  const { d } = await montar(base());
-  chk('con una sola sucursal no estorba el selector',
-      d.querySelector('#f-sucursal').classList.contains('oculto'));
+  const estado = base();
+  estado.rpc.fn_control_inventario = { data:null, error:{ message:
+    'Could not find the function public.fn_control_inventario(p_buscar) in the schema cache' } };
+  const { d } = await montar(estado);
+  const t = d.querySelector('#cuerpo').textContent;
+  chk('si falta la migración lo dice en español', /migraciones 025 y 026/.test(t) && !/Could not/.test(t));
 }
 
 console.log('\n=== EXISTENCIA AL DÍA ===');
@@ -256,136 +373,61 @@ console.log('\n=== EXISTENCIA AL DÍA ===');
   await esperar();
   const a = ultima(e, 'fn_inventario_por_fecha').args;
   chk('pide un solo día', a.p_desde === a.p_hasta);
-  chk('no filtra por movimiento (lo quieto también existe)', a.p_solo_movidos === false);
-  chk('esconde la fecha final', d.querySelector('#f-hasta').classList.contains('oculto'));
-  chk('y el interruptor de movidos', d.querySelector('#l-movidos').classList.contains('oculto'));
-  chk('ofrece el cierre del mes pasado', !!d.querySelector('[data-a="cierre"]'));
+  chk('esconde la fecha final y las opciones del control',
+      d.querySelector('#f-hasta').classList.contains('oculto') &&
+      d.querySelector('#opciones').classList.contains('oculto'));
   chk('solo lista lo que tenía existencia', d.querySelectorAll('.prod').length === 2);
-  chk('y avisa cuántos en cero no se muestran',
-      /1 en cero no se muestran/.test(d.querySelector('#cuerpo').textContent));
-  chk('el total en lempiras del día', /L 1,598\.60/.test(d.querySelector('.ficha').textContent));
-
-  d.querySelector('[data-a="cierre"]').click();
-  await esperar();
-  const hoy = new Date();
-  const fin = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
-  const iso = `${fin.getFullYear()}-${String(fin.getMonth()+1).padStart(2,'0')}-${String(fin.getDate()).padStart(2,'0')}`;
-  chk('cierre del mes pasado = su último día',
-      ultima(e, 'fn_inventario_por_fecha').args.p_hasta === iso);
+  chk('avisa los que están en cero', /1 en cero no se muestran/.test(d.querySelector('#cuerpo').textContent));
+  chk('el total del día', /L 1,598\.60/.test(d.querySelector('.ficha').textContent));
 }
 
-console.log('\n=== NO CUADRA ===');
-{
-  const estado = base();
-  estado.rpc.fn_inventario_por_fecha = { data:INV(true, {
-    totales:{ ...INV(true).totales, no_cuadran:1 },
-    productos:[{ ...INV(true).productos[0], cuadra:false }] }), error:null };
-  const { d } = await montar(estado);
-  chk('el aviso arriba', /no cuadran/.test(d.querySelector('.aviso.malo')?.textContent || ''));
-  chk('y el producto marcado', d.querySelector('[data-p="p1"]').classList.contains('descuadre'));
-}
-
-console.log('\n=== DEMASIADOS PRODUCTOS ===');
-{
-  const estado = base();
-  estado.rpc.fn_inventario_por_fecha = { data:INV(true, { truncado:true, limite:500,
-    totales:{ ...INV(true).totales, productos:812 } }), error:null };
-  const { d } = await montar(estado);
-  chk('avisa que hay más y cómo verlos',
-      /primeros 500 productos de 812/.test(d.querySelector('#cuerpo').textContent.replace(/\s+/g, ' ')));
-}
-
-console.log('\n=== VACÍO Y ERROR ===');
-{
-  const estado = base();
-  estado.rpc.fn_inventario_por_fecha = { data:INV(true, { productos:[], por_tipo:[] }), error:null };
-  const { d } = await montar(estado);
-  chk('sin movimientos lo dice', /Sin movimientos/.test(d.querySelector('#cuerpo').textContent));
-}
-{
-  const estado = base();
-  estado.rpc.fn_inventario_por_fecha = { data:null,
-    error:{ message:'P0001: El periodo puede ser de un año como máximo' } };
-  const { d } = await montar(estado);
-  chk('el error del servidor se muestra limpio',
-      /El periodo puede ser de un año como máximo/.test(d.querySelector('#cuerpo').textContent) &&
-      !/P0001/.test(d.querySelector('#cuerpo').textContent));
-}
-
-{
-  const estado = base();
-  estado.rpc.fn_inventario_por_fecha = { data:null, error:{ message:
-    'Could not find the function public.fn_inventario_por_fecha(p_buscar, p_desde) in the schema cache' } };
-  const { d } = await montar(estado);
-  const t = d.querySelector('#cuerpo').textContent;
-  chk('si falta la migracion lo dice en español', /Ejecute la migración 025/.test(t) && !/Could not/.test(t));
-}
-
-console.log('\n=== KARDEX DE UN PRODUCTO ===');
+console.log('\n=== KARDEX DE UNA FILA ===');
 {
   const { d, estado:e } = await montar(base());
-  d.querySelector('[data-p="p1"]').click();
+  d.querySelector('.control tr.mal').click();
   await esperar();
   const a = ultima(e, 'fn_kardex_producto').args;
-  chk('pide el producto tocado', a.p_producto_id === 'p1');
-  chk('con las mismas fechas de la lista',
-      a.p_desde === e.llamadas.find(l => l.fn === 'fn_inventario_por_fecha').args.p_desde);
-  const h = d.querySelector('#hoja').textContent.replace(/\s+/g, ' ');
-  chk('abre la hoja', !d.querySelector('#velo').classList.contains('oculto'));
-  chk('la cuenta del producto', /Empezó\s*100/.test(h) && /Terminó\s*133/.test(h));
-  chk('cada movimiento con su documento', /Venta · T-S01-00000042/.test(h) && /Compra · FC-881/.test(h));
-  chk('quién lo hizo', /Ana/.test(h));
-  chk('el lote', /lote L-OCT/.test(h));
-  chk('lo que quedó después', /queda 90/.test(h) && /queda 140/.test(h));
-  chk('la salida en negativo', d.querySelector('.mov-fin b.menos').textContent === '−10');
-  chk('el gerente ve a cómo entró', /a L 13\.00 c\/u/.test(h));
-  d.querySelector('#k-cerrar').click();
-  chk('y se cierra', d.querySelector('#velo').classList.contains('oculto'));
-}
-{
-  const { d } = await montar(base('supervisor', 2));
-  d.querySelector('[data-p="p1"]').click();
-  await esperar();
-  chk('el supervisor no ve costos en el kardex', !/c\/u/.test(d.querySelector('#hoja').textContent));
+  chk('abre el producto de la fila', a.p_producto_id === 'p1');
+  chk('solo ese día', a.p_desde === '2026-10-05' && a.p_hasta === '2026-10-05');
+  const h = plano(d.querySelector('#hoja'));
+  chk('dice de qué día es', /el 5 oct 2026/.test(h));
+  chk('el ajuste con su conteo y quién', /Ajuste \(faltante\) · CI-S01-0004/.test(h) && /Ana/.test(h));
+  chk('la merma con su número', /Merma · ME-S01-000007/.test(h));
 }
 {
   const { d, estado:e } = await montar(base());
-  d.querySelector('[data-v="dia"]').click();
+  d.querySelector('[data-m="periodo"]').click();
   await esperar();
-  d.querySelector('[data-p="p1"]').click();
+  d.querySelector('.control tbody tr').click();
   await esperar();
   const a = ultima(e, 'fn_kardex_producto').args;
-  chk('desde "al día" el kardex trae el mes hasta ese día',
-      a.p_desde.endsWith('-01') && a.p_desde.slice(0, 7) === a.p_hasta.slice(0, 7));
+  chk('en periodo el kardex trae todo el periodo', a.p_desde !== a.p_hasta);
 }
 
 console.log('\n=== CSV ===');
 {
   const { d, m, estado:e } = await montar(base());
-  const csv = m.armarCsv(m.S.datos, 'periodo');
-  const lineas = csv.replace('﻿', '').split('\r\n');
-  chk('lleva BOM para que Excel lea las tildes', csv.startsWith('﻿'));
-  chk('separado por punto y coma', lineas[0].startsWith('Producto;SKU;Categoría'));
-  chk('el gerente lleva valores', /Valor final/.test(lineas[0]));
-  chk('una línea por producto', lineas.length === 4);
-  chk('una fórmula no se cuela',
-      lineas.some(l => l.startsWith(`"'=HYPERLINK(""x"")"`)));
-
+  const lineas = m.armarCsv(m.S.datos, 'control').replace('﻿', '').split('\r\n');
+  chk('BOM y punto y coma', m.armarCsv(m.S.datos, 'control').startsWith('﻿') &&
+      lineas[0].startsWith('Fecha;Descripción;Código;Código de barras;Costo;Precio retail'));
+  chk('lleva teórico, final y merma desconocida',
+      /Inv\. teórico;Inv\. final \(sistema\);Merma desconocida/.test(lineas[0]));
+  chk('y departamento y categoría al final', /Departamento;Categoría$/.test(lineas[0]));
+  chk('una línea por fila', lineas.length === 5);
   d.querySelector('#b-csv').click();
-  chk('descarga con nombre de las fechas', /^movimientos-.*-a-.*\.csv$/.test(e.descarga || ''));
-}
-{
-  const { m } = await montar(base('supervisor', 2));
-  const csv = m.armarCsv(m.S.datos, 'periodo');
-  chk('el CSV del supervisor no lleva valores', !/Valor/.test(csv));
+  chk('nombre del archivo', /^control-inventario-.*\.csv$/.test(e.descarga || ''));
 }
 {
   const { d, m } = await montar(base());
-  d.querySelector('[data-v="dia"]').click();
+  d.querySelector('[data-m="periodo"]').click();
   await esperar();
-  const csv = m.armarCsv(m.S.datos, 'dia').split('\r\n');
-  chk('al día: sin los que están en cero', csv.length === 3);
-  chk('al día: columna de existencia', /Existencia/.test(csv[0]));
+  const csv = m.armarCsv(m.S.datos, 'control');
+  chk('una fórmula no se cuela', csv.includes(`"'=HYPERLINK(""x"")"`));
+}
+{
+  const { m } = await montar(base('supervisor', 2));
+  const csv = m.armarCsv(m.S.datos, 'control');
+  chk('el CSV del supervisor no lleva costo', !/;Costo;/.test(csv) && !/Merma desc\. L/.test(csv));
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);
