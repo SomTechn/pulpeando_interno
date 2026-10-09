@@ -215,6 +215,28 @@
 .edit-dif.menos{color:var(--rojo)}
 .edit-dif.mas{color:var(--verde-oscuro)}
 
+/* el campo del conteo: grande, porque se escribe de pie y con una mano */
+.cant-g{display:flex;gap:10px;align-items:stretch}
+.cant-g input{flex:1;min-width:0;height:62px;border:1.5px solid var(--linea);
+  border-radius:var(--r-md);padding:0 16px;outline:none;text-align:right;
+  font-family:var(--num);font-size:28px;font-weight:700;background:var(--panel)}
+.cant-g input:focus{border-color:var(--azul)}
+/* lo que se lleva sumado de los distintos puntos del piso */
+.suma{display:flex;align-items:center;gap:11px;margin-top:11px;padding:11px 13px;
+  border-radius:var(--r-sm);background:var(--azul-suave);color:var(--azul);
+  font-size:13px;line-height:1.4}
+.suma span{flex:1;min-width:0;font-family:var(--num);overflow-wrap:anywhere}
+.suma b{flex:0 0 auto;font-family:var(--num);font-size:16px;font-weight:700}
+.suma .borrar{flex:0 0 auto;width:30px;height:30px;border-radius:50%;
+  background:var(--panel);color:var(--azul);font-size:14px;font-weight:700}
+
+/* el aviso de la bodega, en la tarjeta de inventario */
+.bodega-av{display:flex;align-items:center;gap:9px;margin-top:12px;padding:10px 12px;
+  border-radius:var(--r-sm);font-size:12.5px;line-height:1.45}
+.bodega-av.ok{background:#E7F7EE;color:var(--verde-oscuro)}
+.bodega-av.no{background:#FFF4E0;color:#8A5A00}
+.bodega-av a{font-weight:800;text-decoration:underline;white-space:nowrap}
+
 .entrada{height:50px;border:1.5px solid var(--linea);border-radius:var(--r-md);
   padding:0 14px;outline:none;font-size:15px;background:var(--panel);width:100%}
 .entrada:focus{border-color:var(--azul)}
@@ -352,7 +374,8 @@ const S = {
   vista:'inicio',        // inicio · resultados · ficha
   busqueda:'', resultados:[],
   prod:null, semanas:[], conteos:[], cargando:false,
-  pendientes:[], puedeAprobar:false, causas:[]
+  pendientes:[], puedeAprobar:false, causas:[],
+  bodega:null, sumados:[]
 };
 
 const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
@@ -366,7 +389,11 @@ function cant(n){
 }
 
 function limpiarError(e){
-  const m = (e?.message || String(e)).replace(/^.*?:\s*/, '');
+  // Antes se cortaba hasta el primer ":", lo que se comia la mitad de los
+  // mensajes propios: "Falta: Bodega de arriba" quedaba en "Bodega de
+  // arriba". Ahora solo se quita el prefijo tecnico de Postgres.
+  const m = (e?.message || String(e))
+    .replace(/^(?:[0-9A-Z]{5}|error|Error|ERROR):\s*/, '');
   if (/JWT|token/i.test(m)) return 'La sesión venció. Vuelva a entrar.';
   if (/Failed to fetch|NetworkError/i.test(m)) return 'Sin conexión con el servidor';
   return m;
@@ -436,9 +463,17 @@ async function arrancar(){
   if (await hayCamara()) ver('#btn-camara');
   $('#btn-camara').addEventListener('click', escanearCodigo);
 
-  await Promise.all([cargarPendientes(), cargarCausas()]);
+  await Promise.all([cargarPendientes(), cargarCausas(), cargarBodega()]);
   pintar();
   $('#buscar').focus();
+}
+
+/* Como esta la bodega. El conteo del piso depende de esto, asi que se lee al
+   abrir la pantalla y se refresca cada vez que se abre un producto. */
+async function cargarBodega(){
+  const { data, error } = await sb.rpc('fn_estado_bodega',
+    { p_sucursal_id:S.sucursal, p_horas:24 });
+  S.bodega = error ? null : data;
 }
 
 /* El catalogo de causas de merma. Se lee una vez al abrir la pantalla: es
@@ -532,6 +567,7 @@ async function abrir(id){
   S.puedeAprobar = !!perfil.data.puede_aprobar;
   S.semanas = semanas.error ? [] : (semanas.data || []);
   S.conteos = conteos.error ? [] : (conteos.data || []);
+  await cargarBodega();
   pintar();
   // El campo queda listo para el siguiente escaneo sin tocar nada.
   caja.select();
@@ -648,6 +684,16 @@ function pintarFicha(){
     p.stock_maximo ? `Máximo <b>${cant(p.stock_maximo)}</b>` : '',
     ve ? `Costo <b>${money(p.costo_promedio)}</b>` : ''
   ].filter(Boolean).join(' · ');
+
+  /* El conteo del piso depende de la bodega, asi que el estado se ve aqui y
+     no escondido dentro de la hoja: quien llega a contar lo sabe antes. */
+  const bod = S.bodega;
+  const faltanBod = (bod?.ubicaciones || []).filter(u => !u.al_dia);
+  const avisoBodega = !bod || !bod.bodegas ? '' : (bod.al_dia
+    ? `<div class="bodega-av ok">Bodega auditada hace menos de 24 h. Se puede contar el piso.</div>`
+    : `<div class="bodega-av no">Para contar el piso falta auditar
+         <b>${escapar(faltanBod.map(u => u.nombre).join(', ') || 'la bodega')}</b>.
+         <a href="auditoria.html">Ir a auditar</a></div>`);
 
   // La regla se explica una vez, abajo, en vez de repetirla en cada cifra.
   const cual = lugares.find(u => u.predeterminada);
@@ -793,6 +839,7 @@ function pintarFicha(){
       </div>
       <div class="tiles n${Math.min(lugares.length + 1, 6)}">${tiles}</div>
       ${pie ? `<div class="tile-pie">${pie}</div>` : ''}
+      ${avisoBodega}
       ${notaLugar}
       ${otras ? `<div class="titulin" style="margin-top:16px">En otras sucursales</div>
                  <div>${otras}</div>` : ''}
@@ -883,6 +930,16 @@ function fecha(v){
   const [a, m, d] = String(v).slice(0,10).split('-').map(Number);
   return `${d} ${MESES[m-1]} ${a}`;
 }
+/* Dentro de un desplegable el ancho es poco y el año largo se corta a la
+   mitad ("vence 8 ago 202"). Ahí va de dos cifras. */
+function fechaMini(v){
+  if (!v) return '—';
+  const [a, m, d] = String(v).slice(0,10).split('-').map(Number);
+  return `${d} ${MESES[m-1]} ${String(a).slice(2)}`;
+}
+const opcionLote = l =>
+  `${escapar(l.codigo || 'Lote')} (${cant(l.cantidad)})` +
+  (l.vence ? ' · vence ' + fechaMini(l.vence) : '');
 
 /* ================= registrar merma =================
 
@@ -920,7 +977,7 @@ function hojaMerma(){
     <div class="campo-g" style="margin-top:12px">
       <label for="mr-lote">¿De qué lote?</label>
       <select class="entrada" id="mr-lote">
-        ${lotes.map(l => `<option value="${l.lote_id}">${escapar(l.codigo || 'Lote')} (${cant(l.cantidad)})${l.vence ? ' · vence ' + fecha(l.vence) : ''}</option>`).join('')}
+        ${lotes.map(l => `<option value="${l.lote_id}">${opcionLote(l)}</option>`).join('')}
         ${Number(p.sin_lote) > 0 ? `<option value="">Sin lote (${cant(p.sin_lote)})</option>` : ''}
       </select>
     </div>` : '';
@@ -1014,147 +1071,176 @@ function hojaMerma(){
    manda a aprobacion. Bajar una existencia es la forma mas comoda de tapar
    un faltante, asi que lo pide uno y lo aprueba otro.
    ===================================================== */
-async function hojaEditar(loteElegido){
+/* El conteo del piso de ventas.
+
+   El piso no se guarda: se CALCULA como el resto -el total menos lo que esta
+   asignado a bodega-. Por eso dos cosas:
+
+     · hace falta la bodega auditada hace menos de 24 horas, o la cifra
+       contra la que se compara no vale nada;
+     · se cuenta el piso ENTERO. Un producto puede estar en la gondola, en la
+       punta y junto a la caja, asi que se va sumando con "Agregar mas" y al
+       final se manda un solo numero.
+*/
+function hojaEditar(loteElegido){
   const p = S.prod;
   const lotes = p.lotes || [];
   const haySinLote = Number(p.sin_lote) > 0;
-
-  // Por omision el lote que vence primero: es el que se toca mas.
   const lote = loteElegido === undefined
     ? (lotes.length ? lotes[0].lote_id : null)
     : (loteElegido || null);
 
-  $('#hoja').innerHTML = '<div class="vacio"><span class="girando"></span></div>';
-  ver('#velo');
+  const bod = S.bodega;
+  const alDia = bod && bod.al_dia;
+  const faltan = alDia ? [] :
+    (bod?.ubicaciones || []).filter(u => !u.al_dia).map(u => u.nombre);
 
-  const { data, error } = await sb.rpc('fn_existencia_ubicacion_lote', {
-    p_producto_id:p.producto_id, p_lote_id:lote, p_sucursal_id:S.sucursal });
-
-  if (error){ cerrarHoja(); aviso('No se pudo leer el inventario', limpiarError(error)); return; }
-  const lugares = data || [];
-
-  // Lo que ya esta esperando aprobacion no se puede volver a pedir.
-  const trabado = u => (p.ajustes_pendientes || []).find(a =>
-    a.ubicacion_id === u.ubicacion_id && (a.lote_id || null) === lote);
+  if (!alDia){
+    $('#hoja').innerHTML = `
+      <h2>Primero hay que auditar la bodega</h2>
+      <p class="sub">${escapar(p.nombre)}</p>
+      <div class="aviso ojo">El piso de ventas se calcula restando lo que hay
+        en bodega. Con la bodega sin auditar en las últimas 24 horas, la cifra
+        contra la que se compararía el conteo no sirve.</div>
+      ${faltan.length ? `<div class="aviso malo">Falta auditar:
+        <b>${escapar(faltan.join(', '))}</b>.</div>`
+        : '<div class="aviso malo">No hay ninguna ubicación de bodega configurada.</div>'}
+      <div class="acciones">
+        <button class="btn secundario" id="ed-no">Cerrar</button>
+        <a class="btn principal-b" href="auditoria.html"
+           style="display:grid;place-items:center">Ir a auditar</a>
+      </div>`;
+    ver('#velo');
+    $('#ed-no').onclick = cerrarHoja;
+    return;
+  }
 
   const selLote = (lotes.length || haySinLote) ? `
-    <div class="campo-g">
+    <div class="campo-g" style="margin-top:12px">
       <label for="ed-lote">¿De qué lote?</label>
       <select class="entrada" id="ed-lote">
         ${lotes.map(l => `<option value="${l.lote_id}" ${l.lote_id === lote ? 'selected' : ''}
-          >${escapar(l.codigo || 'Lote')} (${cant(l.cantidad)})${l.vence ? ' · vence ' + fecha(l.vence) : ''}</option>`).join('')}
+          >${opcionLote(l)}</option>`).join('')}
         ${haySinLote ? `<option value="" ${lote === null ? 'selected' : ''}
           >Sin lote (${cant(p.sin_lote)})</option>` : ''}
       </select>
     </div>` : '';
 
-  const filas = lugares.map(u => {
-    const t = trabado(u);
-    const n = Number(u.cantidad) || 0;
-    return `<div class="edit-fila" data-ub="${u.ubicacion_id}" data-sis="${n}">
-      <div class="edit-nom">
-        <b>${escapar(u.ubicacion)}</b>
-        <small>${t ? 'ya tiene un conteo esperando' : 'el sistema dice ' + cant(n)}</small>
-      </div>
-      <span class="edit-dif"></span>
-      <input inputmode="decimal" value="${cant(n)}" ${t ? 'disabled' : ''}
-             aria-label="Contado en ${escapar(u.ubicacion)}">
-    </div>`;
-  }).join('');
-
   $('#hoja').innerHTML = `
-    <h2>Editar inventario</h2>
-    <p class="sub">${escapar(p.nombre)}. Escriba lo que contó en cada lugar.</p>
+    <h2>${escapar(p.nombre)}</h2>
+    <p class="sub">${escapar(p.sku)}${(p.codigos || []).length ? ' · ' + escapar(p.codigos[0]) : ''}${
+      p.categoria ? ' · ' + escapar(p.categoria) : ''} · se cuenta en
+      <b>${escapar(p.unidad)}</b></p>
     ${selLote}
-    <div style="margin:${selLote ? '14px' : '0'} 0 2px">${filas}</div>
-    <div class="aviso ojo" style="margin-top:14px">Esto da de <b>baja o alta
-      mercadería del negocio</b>. Si lo que falta está en otro lugar de la
-      tienda, no es un ajuste: use <b>Mover de lugar</b>.</div>
-    <div class="campo-g">
-      <label for="ed-motivo">¿Por qué no cuadra?</label>
-      <input class="entrada" id="ed-motivo" placeholder="Se quebraron dos, conté el estante…">
+    <div class="campo-g" style="margin-top:12px">
+      <label for="ed-cant">Contado en el piso de ventas</label>
+      <div class="cant-g">
+        <input id="ed-cant" inputmode="decimal" placeholder="0">
+      </div>
+    </div>
+    <button class="btn secundario" id="ed-mas" style="width:100%;margin-top:10px">
+      + Agregar más</button>
+    <div class="suma oculto" id="ed-suma"></div>
+    <div class="campo-g" style="margin-top:14px">
+      <label for="ed-motivo">Nota (opcional)</label>
+      <input class="entrada" id="ed-motivo" placeholder="Conté góndola y punta…">
     </div>
     <div class="aviso malo oculto" id="ed-error"></div>
     <div class="acciones">
       <button class="btn secundario" id="ed-no">Cancelar</button>
-      <button class="btn principal-b" id="ed-si">Actualizar</button>
+      <button class="btn principal-b" id="ed-si">Guardar</button>
     </div>`;
+  ver('#velo');
 
-  // El renglon se marca en cuanto el numero deja de ser el del sistema
-  $('#hoja').querySelectorAll('.edit-fila input').forEach(inp => {
-    inp.addEventListener('input', e => {
-      e.target.value = e.target.value.replace(/[^0-9.]/g, '');
-      const fila = e.target.closest('.edit-fila');
-      const sis  = Number(fila.dataset.sis);
-      const val  = e.target.value.trim();
-      const dif  = val === '' ? 0 : Number(val) - sis;
-      fila.classList.toggle('cambiada', val !== '' && dif !== 0);
-      const d = fila.querySelector('.edit-dif');
-      d.textContent = (val === '' || dif === 0) ? '' : conSigno(dif);
-      d.className = 'edit-dif ' + (dif > 0 ? 'mas' : dif < 0 ? 'menos' : '');
-    });
-    inp.addEventListener('focus', e => e.target.select());
+  S.sumados = [];
+  const campo = $('#ed-cant');
+  campo.focus();
+  campo.addEventListener('input', e => {
+    e.target.value = e.target.value.replace(/[^0-9.]/g, '');
+    pintarSuma();
   });
+  campo.addEventListener('keydown', e => {
+    if (e.key === 'Enter'){ e.preventDefault(); $('#ed-mas').click(); }
+  });
+
+  /* El total incluye lo que este escrito en el campo, no solo lo ya agregado:
+     si dice 20 y al guardar salen 23, el numero de la pantalla mintio. */
+  const pintarSuma = () => {
+    const z = $('#ed-suma');
+    const txt = campo.value.trim();
+    const suelto = txt === '' ? null : Number(txt);
+    const partes = S.sumados.slice();
+    if (suelto >= 0 && txt !== '') partes.push(suelto);
+    if (partes.length < 2){ z.classList.add('oculto'); return; }
+    const tot = partes.reduce((a, n) => a + n, 0);
+    z.classList.remove('oculto');
+    z.innerHTML = `<span>${partes.map(cant).join(' + ')}</span>
+      <b>${cant(tot)} ${escapar(p.unidad)}</b>
+      ${S.sumados.length
+        ? '<button class="borrar" id="ed-borrar" aria-label="Quitar el último">✕</button>'
+        : ''}`;
+    const b = $('#ed-borrar');
+    if (b) b.onclick = () => { S.sumados.pop(); pintarSuma(); campo.focus(); };
+  };
+
+  $('#ed-mas').onclick = () => {
+    const txt = campo.value.trim();
+    const n = Number(txt);
+    if (txt === '' || !(n >= 0)){
+      campo.focus();
+      return;
+    }
+    S.sumados.push(n);
+    campo.value = '';
+    pintarSuma();
+    campo.focus();
+  };
 
   $('#ed-lote')?.addEventListener('change', e => hojaEditar(e.target.value));
   $('#ed-no').onclick = cerrarHoja;
-  $('#ed-si').onclick = () => mandarAjustes(lote);
+  $('#ed-si').onclick = () => mandarConteoPiso(lote);
 }
 
-async function mandarAjustes(lote){
+async function mandarConteoPiso(lote){
   const err = $('#ed-error');
   const fallar = t => { err.textContent = t; err.classList.remove('oculto'); };
   err.classList.add('oculto');
 
-  const cambios = [];
-  for (const fila of $('#hoja').querySelectorAll('.edit-fila')){
-    const inp = fila.querySelector('input');
-    if (inp.disabled) continue;
-    const txt = inp.value.trim();
-    if (txt === '') continue;
-    const n = Number(txt);
-    if (!Number.isFinite(n) || n < 0)
-      return fallar('Hay una cantidad que no se entiende.');
-    if (n === Number(fila.dataset.sis)) continue;
-    cambios.push({ ubicacion:fila.dataset.ub, cantidad:n,
-                   nombre:fila.querySelector('.edit-nom b').textContent });
-  }
+  const txt = $('#ed-cant').value.trim();
+  const suelto = txt === '' ? 0 : Number(txt);
+  if (txt !== '' && !(suelto >= 0))
+    return fallar('Hay una cantidad que no se entiende.');
 
-  if (!cambios.length)
-    return fallar('No cambió ningún número. Escriba lo que contó y vuelva a intentar.');
+  const total = S.sumados.reduce((a, n) => a + n, 0) + suelto;
+  if (!S.sumados.length && txt === '')
+    return fallar('Escriba lo que contó en el piso de ventas.');
 
-  const motivo = $('#ed-motivo').value.trim() || null;
   const b = $('#ed-si');
   b.disabled = true; b.innerHTML = '<span class="girando"></span>';
 
-  const hechos = [], fallos = [];
-  for (const c of cambios){
-    const { data, error } = await sb.rpc('fn_solicitar_ajuste', {
-      p_producto_id:S.prod.producto_id, p_ubicacion_id:c.ubicacion,
-      p_cantidad:c.cantidad, p_lote_id:lote, p_motivo:motivo });
-    if (error) fallos.push(c.nombre + ': ' + limpiarError(error));
-    else hechos.push(data);
-  }
+  const { data, error } = await sb.rpc('fn_solicitar_conteo_piso', {
+    p_producto_id:S.prod.producto_id,
+    p_cantidad:total,
+    p_lote_id:lote,
+    p_motivo:$('#ed-motivo').value.trim() || null,
+    p_sucursal_id:S.sucursal });
 
-  b.disabled = false; b.textContent = 'Actualizar';
+  b.disabled = false; b.textContent = 'Guardar';
+  if (error) return fallar(limpiarError(error));
 
-  if (!hechos.length) return fallar(fallos.join(' · '));
-
-  const puede = hechos[0].puede_aprobar;
   $('#hoja').innerHTML = `
-    <h2>${hechos.length === 1 ? 'Enviado a aprobación' : 'Enviados a aprobación'}</h2>
+    <h2>Enviado a aprobación</h2>
     <p class="sub">${escapar(S.prod.nombre)}</p>
-    ${hechos.map(h => `<div class="pend-fila">
+    <div class="pend-fila">
       <div class="pend-txt">
-        <b>${escapar(h.ubicacion)} · ${escapar(h.numero)}</b>
-        <small>De ${cant(h.sistema)} a ${cant(h.contado)}</small>
+        <b>Piso de ventas · ${escapar(data.numero)}</b>
+        <small>De ${cant(data.sistema)} a ${cant(data.contado)}</small>
       </div>
-      <span class="pend-dif ${Number(h.diferencia) > 0 ? 'mas' : ''}">${conSigno(h.diferencia)}</span>
-    </div>`).join('')}
-    ${fallos.length ? `<div class="aviso malo" style="margin-top:12px">${escapar(fallos.join(' · '))}</div>` : ''}
+      <span class="pend-dif ${Number(data.diferencia) > 0 ? 'mas' : ''}">${conSigno(data.diferencia)}</span>
+    </div>
     <div class="aviso ojo" style="margin-top:12px">El inventario <b>no cambió
-      todavía</b>. ${puede ? 'Usted puede aprobarlo desde el producto.'
-                          : 'Cambia cuando el gerente lo apruebe.'}</div>
+      todavía</b>. ${data.puede_aprobar ? 'Usted puede aprobarlo aquí mismo.'
+                                        : 'Cambia cuando el gerente lo apruebe.'}</div>
     <div class="acciones">
       <button class="btn principal-b" id="ed-listo" style="flex:1">Entendido</button>
     </div>`;
@@ -1247,7 +1333,7 @@ function hojaMover(){
       <label for="mv-lote">¿De qué lote?</label>
       <select class="entrada" id="mv-lote">
         ${Number(p.sin_lote) > 0 ? `<option value="">Sin lote (${cant(p.sin_lote)})</option>` : ''}
-        ${lotes.map(l => `<option value="${l.lote_id}">${escapar(l.codigo || 'Lote')} (${cant(l.cantidad)})${l.vence ? ' · vence ' + fecha(l.vence) : ''}</option>`).join('')}
+        ${lotes.map(l => `<option value="${l.lote_id}">${opcionLote(l)}</option>`).join('')}
       </select>
     </div>
     <div class="lugar-pie" style="margin-top:8px">Las cantidades que aparecen
