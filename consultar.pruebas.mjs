@@ -46,9 +46,12 @@ const PERFIL = (ve = true) => ({
   existencia:60, apartado:6, disponible:54,
   stock_minimo:10, stock_maximo:null, stock_bajo:false,
   ubicaciones:[
-    { ubicacion_id:'u1', nombre:'Piso de ventas', predeterminada:true, cantidad:18 },
-    { ubicacion_id:'u2', nombre:'Refrigerador', predeterminada:false, cantidad:12 },
-    { ubicacion_id:'u3', nombre:'Bodega', predeterminada:false, cantidad:30 }
+    { ubicacion_id:'u1', nombre:'Piso de ventas', predeterminada:true, cantidad:18,
+      tipo:'piso', codigo:'S01-P01', activa:true },
+    { ubicacion_id:'u2', nombre:'Refrigerador', predeterminada:false, cantidad:12,
+      tipo:'piso', codigo:'S01-P02', activa:true },
+    { ubicacion_id:'u3', nombre:'Bodega', predeterminada:false, cantidad:30,
+      tipo:'bodega', codigo:'S01-B01', activa:true }
   ],
   lotes:[
     { lote_id:'lo0', codigo:'L-VIEJO', vence:dia(-62), dias:-62, cantidad:6 },
@@ -164,6 +167,7 @@ async function montar(estado){
     ; window.__p.S = S; window.__p.buscar = buscar; window.__p.abrir = abrir;
     ; window.__p.hojaMover = hojaMover; window.__p.hojaConteo = hojaConteo;
     ; window.__p.escanearCodigo = escanearCodigo;
+    ; window.__p.hojaLugares = hojaLugares; window.__p.hojaPasar = hojaPasar;
   })()`);
   await new Promise(r => setTimeout(r, 160));
   return { w, d:w.document, p:w.__p, estado };
@@ -1031,6 +1035,168 @@ console.log('\n=== REGISTRAR MERMA DESDE EL PRODUCTO ===');
   chk('sin causas en el catálogo explica qué falta',
       /Faltan las causas de merma/.test(d.querySelector('#hoja').textContent));
   chk('y no muestra un formulario roto', !d.querySelector('#mr-causa'));
+}
+
+/* ===================================================================
+   Bodega por lugar: ver cuánto hay en cada uno, bajar al piso y cargar
+   a bodega. La idea es que la cifra del inventario se pueda tocar.
+   =================================================================== */
+{
+  const { d, p } = await montar(base());
+  await p.abrir('p1');
+  await esperar(120);
+
+  const tiles = [...d.querySelectorAll('.tiles button.tile')];
+  chk('cada cifra del inventario se toca', tiles.length === 4);
+  chk('la existencia total también', tiles[0].dataset.u === '');
+  chk('y cada lugar lleva el suyo', tiles[3].dataset.u === 'u3');
+
+  tiles[3].click();
+  await esperar();
+  const h = d.querySelector('#hoja').textContent;
+  chk('se abre el detalle por lugar', /¿Dónde está\?/.test(h));
+  chk('con los tres lugares', /Piso de ventas/.test(h) && /Refrigerador/.test(h)
+      && /Bodega/.test(h));
+  chk('y la cantidad de cada uno', /18/.test(h) && /12/.test(h) && /30/.test(h));
+  chk('el lugar que se tocó queda marcado',
+      d.querySelector('.fila-l.aqui')?.textContent.includes('Bodega'));
+  chk('se dice cuál es bodega y cuál piso',
+      [...d.querySelectorAll('.fila-bajo small')].filter(e => /^Bodega/.test(e.textContent)).length === 1);
+  chk('de la bodega se ofrece bajar al piso', /Bajar al piso/.test(h));
+  chk('del piso, cargar a bodega', /Cargar a bodega/.test(h));
+  chk('se aclara que el total no cambia',
+      /El total no cambia/.test(h.replace(/\s+/g, ' ')));
+}
+{
+  const { d, p, w, estado } = await montar(base());
+  await p.abrir('p1');
+  await esperar(120);
+  p.hojaLugares();
+  await esperar();
+  // La fila de la bodega: de ahí se baja al piso
+  const filas = [...d.querySelectorAll('[data-pasar]')];
+  const bodega = filas.find(f => /Bodega/.test(f.textContent));
+  bodega.click();
+  await esperar();
+  const h = d.querySelector('#hoja');
+  chk('bajar al piso dice cuánto hay en la bodega',
+      /En .*Bodega.* hay/.test(h.textContent) && /30/.test(h.textContent));
+  chk('hay dos lugares de piso, así que pregunta a cuál',
+      !!d.querySelector('#pa-hacia'));
+  chk('y no ofrece la bodega como destino de sí misma',
+      ![...d.querySelectorAll('#pa-hacia option')].some(o => o.value === 'u3'));
+
+  const campo = d.querySelector('#pa-cant');
+  chk('con lotes no se ofrece "pasar todo": la cifra es de todos juntos',
+      !d.querySelector('#pa-todo'));
+
+  campo.value = '5'; campo.dispatchEvent(new w.Event('input', { bubbles:true }));
+  d.querySelector('#pa-si').click();
+  await esperar(180);
+  const lm = estado.llamadas.find(l => l.fn === 'fn_mover_entre_ubicaciones');
+  chk('se manda el movimiento con origen y destino',
+      lm && lm.args.p_desde === 'u3' && lm.args.p_cantidad === 5);
+  chk('y se avisa a dónde fue', /Bajado al piso/.test(d.body.textContent));
+}
+{
+  const { d, p, w, estado } = await montar(base());
+  await p.abrir('p1');
+  await esperar(120);
+  p.hojaLugares();
+  await esperar();
+  // Desde la fila del piso: cargar a bodega lo que acaba de llegar
+  const delPiso = [...d.querySelectorAll('[data-pasar]')]
+    .find(f => /Piso de ventas/.test(f.textContent));
+  delPiso.click();
+  await esperar();
+  chk('cargar a bodega sale del piso', /Cargar a bodega/.test(d.querySelector('#hoja h2').textContent));
+  chk('con una sola bodega no pregunta a cuál', !d.querySelector('#pa-hacia'));
+  chk('y enseña de dónde a dónde va',
+      /Piso de ventas/.test(d.querySelector('.de-a').textContent) &&
+      /Bodega/.test(d.querySelector('.de-a').textContent));
+
+  const campo = d.querySelector('#pa-cant');
+  campo.value = '99'; campo.dispatchEvent(new w.Event('input', { bubbles:true }));
+  d.querySelector('#pa-si').click();
+  await esperar(140);
+  chk('no deja cargar más de lo que hay en el piso',
+      /solo hay 18/.test(d.querySelector('#pa-error').textContent));
+  chk('y no se manda nada al servidor',
+      !estado.llamadas.some(l => l.fn === 'fn_mover_entre_ubicaciones'));
+}
+{
+  // Mientras se cuenta un lugar no se mueve nada de ahí: el servidor lo
+  // rechaza y la pantalla tiene que decir por qué, no "error".
+  const estado = base();
+  estado.rpc.fn_mover_entre_ubicaciones = { data:null, error:{ message:
+    'P0001: Hay una auditoria abierta en Bodega. Termine de contar ese lugar antes de mover mercaderia de ahi o hacia ahi' } };
+  const { d, p, w } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  p.hojaPasar('u3');
+  await esperar();
+  const campo = d.querySelector('#pa-cant');
+  campo.value = '1'; campo.dispatchEvent(new w.Event('input', { bubbles:true }));
+  d.querySelector('#pa-si').click();
+  await esperar(180);
+  const e = d.querySelector('#pa-error').textContent;
+  chk('con auditoría abierta se explica el motivo completo',
+      /auditoria abierta en Bodega/.test(e) && /Termine de contar/.test(e));
+  chk('y la hoja sigue abierta', !!d.querySelector('#pa-cant'));
+}
+{
+  // Una sucursal sin bodega no debe ofrecer botones que no llevan a nada.
+  const estado = base();
+  const perfil = JSON.parse(JSON.stringify(estado.rpc.fn_consultar_producto.data));
+  perfil.ubicaciones = [
+    { ubicacion_id:'u1', nombre:'Piso de ventas', predeterminada:true, cantidad:48,
+      tipo:'piso', codigo:'S01-P01', activa:true },
+    { ubicacion_id:'u2', nombre:'Refrigerador', predeterminada:false, cantidad:12,
+      tipo:'piso', codigo:'S01-P02', activa:true }
+  ];
+  estado.rpc.fn_consultar_producto = { data:perfil, error:null };
+  const { d, p } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  p.hojaLugares();
+  await esperar();
+  chk('sin bodega ninguna fila ofrece cargar',
+      !/Cargar a bodega/.test(d.querySelector('.filas').textContent));
+  chk('y se dice cómo crearla',
+      /no tiene ninguna bodega/i.test(d.querySelector('#hoja').textContent));
+  chk('ninguna fila promete un movimiento imposible',
+      d.querySelectorAll('[data-pasar]').length === 0);
+}
+{
+  const estado = base();
+  const perfil = JSON.parse(JSON.stringify(estado.rpc.fn_consultar_producto.data));
+  perfil.ubicaciones = [{ ubicacion_id:'u1', nombre:'Piso de ventas',
+    predeterminada:true, cantidad:60, tipo:'piso', codigo:'S01-P01', activa:true }];
+  estado.rpc.fn_consultar_producto = { data:perfil, error:null };
+  const { d, p } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  d.querySelector('.tiles button.tile').click();
+  await esperar();
+  chk('con un solo lugar se explica en vez de abrir una hoja vacía',
+      /un solo lugar/.test(d.body.textContent));
+}
+
+{
+  // Sin lotes (lo normal en una pulpería) sí conviene el atajo.
+  const estado = base();
+  const perfil = JSON.parse(JSON.stringify(estado.rpc.fn_consultar_producto.data));
+  perfil.lotes = []; perfil.sin_lote = 60;
+  estado.rpc.fn_consultar_producto = { data:perfil, error:null };
+  const { d, p } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  p.hojaPasar('u3');
+  await esperar();
+  chk('sin lotes sí hay atajo para pasar todo', !!d.querySelector('#pa-todo'));
+  d.querySelector('#pa-todo').click();
+  chk('y llena con lo que hay en ese lugar',
+      d.querySelector('#pa-cant').value === '30');
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);

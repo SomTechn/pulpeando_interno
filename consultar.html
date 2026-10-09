@@ -85,6 +85,15 @@
 .tiles.n4{grid-template-columns:repeat(2,minmax(0,1fr))}
 .tile{background:var(--fondo);border-radius:var(--r-sm);padding:12px 10px;
   text-align:center;min-width:0}
+/* Los lugares se tocan para ver y pasar mercaderia, asi que son botones.
+   Un boton trae borde, fuente y color propios del navegador: se le quitan. */
+button.tile{border:0;width:100%;font:inherit;color:inherit;cursor:pointer;
+  position:relative;transition:transform .08s}
+button.tile:active{transform:scale(.97)}
+button.tile::after{content:'';position:absolute;right:7px;top:9px;width:6px;
+  height:6px;border-right:2px solid var(--claro);border-bottom:2px solid var(--claro);
+  transform:rotate(-45deg);opacity:.75}
+button.tile.fuerte::after{border-color:#9AA8BC}
 .tile b{display:block;font-family:var(--num);font-size:26px;font-weight:700;
   line-height:1.05;letter-spacing:-.03em;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis}
@@ -103,6 +112,44 @@
   text-overflow:ellipsis}
 .lugar-n{flex:0 0 auto;font-family:var(--num);font-size:14px;font-weight:700;
   min-width:46px;text-align:right}
+
+/* la hoja de lugares: cada lugar con lo que tiene y a donde se puede pasar */
+/* Dos lineas por fila. En una sola, el nombre del lugar peleaba el ancho con
+   la cifra y con el texto de la accion, y en celular se partia en tres
+   renglones. Arriba el nombre y la cifra; abajo el codigo y a donde va. */
+.filas{display:flex;flex-direction:column;gap:7px;margin-top:4px}
+.fila-l{display:block;width:100%;text-align:left;background:var(--fondo);
+  border:1px solid transparent;border-radius:var(--r-sm);padding:11px 13px;
+  font:inherit;color:inherit}
+button.fila-l{cursor:pointer;transition:border-color .12s,transform .08s}
+button.fila-l:hover{border-color:#C9D6E8}
+button.fila-l:active{transform:scale(.995)}
+.fila-l.aqui{background:#EEF4FF;border-color:#BFD4F5}
+.fila-alto{display:flex;align-items:baseline;gap:10px}
+.fila-alto b{flex:1;min-width:0;font-size:14.5px;font-weight:700;line-height:1.3;
+  overflow-wrap:anywhere}
+.fila-n{flex:0 0 auto;font-family:var(--num);font-size:19px;font-weight:700;
+  line-height:1.1;white-space:nowrap}
+.fila-n i{font-style:normal;font-size:11px;font-weight:700;color:var(--tenue);
+  margin-left:3px}
+.fila-bajo{display:flex;align-items:center;gap:10px;margin-top:3px}
+.fila-bajo small{flex:1;min-width:0;font-size:11.5px;color:var(--tenue);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fila-ir{flex:0 0 auto;font-size:12px;font-weight:700;color:var(--azul);
+  white-space:nowrap}
+.fila-l.aqui .fila-n{color:var(--azul)}
+.de-a{display:flex;align-items:center;gap:9px;margin:14px 0 2px;font-size:13px}
+.de-a .caja{flex:1;min-width:0;background:var(--fondo);border-radius:var(--r-sm);
+  padding:9px 11px}
+.de-a .caja small{display:block;font-size:10.5px;font-weight:700;color:var(--tenue);
+  text-transform:uppercase;letter-spacing:.03em}
+.de-a .caja b{display:block;font-size:13.5px;font-weight:700;margin-top:2px;
+  overflow-wrap:anywhere}
+.de-a .flecha{flex:0 0 auto;color:var(--claro);font-size:17px}
+/* min-height 40: un enlace de 27px es muy chico para un dedo. */
+.todo{display:block;background:none;border:0;font:inherit;font-size:12.5px;
+  font-weight:700;color:var(--azul);cursor:pointer;padding:10px 2px;
+  min-height:40px;text-align:left}
 
 /* los ultimos conteos */
 .cnt{display:flex;align-items:center;gap:12px;padding:10px 0;
@@ -356,7 +403,8 @@ const CFG = window.SUPABASE_CONFIG || {};
 const SUPABASE_URL = CFG.url || 'PEGUE_AQUI_LA_URL';
 const SUPABASE_KEY = CFG.key || 'PEGUE_AQUI_LA_LLAVE';
 
-const $ = s => document.querySelector(s);
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
 const ver = (id, si = true) => $(id).classList.toggle('oculto', !si);
 
 if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin configurar'); }
@@ -668,13 +716,16 @@ function pintarFicha(){
 
   /* ---- existencia: el total y cada lugar, en cifras grandes ---- */
   const lugares = p.ubicaciones || [];
+  /* Cada cifra se toca: abre el detalle por lugar, que es desde donde se baja
+     a piso y se carga a bodega. */
   const tiles = [
-    `<div class="tile fuerte ${p.stock_bajo ? 'bajo' : ''}">
-       <b>${cant(p.existencia)}</b><small>Existencia</small></div>`,
+    `<button class="tile fuerte ${p.stock_bajo ? 'bajo' : ''}" data-u="">
+       <b>${cant(p.existencia)}</b><small>Existencia</small></button>`,
     ...lugares.map(u => {
       const n = Number(u.cantidad) || 0;
-      return `<div class="tile ${n === 0 ? 'vacio' : ''}">
-        <b>${cant(n)}</b><small>${escapar(u.nombre)}</small></div>`;
+      return `<button class="tile ${n === 0 ? 'vacio' : ''}"
+         data-u="${escapar(u.ubicacion_id)}">
+        <b>${cant(n)}</b><small>${escapar(u.nombre)}</small></button>`;
     })
   ].join('');
 
@@ -869,6 +920,8 @@ function pintarFicha(){
   $('#btn-merma').addEventListener('click', hojaMerma);
   $('#btn-mover').addEventListener('click', hojaMover);
   $('#btn-conteo').addEventListener('click', hojaConteo);
+  $$('.tiles button.tile').forEach(b =>
+    b.addEventListener('click', () => hojaLugares(b.dataset.u || null)));
 }
 
 function pintarGrafica(){
@@ -1310,6 +1363,189 @@ function hojaRechazar(id){
     cerrarHoja();
     await cargarPendientes();
     await recargarFicha();
+  };
+}
+
+/* ================= bodega: ver por lugar y pasar =================
+
+   Tocar cualquier cifra del inventario abre esto: lo que hay en cada lugar.
+   De ahi salen los dos movimientos del dia a dia de una pulperia:
+
+     bajar al piso     se acabo lo que estaba en la gondola
+     cargar a bodega   acaba de llegar la compra y no cabe todo afuera
+
+   Las dos son el mismo movimiento al reves, asi que es una sola hoja que
+   adivina el destino por el tipo del lugar de donde sale. Nada entra ni sale
+   del negocio: el total no se toca, solo cambia donde esta.
+   ================================================================= */
+function hojaLugares(resaltar){
+  const p = S.prod;
+  const lugares = p.ubicaciones || [];
+
+  if (lugares.length < 2){
+    aviso('Falta configurar ubicaciones',
+      'Esta sucursal tiene un solo lugar, así que no hay bodega de dónde bajar. ' +
+      'Un supervisor puede agregarla desde Catálogos.');
+    return;
+  }
+
+  const bodegas = lugares.filter(u => u.tipo === 'bodega');
+  const pisos   = lugares.filter(u => u.tipo !== 'bodega');
+
+  const fila = (u) => {
+    const n    = Number(u.cantidad) || 0;
+    const esB  = u.tipo === 'bodega';
+    // De una bodega se baja al piso; del piso se carga a bodega. Si no hay
+    // a donde, la fila queda informativa en vez de prometer un botón muerto.
+    const haciaDonde = esB ? pisos : bodegas;
+    const puede = n > 0 && haciaDonde.length > 0;
+    const accion = puede
+      ? `<span class="fila-ir">${esB ? 'Bajar al piso →' : 'Cargar a bodega →'}</span>`
+      : '';
+    // "Piso de ventas · S01-P01" no cabe junto a "Cargar a bodega →" en
+    // celular: se corta. La palabra sola alcanza, el titulo ya da el contexto.
+    const sub = [esB ? 'Bodega' : 'Piso',
+                 u.codigo ? escapar(u.codigo) : ''].filter(Boolean).join(' · ');
+    const cuerpo = `
+      <div class="fila-alto"><b>${escapar(u.nombre)}</b>
+        <span class="fila-n">${cant(n)}<i>${escapar(p.unidad)}</i></span></div>
+      <div class="fila-bajo"><small>${sub}</small>${accion}</div>`;
+    const clase = `fila-l ${u.ubicacion_id === resaltar ? 'aqui' : ''}`;
+    return puede
+      ? `<button class="${clase}" data-pasar="${escapar(u.ubicacion_id)}">${cuerpo}</button>`
+      : `<div class="${clase}">${cuerpo}</div>`;
+  };
+
+  const sinBodega = !bodegas.length;
+
+  /* Cada fila ya ofrece su movimiento, asi que abajo no va un segundo boton
+     de "cargar a bodega": repetido obligaba a adivinar de que lugar sale. */
+  $('#hoja').innerHTML = `
+    <h2>¿Dónde está?</h2>
+    <p class="sub"><b>${escapar(p.nombre)}</b> · ${cant(p.existencia)}
+      ${escapar(p.unidad)} en total</p>
+    <div class="filas">${lugares.map(fila).join('')}</div>
+    ${sinBodega
+      ? `<div class="lugar-pie">Esta sucursal no tiene ninguna bodega, así que no
+           hay a dónde cargar. Un supervisor crea el lugar en Catálogos y lo
+           marca como bodega.</div>`
+      : `<div class="lugar-pie">Toque un lugar para pasar mercadería desde ahí.
+           El total no cambia: solo cambia dónde está.</div>`}
+    <button class="todo" id="lu-mover">Mover entre cualesquiera dos lugares →</button>
+    <div class="acciones" style="grid-template-columns:1fr">
+      <button class="btn secundario" id="lu-no">Cerrar</button>
+    </div>`;
+  ver('#velo');
+
+  $('#lu-no').onclick = cerrarHoja;
+  $('#lu-mover').onclick = hojaMover;
+  $$('[data-pasar]').forEach(b =>
+    b.addEventListener('click', () => hojaPasar(b.dataset.pasar)));
+}
+
+function hojaPasar(desdeId){
+  const p = S.prod;
+  const lugares = p.ubicaciones || [];
+  const desde = lugares.find(u => u.ubicacion_id === desdeId);
+  if (!desde) return hojaLugares();
+
+  const esB     = desde.tipo === 'bodega';
+  const destinos = lugares.filter(u =>
+    u.ubicacion_id !== desde.ubicacion_id &&
+    (esB ? u.tipo !== 'bodega' : u.tipo === 'bodega'));
+
+  if (!destinos.length){
+    aviso('No hay a dónde pasarlo',
+      esB ? 'No hay ningún lugar de piso de ventas configurado.'
+          : 'Esta sucursal no tiene ninguna bodega configurada.');
+    return;
+  }
+
+  const hay = Number(desde.cantidad) || 0;
+  const lotes = p.lotes || [];
+  const selLote = lotes.length ? `
+    <div class="campo-g" style="margin-top:12px">
+      <label for="pa-lote">¿De qué lote?</label>
+      <select class="entrada" id="pa-lote">
+        ${Number(p.sin_lote) > 0 ? `<option value="">Sin lote (${cant(p.sin_lote)})</option>` : ''}
+        ${lotes.map(l => `<option value="${l.lote_id}">${opcionLote(l)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="lugar-pie" style="margin-top:6px">La cantidad de arriba es de
+      todos los lotes juntos.</div>` : '';
+
+  // Con un solo destino no se pregunta: se dice a dónde va y listo.
+  const unico = destinos.length === 1;
+  const destino = unico ? `
+    <div class="de-a">
+      <div class="caja"><small>De</small><b>${escapar(desde.nombre)}</b></div>
+      <span class="flecha">→</span>
+      <div class="caja"><small>A</small><b>${escapar(destinos[0].nombre)}</b></div>
+    </div>` : `
+    <div class="campo-g" style="margin-top:14px">
+      <label for="pa-hacia">${esB ? '¿A qué lugar del piso?' : '¿A qué bodega?'}</label>
+      <select class="entrada" id="pa-hacia">
+        ${destinos.map(u => `<option value="${escapar(u.ubicacion_id)}"
+          >${escapar(u.nombre)} (${cant(u.cantidad)})</option>`).join('')}
+      </select>
+    </div>`;
+
+  $('#hoja').innerHTML = `
+    <h2>${esB ? 'Bajar al piso' : 'Cargar a bodega'}</h2>
+    <p class="sub"><b>${escapar(p.nombre)}</b></p>
+    <div class="aviso ojo">En <b>${escapar(desde.nombre)}</b> hay
+      <b>${cant(hay)} ${escapar(p.unidad)}</b>.</div>
+    ${destino}
+    ${selLote}
+    <div class="campo-g" style="margin-top:12px">
+      <label for="pa-cant">¿Cuánto pasa?</label>
+      <input class="entrada" id="pa-cant" inputmode="decimal" placeholder="0">
+    </div>
+    ${hay > 0 && !lotes.length
+      /* Con lotes no va: la cifra del lugar es de todos los lotes juntos, asi
+         que "pasar todo (30)" prometeria mover 30 de un lote que tiene 6. */
+      ? `<button class="todo" id="pa-todo">Pasar todo (${cant(hay)})</button>` : ''}
+    <div class="aviso malo oculto" id="pa-error"></div>
+    <div class="acciones">
+      <button class="btn secundario" id="pa-no">Volver</button>
+      <button class="btn principal-b" id="pa-si">${esB ? 'Bajar' : 'Cargar'}</button>
+    </div>`;
+  ver('#velo');
+  $('#pa-cant').focus();
+
+  $('#pa-cant').addEventListener('input', e => {
+    e.target.value = e.target.value.replace(/[^0-9.]/g, '');
+  });
+  const todo = $('#pa-todo');
+  if (todo) todo.onclick = () => { $('#pa-cant').value = hay; $('#pa-cant').focus(); };
+
+  $('#pa-no').onclick = () => hojaLugares(desde.ubicacion_id);
+  $('#pa-si').onclick = async () => {
+    const hacia = unico ? destinos[0].ubicacion_id : $('#pa-hacia').value;
+    const lote  = $('#pa-lote') ? ($('#pa-lote').value || null) : null;
+    const n     = Number($('#pa-cant').value);
+    const err   = $('#pa-error');
+    const fallar = t => { err.textContent = t; err.classList.remove('oculto'); };
+    err.classList.add('oculto');
+
+    if (!n || n <= 0) return fallar('Ponga cuánto se pasa.');
+    if (n > hay) return fallar(`En ${desde.nombre} solo hay ${cant(hay)}.`);
+
+    const b = $('#pa-si');
+    const texto = b.textContent;
+    b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+
+    const { data, error } = await sb.rpc('fn_mover_entre_ubicaciones', {
+      p_producto_id:p.producto_id, p_hacia:hacia, p_cantidad:n,
+      p_desde:desde.ubicacion_id, p_lote_id:lote });
+
+    b.disabled = false; b.textContent = texto;
+    if (error) return fallar(limpiarError(error));
+
+    cerrarHoja();
+    await recargarFicha();
+    aviso(esB ? 'Bajado al piso' : 'Cargado a bodega',
+      `${cant(data.cantidad)} ${p.unidad} de ${data.producto}: de ${data.desde} a ${data.hacia}.`);
   };
 }
 
