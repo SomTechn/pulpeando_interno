@@ -326,7 +326,11 @@ const plata = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
   { minimumFractionDigits:2, maximumFractionDigits:2 });
 
 function mensaje(e){
-  const m = (e?.message || String(e)).replace(/^.*?:\s*/, '');
+  // Antes se cortaba hasta el primer ":", lo que se comia la mitad de los
+  // mensajes propios: "Falta: Bodega de arriba" quedaba en "Bodega de
+  // arriba". Ahora solo se quita el prefijo tecnico de Postgres.
+  const m = (e?.message || String(e))
+    .replace(/^(?:[0-9A-Z]{5}|error|Error|ERROR):\s*/, '');
   if (/JWT|token|session/i.test(m)) return 'Su sesión venció. Vuelva a entrar.';
   if (/Failed to fetch|NetworkError|network/i.test(m))
     return 'No hay conexión. Revise su internet y pruebe otra vez.';

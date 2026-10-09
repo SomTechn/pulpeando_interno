@@ -235,7 +235,11 @@ const num = v => { const n = parseFloat(String(v).replace(/[^0-9.\-]/g,'')); ret
 const hoy = () => new Date().toISOString().slice(0,10);
 
 function limpiarError(e){
-  const m = (e?.message || String(e)).replace(/^.*?:\s*/, '');
+  // Antes se cortaba hasta el primer ":", lo que se comia la mitad de los
+  // mensajes propios: "Falta: Bodega de arriba" quedaba en "Bodega de
+  // arriba". Ahora solo se quita el prefijo tecnico de Postgres.
+  const m = (e?.message || String(e))
+    .replace(/^(?:[0-9A-Z]{5}|error|Error|ERROR):\s*/, '');
   if (/duplicate key|llave duplicada|unique/i.test(m))
     return 'Ya existe una factura con ese número para este proveedor';
   if (/JWT|token/i.test(m)) return 'La sesión venció. Vuelva a entrar.';
