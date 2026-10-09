@@ -234,7 +234,7 @@ const ENTIDADES = {
   productos: {
     nombre:'Productos', singular:'Producto', icono:'inventario',
     tabla:'productos', nivel:3, orden:'nombre',
-    columnas:'id,sku,nombre,categoria_id,marca_id,proveedor_id,impuesto_id,tipo,unidad_base,controla_lote,controla_vencimiento,stock_minimo,stock_maximo,dias_cobertura,imagen_url,se_vende,se_compra,activo',
+    columnas:'id,sku,nombre,categoria_id,marca_id,proveedor_id,impuesto_id,tipo,unidad_base,controla_lote,controla_vencimiento,stock_minimo,stock_maximo,unidades_empaque,dias_cobertura,imagen_url,se_vende,se_compra,activo',
     buscaEn:['nombre','sku'],
     fila: r => ({
       ini: r.nombre?.[0] || '·',
@@ -268,6 +268,11 @@ const ENTIDADES = {
       { s:'Inventario' },
       { k:'stock_minimo', e:'Stock mínimo', tipo:'decimal', def:0,
         ayuda:'Debajo de esto se marca en rojo.' },
+      { k:'stock_maximo', e:'Stock máximo', tipo:'decimal', vacioEsNulo:true,
+        ayuda:'Hasta cuánto conviene tener. Se ve en Consultar. Déjelo vacío si no lo usa.' },
+      { k:'unidades_empaque', e:'Unidades por caja', tipo:'decimal', vacioEsNulo:true,
+        ayuda:'Cuántas trae la caja cerrada del proveedor. Al auditar la bodega ' +
+              'aparece el botón de «caja completa» y no hay que contar una por una.' },
       { k:'dias_cobertura', e:'Días de cobertura', tipo:'entero', def:15,
         ayuda:'Para las sugerencias de compra.' },
       { k:'controla_vencimiento', e:'Controla vencimiento', tipo:'si', def:false,
@@ -737,7 +742,13 @@ $('#form-guardar').addEventListener('click', async () => {
     if (!el) continue;
 
     let v;
+    /* Hay columnas donde vacío significa "no lo uso" y no cero: el máximo de
+       stock y las unidades por caja aceptan nulo en la base. num('') devuelve
+       0, así que guardar cero ahí diría "la caja trae cero unidades". */
+    const vacio = c.tipo === 'decimal' && c.vacioEsNulo && !String(el.value).trim();
+
     if (c.tipo === 'si')            v = el.checked;
+    else if (vacio)                 v = null;
     else if (c.tipo === 'decimal')  v = num(el.value);
     else if (c.tipo === 'entero')   v = Math.round(num(el.value));
     else if (c.tipo === 'lista')    v = el.value || null;
