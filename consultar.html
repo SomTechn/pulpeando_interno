@@ -67,24 +67,63 @@
   color:#9AA8BC;margin-bottom:9px}
 
 /* existencia: el total grande y el desglose al lado */
-.exi{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
-.exi-total{text-align:center;padding:4px 16px 4px 0;border-right:1px solid var(--linea)}
-.exi-total b{display:block;font-family:var(--num);font-size:38px;font-weight:700;
-  line-height:1;letter-spacing:-.03em}
-.exi-total small{display:block;font-size:11.5px;color:var(--tenue);margin-top:5px}
-.exi-total.bajo b{color:var(--rojo)}
-.lugares{display:flex;flex-direction:column;gap:7px;min-width:0;max-width:460px}
-.lugar{display:flex;align-items:center;gap:10px}
+/* La tarjeta de inventario, como en el equipo de mano de un supermercado:
+   la existencia total en grande y al lado cuanto hay en cada lugar. Editar
+   va DENTRO de la tarjeta, pegado a los numeros que corrige. */
+.tarjeta-enc{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.tarjeta-enc .titulin{flex:1;min-width:0;margin:0}
+.enlace{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  flex:0 0 auto;min-height:40px;padding:0 15px;border-radius:999px;
+  background:var(--azul-suave);color:var(--azul);font-size:13.5px;font-weight:800}
+.enlace:active{transform:scale(.97)}
+
+/* Tres lugares caben de frente. Con cuatro, 3+1 deja un hueco feo: mejor
+   dos y dos. De tablet para arriba caben todos en una fila. */
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.tiles.n1{grid-template-columns:1fr}
+.tiles.n2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.tiles.n4{grid-template-columns:repeat(2,minmax(0,1fr))}
+.tile{background:var(--fondo);border-radius:var(--r-sm);padding:12px 10px;
+  text-align:center;min-width:0}
+.tile b{display:block;font-family:var(--num);font-size:26px;font-weight:700;
+  line-height:1.05;letter-spacing:-.03em;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+.tile small{display:block;font-size:11px;font-weight:700;color:var(--tenue);
+  margin-top:5px;line-height:1.3;overflow-wrap:anywhere}
+.tile.fuerte{background:var(--tinta);color:#fff}
+.tile.fuerte small{color:#9AA8BC}
+.tile.fuerte.bajo{background:#7F1D32}
+.tile.vacio b{color:var(--claro)}
+.tile-pie{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:12px;
+  font-size:12px;color:var(--tenue);line-height:1.5}
+.tile-pie b{font-family:var(--num);font-weight:700;color:var(--tinta)}
+.lugar-pie{font-size:11.5px;color:var(--claro);line-height:1.45;margin-top:10px}
+.lugar{display:flex;align-items:center;gap:10px;padding:3px 0}
 .lugar-nom{flex:1;min-width:0;font-size:13.5px;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis}
-.lugar-pie{font-size:11.5px;color:var(--claro);line-height:1.45;margin-top:10px;
-  max-width:460px}
-.lugar-barra{flex:0 0 76px;height:7px;border-radius:999px;background:var(--fondo);
-  overflow:hidden}
-.lugar-barra span{display:block;height:100%;border-radius:999px;background:var(--azul)}
 .lugar-n{flex:0 0 auto;font-family:var(--num);font-size:14px;font-weight:700;
   min-width:46px;text-align:right}
-.lugar.cero .lugar-nom,.lugar.cero .lugar-n{color:var(--claro)}
+
+/* los ultimos conteos */
+.cnt{display:flex;align-items:center;gap:12px;padding:10px 0;
+  border-bottom:1px solid var(--linea)}
+.cnt:last-child{border-bottom:none;padding-bottom:0}
+.cnt-txt{flex:1;min-width:0}
+.cnt-txt b{display:block;font-size:13.5px;font-weight:600;line-height:1.35;
+  overflow-wrap:anywhere}
+.cnt-txt small{display:block;font-size:11.5px;color:var(--tenue);margin-top:3px;
+  line-height:1.4}
+/* El numero del documento no se parte a la mitad: "AJ-S01-" en un renglon y
+   "000003" en el otro no es un numero, es ruido. */
+.nowrap{white-space:nowrap}
+.cnt-fin{flex:0 0 auto;text-align:right}
+.cnt-fin b{display:block;font-family:var(--num);font-size:15px;font-weight:700}
+.cnt-fin b.menos{color:var(--rojo)}
+.cnt-fin b.mas{color:var(--verde-oscuro)}
+.cnt-fin small{display:block;font-size:10.5px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.03em;margin-top:3px;color:var(--tenue)}
+.cnt-fin small.espera{color:#8A5A00}
+.cnt-fin small.no{color:var(--rojo)}
 
 /* la grafica: cinco barras dibujadas con CSS. Sin libreria: la app tiene que
    abrir sin internet y una grafica de cinco barras no justifica un paquete. */
@@ -190,22 +229,25 @@ select.entrada{appearance:none;
 .acciones{display:flex;gap:10px;margin-top:18px}
 .acciones .btn{flex:1}
 
+@media (min-width:821px){
+  .tiles,.tiles.n4{grid-template-columns:repeat(auto-fit,minmax(118px,1fr))}
+}
 @media (max-width:820px){
   .zona{padding:12px 14px 0}
   .ficha{padding:14px 15px}
   .ficha-enc{flex-direction:column;gap:10px}
   .ficha-precio{text-align:left}
-  .exi{grid-template-columns:1fr;gap:14px}
-  .exi-total{text-align:left;padding:0 0 12px;border-right:none;
-    border-bottom:1px solid var(--linea)}
-  .exi-total b{font-size:32px}
-  .lugar-barra{flex:0 0 52px}
+  .tile b{font-size:22px}
+  .tile{padding:11px 8px}
   .graf{height:112px;gap:5px}
   .gpie{gap:5px}
   .acciones-ficha .btn{min-width:0}
 }
 @media (max-width:420px){
   .datos{grid-template-columns:1fr}
+  .tiles{gap:7px}
+  .tile b{font-size:20px}
+  .tile small{font-size:10px}
   .edit-fila{gap:8px}
   .edit-fila input{width:80px}
   .edit-dif{flex:0 0 38px;font-size:12px}
@@ -309,7 +351,7 @@ const S = {
   ctx:null, sucursal:null, moneda:'L', menu:null, nivel:0,
   vista:'inicio',        // inicio · resultados · ficha
   busqueda:'', resultados:[],
-  prod:null, semanas:[], cargando:false,
+  prod:null, semanas:[], conteos:[], cargando:false,
   pendientes:[], puedeAprobar:false
 };
 
@@ -463,10 +505,12 @@ async function escanearCodigo(){
 async function abrir(id){
   S.cargando = true; S.vista = 'ficha'; pintar();
 
-  const [perfil, semanas] = await Promise.all([
+  const [perfil, semanas, conteos] = await Promise.all([
     sb.rpc('fn_consultar_producto', { p_producto_id:id, p_sucursal_id:S.sucursal }),
     sb.rpc('fn_ventas_producto_semanas', { p_producto_id:id, p_semanas:5,
-                                           p_sucursal_id:S.sucursal })
+                                           p_sucursal_id:S.sucursal }),
+    sb.rpc('fn_conteos_del_producto', { p_producto_id:id, p_sucursal_id:S.sucursal,
+                                        p_limite:5 })
   ]);
 
   S.cargando = false;
@@ -480,6 +524,7 @@ async function abrir(id){
   S.prod = perfil.data;
   S.puedeAprobar = !!perfil.data.puede_aprobar;
   S.semanas = semanas.error ? [] : (semanas.data || []);
+  S.conteos = conteos.error ? [] : (conteos.data || []);
   pintar();
   // El campo queda listo para el siguiente escaneo sin tocar nada.
   caja.select();
@@ -504,8 +549,8 @@ function pintarInicio(){
   const n = S.pendientes.length;
   const bandeja = n ? `
     <div class="pend">
-      <div class="titulin">${n === 1 ? 'Un ajuste espera aprobación'
-                                     : n + ' ajustes esperan aprobación'}</div>
+      <div class="titulin">${n === 1 ? 'Un conteo espera aprobación'
+                                     : n + ' conteos esperan aprobación'}</div>
       ${S.pendientes.map(a => `
         <button class="pend-fila" style="width:100%;text-align:left"
                 data-abrir="${a.producto_id}">
@@ -578,20 +623,26 @@ function pintarFicha(){
   if (Number(p.apartado) > 0)
     chips.push(`<span class="chip alerta">${cant(p.apartado)} apartado para pedidos</span>`);
 
-  /* ---- existencia por ubicacion ---- */
+  /* ---- existencia: el total y cada lugar, en cifras grandes ---- */
   const lugares = p.ubicaciones || [];
-  const tope = Math.max(1, ...lugares.map(u => Number(u.cantidad) || 0));
-  const filasLugar = lugares.map(u => {
-    const n = Number(u.cantidad) || 0;
-    const ancho = Math.round(n / tope * 100);
-    return `<div class="lugar ${n === 0 ? 'cero' : ''}">
-      <span class="lugar-nom">${escapar(u.nombre)}</span>
-      <span class="lugar-barra"><span style="width:${ancho}%"></span></span>
-      <span class="lugar-n">${cant(n)}</span>
-    </div>`;
-  }).join('');
+  const tiles = [
+    `<div class="tile fuerte ${p.stock_bajo ? 'bajo' : ''}">
+       <b>${cant(p.existencia)}</b><small>Existencia</small></div>`,
+    ...lugares.map(u => {
+      const n = Number(u.cantidad) || 0;
+      return `<div class="tile ${n === 0 ? 'vacio' : ''}">
+        <b>${cant(n)}</b><small>${escapar(u.nombre)}</small></div>`;
+    })
+  ].join('');
 
-  // La regla se explica una vez, abajo, en vez de repetirla recortada en la fila.
+  const pie = [
+    Number(p.apartado) > 0 ? `Apartado <b>${cant(p.apartado)}</b>` : '',
+    `Mínimo <b>${cant(p.stock_minimo)}</b>`,
+    p.stock_maximo ? `Máximo <b>${cant(p.stock_maximo)}</b>` : '',
+    ve ? `Costo <b>${money(p.costo_promedio)}</b>` : ''
+  ].filter(Boolean).join(' · ');
+
+  // La regla se explica una vez, abajo, en vez de repetirla en cada cifra.
   const cual = lugares.find(u => u.predeterminada);
   const notaLugar = cual && lugares.length > 1
     ? `<div class="lugar-pie">Lo que entra sin asignarle lugar se cuenta en
@@ -648,10 +699,40 @@ function pintarFicha(){
     `<div class="dato"><small>Impuesto</small><b>${(Number(p.tasa_impuesto)*100).toLocaleString('es-HN',{maximumFractionDigits:2})}%</b></div>`
   ].filter(Boolean).join('');
 
+  /* ---- los ultimos conteos de este producto ----
+     Sin esto nadie sabe si lo que esta mirando se reviso ayer o hace tres
+     meses, y se vuelve a contar lo mismo. */
+  const ESTADO = { pendiente:['Espera', 'espera'], aprobado:['Aplicado', ''],
+                   rechazado:['Rechazado', 'no'], contado:['En la hoja', 'espera'],
+                   aplicado:['Aplicado', ''], cancelado:['Cancelado', 'no'] };
+  const bloqueConteos = S.conteos.length ? `
+    <div class="ficha">
+      <div class="titulin">Últimos conteos</div>
+      ${S.conteos.map(c => {
+        const [et, cl] = ESTADO[c.estado] || [c.estado, ''];
+        const dif = c.diferencia;
+        const hayDif = dif !== null && dif !== undefined;
+        return `<div class="cnt">
+          <div class="cnt-txt">
+            <b>${c.origen === 'hoja' ? 'Hoja ' + escapar(c.referencia)
+                                     : escapar(c.ubicacion || 'Sucursal')}</b>
+            <small>${c.origen === 'lugar'
+                ? `<span class="nowrap">${escapar(c.referencia)}</span> · ` : ''
+              }${escapar(c.quien)} · ${cuando(c.cuando)}${c.lote ? ' · lote ' + escapar(c.lote) : ''}</small>
+          </div>
+          <div class="cnt-fin">
+            <b class="${hayDif ? (Number(dif) > 0 ? 'mas' : Number(dif) < 0 ? 'menos' : '') : ''}"
+               >${hayDif ? conSigno(dif) : cant(c.contado)}</b>
+            <small class="${cl}">${escapar(et)}</small>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
   const abierto = p.conteo_abierto;
   const textoConteo = abierto
-    ? `Agregar al conteo ${abierto.numero}`
-    : 'Generar conteo';
+    ? `Agregar a la hoja ${abierto.numero}`
+    : 'Hoja de conteo';
 
   /* Lo que este producto tiene esperando aprobacion. Va arriba del todo:
      sin esto dos personas piden el mismo ajuste y la segunda solo se entera
@@ -659,8 +740,8 @@ function pintarFicha(){
   const pend = p.ajustes_pendientes || [];
   const bloquePend = pend.length ? `
     <div class="pend">
-      <div class="titulin">${pend.length === 1 ? 'Ajuste esperando aprobación'
-                                               : 'Ajustes esperando aprobación'}</div>
+      <div class="titulin">${pend.length === 1 ? 'Conteo esperando aprobación'
+                                               : 'Conteos esperando aprobación'}</div>
       ${pend.map(a => `
         <div class="pend-fila">
           <div class="pend-txt">
@@ -694,21 +775,25 @@ function pintarFicha(){
     </div>
 
     <div class="ficha">
-      <div class="titulin">Existencia en ${escapar(p.sucursal)}</div>
-      <div class="exi">
-        <div class="exi-total ${p.stock_bajo ? 'bajo' : ''}">
-          <b>${cant(p.existencia)}</b>
-          <small>${escapar(p.unidad)} en total</small>
-        </div>
-        <div class="lugares">${filasLugar || '<div class="lugar cero"><span class="lugar-nom">Sin ubicaciones configuradas</span></div>'}</div>
+      <div class="tarjeta-enc">
+        <div class="titulin">Inventario</div>
+        <button class="enlace" id="btn-editar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+          Editar
+        </button>
       </div>
+      <div class="tiles n${Math.min(lugares.length + 1, 6)}">${tiles}</div>
+      ${pie ? `<div class="tile-pie">${pie}</div>` : ''}
       ${notaLugar}
       ${otras ? `<div class="titulin" style="margin-top:16px">En otras sucursales</div>
-                 <div class="lugares">${otras}</div>` : ''}
+                 <div>${otras}</div>` : ''}
     </div>
 
+    ${bloqueConteos}
+
     <div class="acciones-ficha">
-      <button class="btn secundario" id="btn-editar">Editar inventario</button>
       <button class="btn secundario" id="btn-mover">Mover de lugar</button>
       <button class="btn secundario" id="btn-conteo">${escapar(textoConteo)}</button>
     </div>
@@ -771,6 +856,19 @@ function semanaCorta(iso){
   const [a, m, d] = String(iso).slice(0,10).split('-').map(Number);
   return `${d} ${MESES[m-1]}`;
 }
+/* "ayer 3:40 p. m." pesa menos que una fecha completa cuando lo que importa
+   es si fue hace poco. Mas alla de una semana si va la fecha. */
+function cuando(v){
+  if (!v) return '—';
+  const d = new Date(v);
+  const dias = Math.floor((Date.now() - d.getTime()) / 86400000);
+  const hora = d.toLocaleTimeString('es-HN', { hour:'numeric', minute:'2-digit' });
+  if (dias <= 0) return 'hoy ' + hora;
+  if (dias === 1) return 'ayer ' + hora;
+  if (dias < 7)   return 'hace ' + dias + ' días';
+  return fecha(v);
+}
+
 function fecha(v){
   if (!v) return '—';
   const [a, m, d] = String(v).slice(0,10).split('-').map(Number);
@@ -823,7 +921,7 @@ async function hojaEditar(loteElegido){
     return `<div class="edit-fila" data-ub="${u.ubicacion_id}" data-sis="${n}">
       <div class="edit-nom">
         <b>${escapar(u.ubicacion)}</b>
-        <small>${t ? 'ya tiene un ajuste esperando' : 'el sistema dice ' + cant(n)}</small>
+        <small>${t ? 'ya tiene un conteo esperando' : 'el sistema dice ' + cant(n)}</small>
       </div>
       <span class="edit-dif"></span>
       <input inputmode="decimal" value="${cant(n)}" ${t ? 'disabled' : ''}
@@ -949,7 +1047,7 @@ async function aprobarAjuste(id){
       <b>${cant(data.queda_en)}</b>. La existencia total del producto es
       ahora <b>${cant(data.existencia_total)}</b>.</div>
     ${data.valor !== null && data.valor !== undefined
-      ? `<div class="aviso ojo">El ajuste vale ${money(data.valor)} al costo promedio.</div>` : ''}
+      ? `<div class="aviso ojo">La diferencia vale ${money(data.valor)} al costo promedio.</div>` : ''}
     <button class="btn principal-b" style="width:100%" id="ap-ok">Entendido</button>`;
   ver('#velo');
   $('#ap-ok').onclick = cerrarHoja;
@@ -957,7 +1055,7 @@ async function aprobarAjuste(id){
 
 function hojaRechazar(id){
   $('#hoja').innerHTML = `
-    <h2>Rechazar el ajuste</h2>
+    <h2>Rechazar el conteo</h2>
     <p class="sub">El inventario se queda como está. Quien lo pidió verá el
       motivo.</p>
     <div class="campo-g">
@@ -1089,13 +1187,13 @@ function hojaConteo(){
   const abierto = p.conteo_abierto;
 
   $('#hoja').innerHTML = `
-    <h2>${abierto ? 'Agregar al conteo' : 'Generar un conteo'}</h2>
+    <h2>${abierto ? 'Agregar a la hoja' : 'Abrir una hoja de conteo'}</h2>
     <p class="sub">${escapar(p.nombre)}</p>
     ${abierto
-      ? `<div class="aviso ojo">Ya hay un conteo abierto en esta sucursal
-          (<b>${escapar(abierto.numero)}</b>). Este producto se agrega a ese:
-          dos conteos abiertos a la vez se pisan el ajuste.</div>`
-      : `<div class="aviso bien">Se abre un conteo nuevo que contiene
+      ? `<div class="aviso ojo">Ya hay una hoja de conteo abierta en esta sucursal
+          (<b>${escapar(abierto.numero)}</b>). Este producto se agrega a esa:
+          dos hojas abiertas a la vez se pisan el ajuste.</div>`
+      : `<div class="aviso bien">Se abre una hoja nueva que contiene
           <b>solo los productos que usted agregue</b>. No hay que contar la
           categoría entera ni todo el proveedor.</div>`}
     <div class="aviso ojo">El sistema dice <b>${cant(p.existencia)} ${escapar(p.unidad)}</b>.
@@ -1104,7 +1202,7 @@ function hojaConteo(){
     <div class="aviso malo oculto" id="ct-error"></div>
     <div class="acciones">
       <button class="btn secundario" id="ct-no">Cancelar</button>
-      <button class="btn principal-b" id="ct-si">${abierto ? 'Agregar' : 'Generar conteo'}</button>
+      <button class="btn principal-b" id="ct-si">${abierto ? 'Agregar' : 'Abrir la hoja'}</button>
     </div>`;
   ver('#velo');
 
@@ -1138,12 +1236,12 @@ function hojaConteo(){
       <h2>${escapar(data.numero)}</h2>
       <p class="sub">${escapar(data.producto)}. ${escapar(detalle)}</p>
       ${data.conteo_nuevo
-        ? '<div class="aviso bien">Conteo nuevo. Puede seguir agregando productos desde esta pantalla y contarlos todos juntos.</div>'
+        ? '<div class="aviso bien">Hoja nueva. Puede seguir agregando productos desde esta pantalla y contarlos todos juntos.</div>'
         : ''}
       <div class="acciones">
         <button class="btn secundario" id="cf-no">Seguir consultando</button>
         <a class="btn principal-b" href="conteo.html"
-           style="display:grid;place-items:center">Ir al conteo</a>
+           style="display:grid;place-items:center">Ir a la hoja</a>
       </div>`;
     $('#cf-no').onclick = async () => { cerrarHoja(); await recargarFicha(); };
   };

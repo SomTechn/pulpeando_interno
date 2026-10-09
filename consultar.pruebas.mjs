@@ -80,6 +80,22 @@ const BANDEJA = [{
   solicitado_por:'Ana', solicitado_en:dia(0)+'T14:00:00Z',
   resuelto_por:null, resuelto_en:null, nota:null, aplicado:null }];
 
+const HISTORIAL = [
+  { origen:'lugar', referencia:'AJ-S01-000003', estado:'pendiente',
+    ubicacion:'Piso de ventas', lote:null, sistema:18, contado:14, diferencia:-4,
+    quien:'Ana', cuando:new Date(Date.now()-2*3600000).toISOString(), nota:null },
+  { origen:'hoja', referencia:'C-S01-000007', estado:'aplicado',
+    ubicacion:null, lote:'L-ENE', sistema:30, contado:30, diferencia:0,
+    quien:'Somar', cuando:new Date(Date.now()-26*3600000).toISOString(), nota:null },
+  { origen:'lugar', referencia:'AJ-S01-000002', estado:'rechazado',
+    ubicacion:'Bodega', lote:null, sistema:30, contado:0, diferencia:-30,
+    quien:'Kevin', cuando:new Date(Date.now()-4*86400000).toISOString(),
+    nota:'Volver a contar' },
+  { origen:'lugar', referencia:'AJ-S01-000001', estado:'aprobado',
+    ubicacion:'Refrigerador', lote:'L-FEB', sistema:12, contado:15, diferencia:3,
+    quien:'Ana', cuando:new Date(Date.now()-20*86400000).toISOString(), nota:null }
+];
+
 const POR_LOTE = [
   { ubicacion_id:'u1', ubicacion:'Piso de ventas', es_predeterminada:true, orden:10, cantidad:18 },
   { ubicacion_id:'u2', ubicacion:'Refrigerador', es_predeterminada:false, orden:20, cantidad:12 },
@@ -169,6 +185,7 @@ const base = (rol = 'gerente', nivel = 3, extra = {}) => ({
                                  ya_estaba:false, lineas_producto:4,
                                  producto:'Leche entera 1 L' }, error:null },
     fn_ajustes:{ data:[], error:null },
+    fn_conteos_del_producto:{ data:[], error:null },
     fn_existencia_ubicacion_lote:{ data:POR_LOTE, error:null },
     fn_solicitar_ajuste: a => ({ data:{
       ajuste_id:'ajN', numero:'AJ-S01-000009',
@@ -282,15 +299,18 @@ console.log('\n=== LA FICHA ===');
   chk('el nombre', /Leche entera 1 L/.test(t));
   chk('el precio', /L 28\.00/.test(t));
   chk('el código de barras', /7421001234567/.test(t));
-  chk('la existencia total', /60/.test(d.querySelector('.exi-total b').textContent));
-  chk('sin decimales de relleno', d.querySelector('.exi-total b').textContent === '60');
+  chk('la existencia total', /60/.test(d.querySelector('.tile.fuerte b').textContent));
+  chk('sin decimales de relleno', d.querySelector('.tile.fuerte b').textContent === '60');
 
-  const lug = [...d.querySelectorAll('.lugar-n')].map(e => Number(e.textContent));
-  chk('las tres ubicaciones', d.querySelectorAll('.lugares .lugar').length >= 3);
+  const lug = [...d.querySelectorAll('.tile:not(.fuerte) b')].map(e => Number(e.textContent));
+  chk('las tres ubicaciones', d.querySelectorAll('.tile:not(.fuerte)').length === 3);
   chk('el desglose suma el total', lug[0] + lug[1] + lug[2] === 60);
+  chk('cada cifra lleva el nombre de su lugar',
+      [...d.querySelectorAll('.tile:not(.fuerte) small')].map(e => e.textContent).join(',')
+        === 'Piso de ventas,Refrigerador,Bodega');
   chk('dice dónde cae lo no asignado',
       /Piso de ventas/.test(d.querySelector('.lugar-pie').textContent));
-  chk('avisa lo apartado para pedidos', /6 apartado/.test(t));
+  chk('avisa lo apartado para pedidos', /Apartado/.test(t));
   chk('muestra la otra sucursal', /El Carmen/.test(t));
 }
 
@@ -305,7 +325,7 @@ console.log('\n=== PLATA: SOLO DE SUPERVISOR PARA ARRIBA ===');
   chk('ni margen', !/Margen/.test(t));
   chk('ni el valor del inventario', !/Valor del inventario/.test(t));
   chk('pero sí el precio de venta', /L 28\.00/.test(t));
-  chk('y sí la existencia', /60/.test(d.querySelector('.exi-total b').textContent));
+  chk('y sí la existencia', /60/.test(d.querySelector('.tile.fuerte b').textContent));
   chk('y sí los vencimientos', /L-VIEJO/.test(t));
 }
 {
@@ -473,8 +493,8 @@ console.log('\n=== GENERAR CONTEO DESDE EL PRODUCTO ===');
   const { d, p } = await montar(estado);
   await p.abrir('p1');
   await esperar(120);
-  chk('sin conteo abierto el botón dice generar',
-      /Generar conteo/.test(d.querySelector('#btn-conteo').textContent));
+  chk('sin hoja abierta el botón ofrece abrirla',
+      /Hoja de conteo/.test(d.querySelector('#btn-conteo').textContent));
   p.hojaConteo();
   await esperar();
   chk('explica que sólo lleva lo que se agregue',
@@ -503,16 +523,16 @@ console.log('\n=== GENERAR CONTEO DESDE EL PRODUCTO ===');
   const { d, p } = await montar(estado);
   await p.abrir('p1');
   await esperar(120);
-  chk('con un conteo abierto el botón nombra ese conteo',
+  chk('con una hoja abierta el botón la nombra',
       /C-S01-000001/.test(d.querySelector('#btn-conteo').textContent));
   p.hojaConteo();
   await esperar();
-  chk('avisa que se suma al que ya está abierto',
-      /ya hay un conteo abierto/i.test(d.querySelector('#hoja').textContent));
+  chk('avisa que se suma a la que ya está abierta',
+      /ya hay una hoja de conteo abierta/i.test(d.querySelector('#hoja').textContent));
   d.querySelector('#ct-si').click();
   await esperar(140);
   const ag = estado.llamadas.find(l => l.fn === 'fn_agregar_a_conteo');
-  chk('manda el conteo abierto', ag.args.p_conteo_id === 'c1');
+  chk('manda la hoja abierta', ag.args.p_conteo_id === 'c1');
   chk('si ya estaba lo dice sin asustar',
       /Ya estaba en el conteo/.test(d.querySelector('#hoja').textContent));
 }
@@ -547,7 +567,7 @@ console.log('\n=== PRODUCTOS RAROS ===');
   chk('sin lotes no dibuja la sección de vencimientos',
       !/VENCIMIENTOS/.test(d.querySelector('#cuerpo').textContent));
   chk('pero la existencia sigue estando',
-      d.querySelector('.exi-total b').textContent === '60');
+      d.querySelector('.tile.fuerte b').textContent === '60');
 }
 {
   const estado = base();
@@ -562,7 +582,7 @@ console.log('\n=== PRODUCTOS RAROS ===');
   chk('marca el producto inactivo', /Inactivo/.test(d.querySelector('.chips').textContent));
   chk('marca que está bajo el mínimo', /Bajo el mínimo/.test(d.querySelector('.chips').textContent));
   chk('y pinta el total en alerta',
-      d.querySelector('.exi-total').classList.contains('bajo'));
+      d.querySelector('.tile.fuerte').classList.contains('bajo'));
 }
 {
   const estado = base();
@@ -576,7 +596,7 @@ console.log('\n=== PRODUCTOS RAROS ===');
   await p.abrir('p1');
   await esperar(120);
   chk('media libra se lee como 0.5, no 0.500',
-      d.querySelector('.exi-total b').textContent === '0.5');
+      d.querySelector('.tile.fuerte b').textContent === '0.5');
 }
 {
   const estado = base();
@@ -592,6 +612,87 @@ console.log('\n=== PRODUCTOS RAROS ===');
   chk('y avisa por qué', /no es de su negocio/.test(d.querySelector('#hoja').textContent));
 }
 
+console.log('\n=== LOS ÚLTIMOS CONTEOS DEL PRODUCTO ===');
+{
+  const estado = base();
+  const { d, p, estado:e } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  chk('pide los últimos cinco',
+      e.llamadas.find(l => l.fn === 'fn_conteos_del_producto').args.p_limite === 5);
+  chk('sin conteos no pone la tarjeta vacía',
+      !/Últimos conteos/.test(d.querySelector('#cuerpo').textContent));
+}
+{
+  const estado = base();
+  estado.rpc.fn_conteos_del_producto = { data:HISTORIAL, error:null };
+  const { d, p } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  chk('pinta la tarjeta', /Últimos conteos/.test(d.querySelector('#cuerpo').textContent));
+  chk('una fila por conteo', d.querySelectorAll('.cnt').length === 4);
+  chk('el de un lugar dice el lugar',
+      d.querySelectorAll('.cnt-txt b')[0].textContent.trim() === 'Piso de ventas');
+  chk('el de una hoja dice que es hoja',
+      /^Hoja C-S01-000007/.test(d.querySelectorAll('.cnt-txt b')[1].textContent.trim()));
+  chk('con quién y cuándo',
+      /Ana · hoy/.test(d.querySelectorAll('.cnt-txt small')[0].textContent));
+  chk('fechas viejas con fecha completa',
+      /hace 4 días/.test(d.querySelectorAll('.cnt-txt small')[2].textContent));
+  chk('la diferencia con signo',
+      [...d.querySelectorAll('.cnt-fin b')].map(e => e.textContent).join(',') === '−4,0,−30,+3');
+  chk('el pendiente dice que espera',
+      d.querySelectorAll('.cnt-fin small')[0].textContent === 'Espera');
+  chk('el rechazado se ve rechazado',
+      d.querySelectorAll('.cnt-fin small')[2].textContent === 'Rechazado' &&
+      d.querySelectorAll('.cnt-fin small')[2].classList.contains('no'));
+  chk('el aprobado dice aplicado',
+      d.querySelectorAll('.cnt-fin small')[3].textContent === 'Aplicado');
+  chk('la baja en rojo y la alta en verde',
+      d.querySelectorAll('.cnt-fin b')[0].classList.contains('menos') &&
+      d.querySelectorAll('.cnt-fin b')[3].classList.contains('mas'));
+}
+{
+  // La auxiliar no ve la diferencia de lo ya resuelto: el servidor la manda
+  // en null y la pantalla tiene que poner lo contado, no un hueco.
+  const estado = base('auxiliar', 1);
+  estado.rpc.fn_conteos_del_producto = { data:HISTORIAL.map(h =>
+    h.estado === 'pendiente' ? h : { ...h, sistema:null, diferencia:null }), error:null };
+  const { d, p } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  chk('sin diferencia muestra lo contado',
+      [...d.querySelectorAll('.cnt-fin b')].map(e => e.textContent).join(',') === '−4,30,0,15');
+  chk('y sin color de alarma',
+      !d.querySelectorAll('.cnt-fin b')[1].className.trim());
+}
+
+console.log('\n=== LA TARJETA DE INVENTARIO ===');
+{
+  const estado = base();
+  const { d, p } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  chk('Editar vive dentro de la tarjeta de inventario',
+      d.querySelector('#btn-editar').closest('.ficha')
+        .querySelector('.tile.fuerte') !== null);
+  chk('ya no está en la fila de botones',
+      !d.querySelector('.acciones-ficha #btn-editar'));
+  chk('cuatro cifras: total y tres lugares', d.querySelectorAll('.tile').length === 4);
+  chk('el pie dice el mínimo', /Mínimo/.test(d.querySelector('.tile-pie').textContent));
+  chk('y lo apartado', /Apartado/.test(d.querySelector('.tile-pie').textContent));
+  chk('el gerente ve el costo ahí mismo',
+      /Costo/.test(d.querySelector('.tile-pie').textContent));
+}
+{
+  const estado = base('auxiliar', 1);
+  const { d, p } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  chk('la auxiliar no ve el costo en el pie',
+      !/Costo/.test(d.querySelector('.tile-pie').textContent));
+}
+
 console.log('\n=== LA BANDEJA DE APROBACIÓN EN LA PORTADA ===');
 {
   const estado = base();
@@ -605,7 +706,7 @@ console.log('\n=== LA BANDEJA DE APROBACIÓN EN LA PORTADA ===');
   chk('pide solo los pendientes',
       e.llamadas.find(l => l.fn === 'fn_ajustes').args.p_estado === 'pendiente');
   chk('muestra la bandeja', !!d.querySelector('.pend'));
-  chk('en singular con uno solo', /Un ajuste espera/.test(d.querySelector('.pend').textContent));
+  chk('en singular con uno solo', /Un conteo espera/.test(d.querySelector('.pend').textContent));
   chk('dice de cuánto a cuánto', /de 18 a 14/.test(d.querySelector('.pend').textContent));
   chk('y la diferencia con signo', d.querySelector('.pend-dif').textContent === '−4');
   chk('el gerente puede tocar para revisar',
@@ -712,9 +813,9 @@ console.log('\n=== EDITAR INVENTARIO ===');
   d.querySelector('#btn-editar').click();
   await esperar(150);
   const primera = d.querySelectorAll('.edit-fila')[0];
-  chk('la fila con ajuste pendiente no se puede escribir',
+  chk('la fila con conteo pendiente no se puede escribir',
       primera.querySelector('input').disabled === true);
-  chk('y lo dice', /ya tiene un ajuste esperando/.test(primera.textContent));
+  chk('y lo dice', /ya tiene un conteo esperando/.test(primera.textContent));
   chk('las otras sí',
       d.querySelectorAll('.edit-fila')[1].querySelector('input').disabled === false);
 }
