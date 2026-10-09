@@ -312,6 +312,15 @@ console.log('\n=== VACÍO Y ERROR ===');
       !/P0001/.test(d.querySelector('#cuerpo').textContent));
 }
 
+{
+  const estado = base();
+  estado.rpc.fn_inventario_por_fecha = { data:null, error:{ message:
+    'Could not find the function public.fn_inventario_por_fecha(p_buscar, p_desde) in the schema cache' } };
+  const { d } = await montar(estado);
+  const t = d.querySelector('#cuerpo').textContent;
+  chk('si falta la migracion lo dice en español', /Ejecute la migración 025/.test(t) && !/Could not/.test(t));
+}
+
 console.log('\n=== KARDEX DE UN PRODUCTO ===');
 {
   const { d, estado:e } = await montar(base());

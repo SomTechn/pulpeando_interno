@@ -274,6 +274,10 @@ function limpiarError(e){
     .replace(/^(?:[0-9A-Z]{5}|error|Error|ERROR):\s*/, '');
   if (/JWT|token/i.test(m)) return 'La sesión venció. Vuelva a entrar.';
   if (/Failed to fetch|NetworkError/i.test(m)) return 'Sin conexión con el servidor';
+  // PostgREST responde en ingles cuando la funcion no existe en la base:
+  // casi siempre es que falta correr la migracion de este modulo.
+  if (/Could not find the function|schema cache/i.test(m))
+    return 'Falta instalar esta función en la base de datos. Ejecute la migración 025_inventario_por_fecha.sql en el SQL Editor de Supabase.';
   return m;
 }
 
