@@ -332,6 +332,21 @@ avanza de uno en uno al facturar, un rango usado no se edita ni se borra, los
 rangos del mismo prefijo no se enciman y el CAI y el prefijo se validan. El
 gerente no puede cambiar el plan ni el estado de la cuenta.
 
+## Fiado en la caja
+
+- **Fiado** siempre está entre las formas de pago. Sin cliente, tocarlo abre
+  la lista para elegir a quién; si no se le puede fiar, dice por qué.
+- **Paga una parte y debe el resto:** al elegir Fiado la caja pregunta
+  «¿Paga algo ahora?». Lo que paga entra en efectivo al turno y el resto queda
+  fiado. El límite se revisa contra lo fiado, no contra el total.
+- **La deuda a la vista:** al elegir un cliente que debe se ve cuánto, cuándo
+  paga y si está atrasado o le toca hoy, con un botón **Cobrar** para abonar
+  ahí mismo (efectivo con cambio, tarjeta o transferencia).
+- **Días de pago** (supervisor, en Catálogos › Clientes): por semana (los
+  viernes) o por mes (15 y 30, o cualquier día). En Fiado se filtran
+  **Les toca hoy** y **Atrasados**: pasó su día de pago con deuda de antes y
+  no abonó desde entonces. (Migración 031.)
+
 ## Pendiente
 
 - Traslados de mercadería entre sucursales

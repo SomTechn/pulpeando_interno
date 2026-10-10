@@ -199,6 +199,8 @@
 
       <div class="filtros" id="filtros">
         <button class="fl activo" data-f="todos">Todos</button>
+        <button class="fl" data-f="hoy">Les toca hoy</button>
+        <button class="fl" data-f="atrasado">Atrasados</button>
         <button class="fl" data-f="viejo">Más de 30 días</button>
         <button class="fl" data-f="tope">En su tope</button>
         <button class="fl" data-f="monto">Deben más</button>
@@ -413,7 +415,19 @@ async function cargar(){
   pintar();
 }
 
+const MESES_F = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const DIAS_F  = ['dom','lun','mar','mié','jue','vie','sáb'];
+function fechaDia(v){
+  const [a, m, d] = String(v).slice(0,10).split('-').map(Number);
+  return `${DIAS_F[new Date(a, m-1, d).getDay()]} ${d} ${MESES_F[m-1]}`;
+}
+
 function pintarResumen(r){
+  // Con la 031: cuántos atrasados y a cuántos les toca hoy, en los filtros
+  const fl = (f, n) => { const b = document.querySelector(`#filtros [data-f="${f}"]`);
+    if (b) b.textContent = b.textContent.replace(/ \(\d+\)$/, '') + (n ? ` (${n})` : ''); };
+  fl('hoy', r.les_toca_hoy || 0);
+  fl('atrasado', r.atrasados || 0);
   $('#r-total').textContent    = money(r.total || 0);
   $('#r-clientes').textContent = r.clientes || 0;
   $('#r-tope').textContent     = r.al_tope || 0;
@@ -432,6 +446,8 @@ function visibles(){
 
   if (S.filtro === 'viejo') l = l.filter(f => (f.dias ?? 0) > 30);
   if (S.filtro === 'tope')  l = l.filter(f => f.tope_alcanzado);
+  if (S.filtro === 'hoy')   l = l.filter(f => f.le_toca_hoy);
+  if (S.filtro === 'atrasado') l = l.filter(f => f.atrasado);
 
   l = [...l];
   if (S.filtro === 'monto')      l.sort((a,b) => Number(b.debe) - Number(a.debe));
@@ -455,7 +471,9 @@ function pintar(){
 
   $('#lista').innerHTML = l.map(f => {
     const dias = f.dias ?? null;
-    const marca = f.tope_alcanzado ? '<span class="insignia tope">En su tope</span>'
+    const marca = f.atrasado ? '<span class="insignia viejo">Atrasado</span>'
+      : f.le_toca_hoy ? '<span class="insignia tope">Le toca hoy</span>'
+      : f.tope_alcanzado ? '<span class="insignia tope">En su tope</span>'
       : (dias !== null && dias > 30) ? `<span class="insignia viejo">${dias} días</span>`
       : (dias !== null && dias > 0)  ? `<span class="insignia bien">${dias} día${dias===1?'':'s'}</span>`
       : '';
@@ -468,7 +486,9 @@ function pintar(){
         <span class="fila-ini">${escapar(iniciales(f.cliente))}</span>
         <span class="fila-txt">
           <b>${escapar(f.cliente)}</b>
-          <small>${escapar(f.telefono || 'sin teléfono')} · ${escapar(ultimo)}
+          <small>${escapar(f.telefono || 'sin teléfono')} · ${escapar(ultimo)}${
+            f.dias_pago_texto ? ' · paga ' + escapar(f.dias_pago_texto) +
+              (f.proximo_pago && !f.le_toca_hoy ? ' (próximo ' + fechaDia(f.proximo_pago) + ')' : '') : ''}
             · ${f.compras_credito} compra${f.compras_credito === 1 ? '' : 's'} al crédito</small>
         </span>
         <span class="fila-fin">

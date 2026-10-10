@@ -195,6 +195,23 @@
 .a-cobrar b{font-family:var(--num);font-size:28px;font-weight:700}
 .metodos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
 .metodos:has(#metodo-fiado:not(.oculto)){grid-template-columns:repeat(4,1fr)}
+.metodo.no-puede{opacity:.45;border-style:dashed}
+.abono-ahora{background:#FFF9EC;border:1px solid #F3E2BC;border-radius:var(--r-md);padding:12px 14px;
+  margin-bottom:14px}
+.abono-ahora label{display:block;font-size:12px;font-weight:800;color:#8A5A00;margin-bottom:6px}
+.abono-ahora input{width:100%;height:46px;border:1.5px solid #F3E2BC;border-radius:10px;padding:0 12px;
+  font-family:var(--num);font-size:19px;font-weight:700;text-align:right;outline:none;background:#fff}
+.abono-ahora input:focus{border-color:var(--ambar)}
+.abono-ahora small{display:block;font-size:12px;color:#8A5A00;margin-top:6px;line-height:1.4}
+.deuda{margin-top:8px;border-radius:var(--r-sm);padding:9px 11px;background:#FFF4E0;color:#6B4500;
+  font-size:12.5px;line-height:1.4;display:flex;align-items:center;gap:10px}
+.deuda.atrasado{background:#FFEDF1;color:#9F1239}
+.deuda div{flex:1;min-width:0}
+.deuda b{font-family:var(--num);font-size:14px}
+.deuda .etq{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;
+  padding:1px 7px;border-radius:999px;background:rgba(0,0,0,.08);margin-left:4px}
+.deuda button{flex:0 0 auto;height:34px;padding:0 12px;border-radius:9px;background:var(--tinta);color:#fff;
+  font-size:12.5px;font-weight:800}
 .metodo[data-m="credito"].activo{border-color:var(--ambar);background:#FFF4E0;color:#8A5A00}
 .metodo{padding:13px 6px;border-radius:var(--r-sm);border:1.5px solid var(--linea);
   font-size:12.5px;font-weight:700;color:var(--tenue);text-align:center}
@@ -422,6 +439,10 @@
             <span class="cl-txt" id="cl-txt">Cliente sin registrar</span>
             <span id="cl-flecha">›</span>
           </button>
+          <div class="deuda oculto" id="cl-deuda">
+            <div id="cl-deuda-txt"></div>
+            <button id="btn-cobrar-deuda">Cobrar</button>
+          </div>
         </div>
         <div class="lineas" id="lineas"></div>
         <div class="totales">
@@ -468,10 +489,15 @@
         <button class="metodo activo" data-m="efectivo">Efectivo</button>
         <button class="metodo" data-m="tarjeta">Tarjeta</button>
         <button class="metodo" data-m="transferencia">Transfer.</button>
-        <button class="metodo oculto" data-m="credito" id="metodo-fiado">Fiado</button>
+        <button class="metodo" data-m="credito" id="metodo-fiado">Fiado</button>
       </div>
       <button class="partir" id="btn-partir">+ Dividir el pago en dos formas</button>
       <div class="aviso ojo oculto" id="cobro-fiado"></div>
+      <div class="abono-ahora oculto" id="bloque-abono">
+        <label for="abono-ahora">¿Paga algo ahora? (efectivo)</label>
+        <input id="abono-ahora" inputmode="decimal" value="0.00">
+        <small id="abono-nota">Lo que no pague queda fiado.</small>
+      </div>
       <div id="bloque-efectivo">
         <div class="rotulo" id="rot-recibe">Recibe</div>
         <input class="recibido num" id="recibido" inputmode="decimal" value="0.00">
@@ -1530,13 +1556,14 @@ async function cerrarTurno(){
 }
 
 /* ================= cliente ================= */
-$('#btn-cliente').addEventListener('click', async () => {
+async function abrirClientes(){
   $('#cl-buscar').value = S.buscaCliente = '';
   ver('#velo-cliente');
   if (!S.clientesLeidos) await leerClientes();
   pintarClientes();
   $('#cl-buscar').focus();
-});
+}
+$('#btn-cliente').addEventListener('click', () => { S.fiarDespues = false; abrirClientes(); });
 
 async function leerClientes(){
   $('#cl-lista').innerHTML =
@@ -1598,20 +1625,65 @@ $('#cl-buscar').addEventListener('input', e => {
 $('#cl-lista').addEventListener('click', e => {
   const f = e.target.closest('.cl-fila'); if (!f) return;
   S.cliente = S.clientes.find(c => c.id === f.dataset.id) || null;
+  S.situacion = null;
   pintarCliente();
   ver('#velo-cliente', false);
+  cargarSituacion();
+  // Venía de tocar «Fiado» en el cobro: vuelve con el fiado elegido
+  if (S.fiarDespues){
+    S.fiarDespues = false;
+    $('#metodo-fiado').click();
+  }
 });
 $('#cl-quitar').addEventListener('click', () => {
-  S.cliente = null; pintarCliente(); ver('#velo-cliente', false);
+  S.cliente = null; S.situacion = null; S.fiarDespues = false;
+  pintarCliente(); ver('#velo-cliente', false);
 });
 $('#cl-cerrar').addEventListener('click', () => ver('#velo-cliente', false));
 $('#velo-cliente').addEventListener('click', e => {
   if (e.target.id === 'velo-cliente') ver('#velo-cliente', false);
 });
 
+/* Situacion del cliente: cuando paga, si le toca hoy o si va atrasado. Si la
+   migracion 031 no esta instalada no pasa nada: se ve solo el saldo. */
+async function cargarSituacion(){
+  const c = S.cliente;
+  if (!c || !S.enLinea) return;
+  const { data, error } = await sb.rpc('fn_situacion_cliente', { p_cliente_id:c.id });
+  if (error || S.cliente?.id !== c.id) return;
+  S.situacion = data;
+  c.saldo = data.debe;
+  pintarCliente();
+}
+
+const MESES_C = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const DIAS_C  = ['dom','lun','mar','mié','jue','vie','sáb'];
+function fechaCorta(v){
+  if (!v) return '';
+  const [a, m, d] = String(v).slice(0,10).split('-').map(Number);
+  return `${DIAS_C[new Date(a, m-1, d).getDay()]} ${d} ${MESES_C[m-1]}`;
+}
+
+function pintarDeuda(){
+  const c = S.cliente, z = $('#cl-deuda');
+  const debe = Number(c?.saldo) || 0;
+  ver('#cl-deuda', debe > 0);
+  if (!(debe > 0)) return;
+  const si = S.situacion;
+  const partes = [`Debe <b>${money(debe)}</b>`];
+  if (si?.atrasado) partes[0] += '<span class="etq">Atrasado</span>';
+  else if (si?.le_toca_hoy) partes[0] += '<span class="etq">Le toca hoy</span>';
+  if (si?.dias_pago_texto) partes.push('paga ' + escapar(si.dias_pago_texto) +
+    (si.proximo_pago && !si.le_toca_hoy ? ' · próximo ' + fechaCorta(si.proximo_pago) : ''));
+  z.classList.toggle('atrasado', !!si?.atrasado);
+  $('#cl-deuda-txt').innerHTML = partes.join('<br>');
+  ver('#btn-cobrar-deuda', S.enLinea);
+}
+
 function pintarCliente(){
   const b = $('#btn-cliente'), c = S.cliente;
   b.classList.remove('puesto', 'debe');
+  pintarDeuda();
   if (!c){
     $('#cl-ini').textContent = '+';
     $('#cl-txt').textContent = 'Cliente sin registrar';
@@ -1657,7 +1729,8 @@ function resto(total){
 $('#btn-cobrar').addEventListener('click', () => {
   if (!S.ticket.length) return;
   const t = totales();
-  S.recibido = 0; S.metodo = 'efectivo'; S.fiscal = false;
+  S.recibido = 0; S.metodo = 'efectivo'; S.fiscal = false; S.abono = 0; S.metodoTocado = null;
+  $('#abono-ahora').value = '0.00'; ver('#bloque-abono', false);
   S.partido = false; S.p1 = { metodo:'tarjeta', monto:0 };
   pintarPartes(t.total);
   $('#cobro-total').textContent = money(t.total);
@@ -1677,15 +1750,29 @@ $('#btn-cobrar').addEventListener('click', () => {
 /* El botón de fiado solo aparece cuando de verdad se puede fiar esta venta:
    con cliente, con límite, con cupo suficiente y con internet (el límite se
    verifica en el servidor, y sin conexión no hay cómo verificarlo). */
+/* El boton de Fiado se ve siempre: la cajera tiene que saber que existe.
+   Si esta venta no se puede fiar se ve apagado y, al tocarlo, explica por
+   que (o pide el cliente, si falta). */
+function aFiar(total){
+  const abono = S.metodo === 'credito' && !S.partido ? (S.abono || 0) : 0;
+  return dos(Math.max(total - abono, 0));
+}
+function puedeFiar(total){
+  const libre = fiadoDisponible();
+  return !!S.cliente && libre > 0 && libre >= aFiar(total) - 0.001 && S.enLinea;
+}
 function pintarFiado(total){
   const c = S.cliente, libre = fiadoDisponible();
-  const alcanza = libre >= total - 0.001;
-  const puede = !!c && libre > 0 && alcanza && S.enLinea;
+  const fiar = aFiar(total);
+  const alcanza = libre >= fiar - 0.001;
+  const puede = puedeFiar(total);
 
-  ver('#metodo-fiado', puede);
+  ver('#metodo-fiado', true);
+  $('#metodo-fiado').classList.toggle('no-puede', !puede);
 
   let nota = '';
-  if (!c)                        nota = '';
+  if (!c)                        nota = S.metodoTocado === 'credito'
+                                   ? 'Para fiar, elija primero el cliente.' : '';
   else if (!S.enLinea)           nota = 'Sin internet no se puede fiar: el límite de ' +
                                         c.nombre + ' se verifica en el servidor.';
   else if (libre <= 0 && (Number(c.limite_credito)||0) <= 0)
@@ -1694,7 +1781,8 @@ function pintarFiado(total){
   else if (libre <= 0)           nota = c.nombre + ' ya llegó a su límite. Debe ' +
                                         money(c.saldo) + ' y tiene que abonar antes de fiar.';
   else if (!alcanza)             nota = c.nombre + ' solo puede fiar ' + money(libre) +
-                                        ' y esta venta es de ' + money(total) + '.';
+                                        ' y quedaría debiendo ' + money(fiar) +
+                                        '. Que pague una parte ahora.';
   ver('#cobro-fiado', !!nota);
   if (nota) $('#cobro-fiado').textContent = nota;
 }
@@ -1711,7 +1799,7 @@ function pintarRapidos(total){
 
 function pintarPartes(total){
   ver('#partes', S.partido);
-  ver('#btn-partir', !S.partido);
+  ver('#btn-partir', !S.partido && S.metodo !== 'credito');
   $('#rot-recibe').textContent = S.partido ? 'Recibe en efectivo' : 'Recibe';
 
   if (!S.partido){
@@ -1742,10 +1830,19 @@ function pintarCambio(){
   const partidoMal = S.partido && (S.p1.monto <= 0 || S.p1.monto >= t.total);
 
   if (S.metodo === 'credito'){
-    c.classList.remove('falta');
-    c.querySelector('span').textContent = 'Queda fiado a ' + (S.cliente?.nombre || '');
-    $('#cambio').textContent = money(falta);
-    $('#confirmar-cobro').disabled = partidoMal;
+    const fiar = aFiar(falta);
+    const abonoMal = !S.partido && (S.abono < 0 || S.abono >= falta - 0.001);
+    c.classList.toggle('falta', abonoMal);
+    c.querySelector('span').textContent = abonoMal
+      ? 'Si paga todo, cobre en efectivo'
+      : 'Queda fiado a ' + (S.cliente?.nombre || '');
+    $('#cambio').textContent = money(fiar);
+    if (!S.partido)
+      $('#abono-nota').textContent = S.abono > 0
+        ? `Paga ${money(S.abono)} ahora y queda debiendo ${money(fiar)}.`
+        : 'Lo que no pague queda fiado.';
+    pintarFiado(falta);
+    $('#confirmar-cobro').disabled = partidoMal || abonoMal || !puedeFiar(falta);
     return;
   }
   if (S.metodo !== 'efectivo'){
@@ -1797,10 +1894,41 @@ $('#p1-monto').addEventListener('input', e => {
 });
 $('#metodos').addEventListener('click', e => {
   const b = e.target.closest('.metodo'); if (!b) return;
+  const t = totales();
+  if (b.dataset.m === 'credito'){
+    S.metodoTocado = 'credito';
+    // Sin cliente no hay a quien fiarle: se abre la lista encima del cobro
+    if (!S.cliente){
+      S.fiarDespues = true;
+      abrirClientes();
+      return;
+    }
+    // Con cliente pero sin cupo (o sin internet): se explica y no se cambia.
+    // Si solo le falta cupo, igual se deja elegir para que pague una parte.
+    const libre = fiadoDisponible();
+    if (!S.enLinea || libre <= 0){ pintarFiado(resto(t.total)); return; }
+  }
   S.metodo = b.dataset.m;
   document.querySelectorAll('.metodo').forEach(m => m.classList.toggle('activo', m === b));
+  const fiado = S.metodo === 'credito';
   ver('#bloque-efectivo', S.metodo === 'efectivo');
+  ver('#bloque-abono', fiado && !S.partido);
+  ver('#btn-partir', !S.partido && !fiado);
+  if (!fiado){ S.abono = 0; $('#abono-ahora').value = '0.00'; }
+  pintarFiado(resto(t.total));
   pintarCambio();
+  if (fiado && !S.partido){ $('#abono-ahora').focus(); $('#abono-ahora').select(); }
+});
+$('#abono-ahora').addEventListener('input', e => {
+  e.target.value = e.target.value.replace(/[^0-9.]/g, '');
+  S.abono = dos(parseFloat(e.target.value) || 0);
+  pintarCambio();
+});
+$('#abono-ahora').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const b = $('#confirmar-cobro');
+  if (!b.disabled) b.click();
 });
 $('#rapidos').addEventListener('click', e => {
   const b = e.target.closest('.rapido'); if (!b) return;
@@ -1838,8 +1966,15 @@ $('#confirmar-cobro').addEventListener('click', async () => {
   const pagos = [];
   if (S.partido && S.p1.monto > 0)
     pagos.push({ metodo:S.p1.metodo, monto:dos(S.p1.monto) });
-  pagos.push({ metodo:S.metodo, monto:falta,
-               recibido:S.metodo === 'efectivo' ? S.recibido : null });
+  // Fiado con abono: la parte que paga entra en efectivo al turno y el resto
+  // queda a deber. El servidor revisa el limite contra lo fiado, no el total.
+  if (S.metodo === 'credito' && !S.partido && S.abono > 0){
+    pagos.push({ metodo:'efectivo', monto:dos(S.abono), recibido:dos(S.abono) });
+    pagos.push({ metodo:'credito', monto:dos(falta - S.abono) });
+  } else {
+    pagos.push({ metodo:S.metodo, monto:falta,
+                 recibido:S.metodo === 'efectivo' ? S.recibido : null });
+  }
 
   const clienteId = S.cliente?.id || null;
 
@@ -1953,6 +2088,103 @@ $('#btn-terminar').addEventListener('click', async () => {
   bloquear();
   if (S.enLinea) await revisarCola();
 });
+
+/* ================= cobrar deuda (abono) =================
+   El cliente que viene a comprar y de paso paga lo que debe. El abono en
+   efectivo entra al turno de esta caja, igual que en la pantalla de Fiado. */
+$('#btn-cobrar-deuda').addEventListener('click', hojaAbono);
+
+function hojaAbono(){
+  const c = S.cliente; if (!c) return;
+  const debe = dos(Number(c.saldo) || 0);
+  let metodo = 'efectivo';
+  $('#hoja').innerHTML = `
+    <h2>Cobrar deuda</h2>
+    <p class="sub">${escapar(c.nombre)} debe <b class="num">${money(debe)}</b>${
+      S.situacion?.atrasado ? ' · <b style="color:var(--rojo)">atrasado</b>' : ''}</p>
+    <div class="rotulo">¿Cuánto paga?</div>
+    <input class="recibido num" id="ab-monto" inputmode="decimal" value="${debe.toFixed(2)}">
+    <div class="rapidos" id="ab-rapidos">
+      <button class="rapido" data-v="${debe}">Todo</button>
+      ${[0.5].map(f => debe * f >= 1 ? `<button class="rapido" data-v="${dos(debe * f)}">La mitad</button>` : '').join('')}
+    </div>
+    <div class="metodos" id="ab-metodos" style="grid-template-columns:repeat(3,1fr)">
+      <button class="metodo activo" data-m="efectivo">Efectivo</button>
+      <button class="metodo" data-m="tarjeta">Tarjeta</button>
+      <button class="metodo" data-m="transferencia">Transfer.</button>
+    </div>
+    <div id="ab-bloque-efe">
+      <div class="rotulo">Recibe</div>
+      <input class="recibido num" id="ab-recibe" inputmode="decimal" value="${debe.toFixed(2)}">
+    </div>
+    <div class="cambio" id="ab-cambio-caja"><span>Cambio</span><b class="num" id="ab-cambio">${money(0)}</b></div>
+    <div class="aviso malo oculto" id="ab-error"></div>
+    <div class="acciones">
+      <button class="btn secundario" id="ab-no">Volver</button>
+      <button class="btn principal-b" id="ab-si">Registrar abono</button>
+    </div>`;
+  ver('#velo-hoja');
+  const monto = () => dos(parseFloat($('#ab-monto').value.replace(/[^0-9.]/g, '')) || 0);
+  const recibe = () => dos(parseFloat($('#ab-recibe').value.replace(/[^0-9.]/g, '')) || 0);
+  const pintarAb = () => {
+    const m = monto();
+    const mal = m <= 0 || m > debe + 0.001;
+    const dif = metodo === 'efectivo' ? dos(recibe() - m) : 0;
+    const cc = $('#ab-cambio-caja');
+    cc.classList.toggle('falta', mal || dif < 0);
+    cc.querySelector('span').textContent = mal ? (m > debe ? 'Más de lo que debe' : 'Ponga el monto')
+      : dif < 0 ? 'Falta' : metodo === 'efectivo' ? 'Cambio' : 'Queda debiendo';
+    $('#ab-cambio').textContent = money(mal ? 0 : metodo === 'efectivo' ? Math.abs(dif) : debe - m);
+    $('#ab-si').disabled = mal || dif < 0;
+  };
+  $('#ab-monto').addEventListener('input', () => {
+    if (metodo === 'efectivo' && recibe() < monto()) $('#ab-recibe').value = monto().toFixed(2);
+    pintarAb();
+  });
+  $('#ab-recibe').addEventListener('input', pintarAb);
+  $('#ab-rapidos').addEventListener('click', e => {
+    const b = e.target.closest('[data-v]'); if (!b) return;
+    $('#ab-monto').value = Number(b.dataset.v).toFixed(2);
+    $('#ab-recibe').value = Number(b.dataset.v).toFixed(2);
+    pintarAb();
+  });
+  $('#ab-metodos').addEventListener('click', e => {
+    const b = e.target.closest('.metodo'); if (!b) return;
+    metodo = b.dataset.m;
+    $('#ab-metodos').querySelectorAll('.metodo').forEach(x => x.classList.toggle('activo', x === b));
+    ver('#ab-bloque-efe', metodo === 'efectivo');
+    pintarAb();
+  });
+  $('#ab-no').onclick = () => ver('#velo-hoja', false);
+  $('#ab-si').onclick = async () => {
+    const b = $('#ab-si'), err = $('#ab-error');
+    const m = monto();
+    b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+    const { data, error } = await sb.rpc('fn_registrar_abono', {
+      p_cliente_id:c.id, p_monto:m, p_metodo:metodo, p_turno_id:S.turno,
+      p_referencia:null, p_notas:'Cobrado en caja' });
+    b.disabled = false; b.textContent = 'Registrar abono';
+    if (error){ err.textContent = limpiarError(error); ver('#ab-error'); return; }
+    c.saldo = Number(data.saldo_nuevo);
+    const i = S.clientes.findIndex(x => x.id === c.id);
+    if (i >= 0) S.clientes[i] = { ...S.clientes[i], saldo:c.saldo };
+    const cambio = metodo === 'efectivo' ? Math.max(dos(recibe() - m), 0) : 0;
+    $('#hoja').innerHTML = `<div class="listo">
+      <div class="marca-ok">✓</div>
+      <h2>Abono registrado</h2>
+      <p class="doc">${escapar(c.nombre)} pagó ${money(data.abonado)}</p>
+      ${cambio > 0 ? `<div class="entregar"><small>Entregar de cambio</small><b class="num">${money(cambio)}</b></div>` : ''}
+      <p class="sub">${data.queda_libre ? 'Ya no debe nada.' : 'Ahora debe ' + money(data.saldo_nuevo) + '.'}</p>
+      <button class="btn principal-b" style="width:100%" id="ab-ok">Seguir con la venta</button></div>`;
+    $('#ab-ok').onclick = () => ver('#velo-hoja', false);
+    S.situacion = null;
+    pintarCliente();
+    cargarSituacion();
+    if (S.ticket.length) pintar();
+  };
+  pintarAb();
+  $('#ab-monto').focus(); $('#ab-monto').select();
+}
 
 /* ================= sincronizar ================= */
 async function revisarCola(){

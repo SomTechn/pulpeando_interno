@@ -80,9 +80,12 @@ async function montar(estado){
       if (h === undefined) return { data:null, error:{ message:'sin simular: ' + fn } };
       return typeof h === 'function' ? h(args) : h;
     },
-    from: () => ({
-      select: () => ({ eq: () => ({ order: async () => ({ data:estado.catalogo, error:null }) }) })
-    })
+    from: t => {
+      const datos = () => (estado.tablas && estado.tablas[t]) || estado.catalogo;
+      const q = { select(){ return q; }, eq(){ return q; }, order(){ return q; }, limit(){ return q; },
+                  then(r, j){ return Promise.resolve({ data:datos(), error:null }).then(r, j); } };
+      return q;
+    }
   };
 
   const menu = await import(BASE + 'menu.js');
@@ -684,6 +687,160 @@ const VENTA_COMPLETA = { data:{ venta:{ id:'v-123', numero:'T-S01-00000004', doc
   await esperar(200);
   chk('sin internet no se ofrece imprimir (aún no hay número)',
       r.d.querySelector('#btn-imprimir').classList.contains('oculto'));
+}
+
+console.log('\n=== FIADO: PARTE AHORA Y PARTE DEBIENDO ===');
+const CLIENTES = () => [
+  { id:'k1', nombre:'Doña Rosa', telefono:'9999', saldo:300, limite_credito:1000, activo:true },
+  { id:'k2', nombre:'Don Pedro', telefono:'8888', saldo:0, limite_credito:0, activo:true } ];
+const SITUACION = { debe:300, limite:1000, disponible:700, dias_pago_texto:'los viernes',
+  proximo_pago:'2026-10-16', le_toca_hoy:false, atrasado:true };
+function conClientes(extra = {}){
+  const e = base({ ...extra });
+  e.tablas = { clientes:CLIENTES() };
+  // como el servidor: la situación es la del cliente pedido, con su saldo real
+  e.rpc.fn_situacion_cliente = a => {
+    const c = e.tablas.clientes.find(x => x.id === a.p_cliente_id) || { saldo:0, limite_credito:0 };
+    return { data:{ ...SITUACION, debe:Number(c.saldo), atrasado:c.saldo > 0 && SITUACION.atrasado }, error:null };
+  };
+  const abonar = e.rpc.fn_registrar_abono;
+  if (abonar) e.rpc.fn_registrar_abono = a => {
+    const c = e.tablas.clientes.find(x => x.id === a.p_cliente_id);
+    if (c) c.saldo = c.saldo - a.p_monto;
+    return abonar(a);
+  };
+  return e;
+}
+async function elegirCliente(d, id){
+  d.querySelector('#btn-cliente').click();
+  await esperar(80);
+  d.querySelector(`.cl-fila[data-id="${id}"]`).click();
+  await esperar(80);
+}
+{
+  const estado = conClientes();
+  const { w, d, C } = await montar(estado);
+  C.agregar('p1'); C.agregar('p1');   // 196
+  await esperar();
+  d.querySelector('#btn-cobrar').click();
+  await esperar();
+  const f = d.querySelector('#metodo-fiado');
+  chk('el fiado se ve aunque no haya cliente', !f.classList.contains('oculto'));
+  f.click();
+  await esperar(100);
+  chk('sin cliente, tocar Fiado abre la lista de clientes',
+      !d.querySelector('#velo-cliente').classList.contains('oculto'));
+  d.querySelector('.cl-fila[data-id="k1"]').click();
+  await esperar(120);
+  chk('al elegirlo vuelve al cobro con el fiado marcado',
+      d.querySelector('#velo-cliente').classList.contains('oculto') &&
+      d.querySelector('#metodo-fiado').classList.contains('activo') && C.S.metodo === 'credito');
+  chk('pregunta si paga algo ahora', !d.querySelector('#bloque-abono').classList.contains('oculto'));
+  chk('sin abono todo queda fiado', /196\.00/.test(d.querySelector('#cambio').textContent));
+
+  const a = d.querySelector('#abono-ahora');
+  a.value = '100'; a.dispatchEvent(new w.Event('input', { bubbles:true }));
+  chk('paga 100 y queda debiendo 96', /96\.00/.test(d.querySelector('#cambio').textContent) &&
+      /Paga L 100\.00 ahora y queda debiendo L 96\.00/.test(d.querySelector('#abono-nota').textContent));
+  d.querySelector('#confirmar-cobro').click();
+  await esperar(200);
+  const v = estado.llamadas.find(l => l.fn === 'fn_registrar_venta');
+  chk('manda efectivo y fiado', v && v.args.p_pagos.length === 2 &&
+      v.args.p_pagos[0].metodo === 'efectivo' && v.args.p_pagos[0].monto === 100 &&
+      v.args.p_pagos[1].metodo === 'credito' && v.args.p_pagos[1].monto === 96);
+  chk('a nombre del cliente', v && v.args.p_cliente_id === 'k1');
+}
+{
+  const estado = conClientes();
+  const { w, d, C } = await montar(estado);
+  await elegirCliente(d, 'k1');
+  C.agregar('p1');   // 98
+  await esperar();
+  d.querySelector('#btn-cobrar').click();
+  await esperar();
+  d.querySelector('#metodo-fiado').click();
+  await esperar();
+  const a = d.querySelector('#abono-ahora');
+  a.value = '98'; a.dispatchEvent(new w.Event('input', { bubbles:true }));
+  chk('si paga todo, no es fiado: no deja confirmar', d.querySelector('#confirmar-cobro').disabled &&
+      /cobre en efectivo/.test(d.querySelector('#cambio-caja').textContent));
+}
+{
+  const estado = conClientes();
+  const r = await montar(estado);
+  r.C.S.cliente = { id:'k9', nombre:'Doña Chepa', saldo:950, limite_credito:1000 };
+  r.C.agregar('p1');   // 98, solo puede fiar 50
+  await esperar();
+  r.d.querySelector('#btn-cobrar').click();
+  await esperar();
+  r.d.querySelector('#metodo-fiado').click();
+  await esperar();
+  chk('sin cupo para todo, igual deja elegir fiado', r.C.S.metodo === 'credito');
+  chk('pero no deja confirmar', r.d.querySelector('#confirmar-cobro').disabled &&
+      /Que pague una parte ahora/.test(r.d.querySelector('#cobro-fiado').textContent));
+  const a = r.d.querySelector('#abono-ahora');
+  a.value = '50'; a.dispatchEvent(new r.w.Event('input', { bubbles:true }));
+  chk('pagando 50 ya le alcanza el cupo', !r.d.querySelector('#confirmar-cobro').disabled);
+}
+{
+  const estado = conClientes();
+  const { d, C } = await montar(estado);
+  await elegirCliente(d, 'k2');
+  C.agregar('p1');
+  await esperar();
+  d.querySelector('#btn-cobrar').click();
+  await esperar();
+  d.querySelector('#metodo-fiado').click();
+  await esperar();
+  chk('a quien no se le fía, se explica y no cambia', C.S.metodo === 'efectivo' &&
+      /no se le fía/i.test(d.querySelector('#cobro-fiado').textContent));
+}
+
+console.log('\n=== LA DEUDA DEL CLIENTE A LA VISTA ===');
+{
+  const estado = conClientes({ fn_registrar_abono: a => ({ data:{ abono_id:'ab1', cliente:'Doña Rosa',
+    abonado:a.p_monto, saldo_anterior:300, saldo_nuevo:300 - a.p_monto, queda_libre:a.p_monto >= 300 }, error:null }) });
+  const { w, d, C } = await montar(estado);
+  await elegirCliente(d, 'k1');
+  await esperar(80);
+  const z = d.querySelector('#cl-deuda');
+  chk('al elegir un cliente que debe se ve la deuda', !z.classList.contains('oculto') &&
+      /Debe L 300\.00/.test(z.textContent));
+  chk('con sus días de pago y si va atrasado', /paga los viernes/.test(z.textContent) &&
+      /Atrasado/.test(z.textContent) && z.classList.contains('atrasado'));
+  d.querySelector('#btn-cobrar-deuda').click();
+  await esperar(50);
+  chk('cobrar abre el abono con todo lo que debe', d.querySelector('#ab-monto').value === '300.00');
+  const m = d.querySelector('#ab-monto');
+  m.value = '150'; m.dispatchEvent(new w.Event('input', { bubbles:true }));
+  const rc = d.querySelector('#ab-recibe');
+  rc.value = '200'; rc.dispatchEvent(new w.Event('input', { bubbles:true }));
+  chk('calcula el cambio', /50\.00/.test(d.querySelector('#ab-cambio').textContent));
+  d.querySelector('#ab-si').click();
+  await esperar(150);
+  const ab = estado.llamadas.find(l => l.fn === 'fn_registrar_abono');
+  chk('registra el abono en el turno de la caja', ab && ab.args.p_cliente_id === 'k1' &&
+      ab.args.p_monto === 150 && ab.args.p_metodo === 'efectivo' && ab.args.p_turno_id === 't1');
+  chk('dice cuánto queda debiendo y el cambio', /Ahora debe L 150\.00/.test(d.querySelector('#hoja').textContent) &&
+      /L 50\.00/.test(d.querySelector('#hoja').textContent));
+  chk('y el saldo del cliente se actualiza', Number(C.S.cliente.saldo) === 150);
+}
+{
+  const estado = conClientes();
+  const { w, d } = await montar(estado);
+  await elegirCliente(d, 'k1');
+  d.querySelector('#btn-cobrar-deuda').click();
+  await esperar(50);
+  const m = d.querySelector('#ab-monto');
+  m.value = '400'; m.dispatchEvent(new w.Event('input', { bubbles:true }));
+  chk('no deja cobrar más de lo que debe', d.querySelector('#ab-si').disabled &&
+      /Más de lo que debe/.test(d.querySelector('#ab-cambio-caja').textContent));
+}
+{
+  const estado = conClientes();
+  const { d } = await montar(estado);
+  await elegirCliente(d, 'k2');
+  chk('quien no debe no muestra deuda', d.querySelector('#cl-deuda').classList.contains('oculto'));
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);

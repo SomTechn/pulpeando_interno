@@ -158,14 +158,18 @@ console.log('\n=== CAJA: puerta del fiado ===');
   chk('el módulo expone su estado', !!S);
   chk('pintarFiado existe', typeof caja.pintarFiado === 'function');
 
-  const oculto = () => d.querySelector('#metodo-fiado').classList.contains('oculto');
+  // Desde la 031 el botón de Fiado siempre se ve; cuando no se puede fiar
+  // se ve apagado (no-puede) y explica por qué al tocarlo.
+  const oculto = () => d.querySelector('#metodo-fiado').classList.contains('oculto') ||
+                       d.querySelector('#metodo-fiado').classList.contains('no-puede');
+  const visible = () => !d.querySelector('#metodo-fiado').classList.contains('oculto');
   const nota = () => d.querySelector('#cobro-fiado').classList.contains('oculto')
     ? '' : d.querySelector('#cobro-fiado').textContent;
 
   // sin cliente
   S.cliente = null; S.enLinea = true;
   caja.pintarFiado(100);
-  chk('sin cliente no hay botón de fiado', oculto());
+  chk('sin cliente el fiado se ve pero apagado', oculto() && visible());
   chk('sin cliente no hay regaño', nota() === '');
 
   // cliente sin límite
@@ -194,6 +198,7 @@ console.log('\n=== CAJA: puerta del fiado ===');
   caja.pintarFiado(10);
   chk('en el tope esconde el fiado', oculto());
   chk('en el tope dice que abone', /abonar antes de fiar/i.test(nota()));
+  chk('pero el botón no desaparece', visible());
 
   // sin internet
   S.cliente = { id:'k2', nombre:'Dona Marta', saldo:0, limite_credito:200 };
@@ -779,6 +784,44 @@ const estadoCat = extra => ({
   chk('la quitada se desactiva, no se borra', baja && JSON.stringify(baja.ids) === '["pr1"]');
   const cambio = estado.escrituras.find(e => e.tabla === 'presentaciones' && e.op === 'update' && e.datos.nombre === 'Docena');
   chk('y la docena queda como la de compra', cambio && cambio.datos.es_compra === true);
+}
+
+console.log('\n=== CATÁLOGOS: días de pago del cliente ===');
+for (const [rol, nivel] of [['supervisor', 2], ['auxiliar', 1]]){
+  const estado = {
+    enLinea:true, alertas:[], llamadas:[],
+    tablas:{ clientes:[{ id:'k1', codigo:'C1', nombre:'Doña Rosa', telefono:'9999', limite_credito:500,
+                         saldo:120, activo:true }],
+             categorias:[], marcas:[], proveedores:[], impuestos:[] },
+    rpc:{ fn_pos_contexto:{ data:{ ...CTX_BASE, usuario:{ ...CTX_BASE.usuario, rol, nivel } }, error:null },
+          fn_situacion_cliente:{ data:{ debe:120, dias_pago:{ tipo:'semana', dias:[5] } }, error:null },
+          fn_fijar_dias_pago:{ data:{ texto:'los 15 y 30 de cada mes' }, error:null },
+          fn_fijar_limite_credito:{ data:{}, error:null } }
+  };
+  const { d } = await montar('catalogo.html', estado);
+  d.querySelector('[data-valor="clientes"]').click();
+  await new Promise(r => setTimeout(r, 60));
+  d.querySelector('[data-id="k1"]').click();
+  await new Promise(r => setTimeout(r, 80));
+  chk(rol + ': trae sus días de pago (viernes)',
+      d.querySelector('#dp-tipo .activo')?.dataset.t === 'semana' &&
+      d.querySelector('#dp-semana input[value="5"]').checked);
+  if (nivel < 2){
+    chk('auxiliar: los ve pero no los cambia', d.querySelector('#dp-tipo [data-t="mes"]').disabled);
+    continue;
+  }
+  d.querySelector('#dp-tipo [data-t="mes"]').click();
+  d.querySelector('#form-guardar').click();
+  await new Promise(r => setTimeout(r, 80));
+  chk('por mes sin marcar días no se guarda', !estado.llamadas.some(l => l.fn === 'fn_fijar_dias_pago') &&
+      /Faltan los días de pago/.test(d.body.textContent));
+  d.querySelector('#dp-mes input[value="15"]').checked = true;
+  d.querySelector('#dp-mes input[value="30"]').checked = true;
+  d.querySelector('#form-guardar').click();
+  await new Promise(r => setTimeout(r, 120));
+  const f = estado.llamadas.find(l => l.fn === 'fn_fijar_dias_pago');
+  chk('guarda la quincena y fin de mes', f && f.args.p_cliente_id === 'k1' &&
+      JSON.stringify(f.args.p_dias_pago) === '{"tipo":"mes","dias":[15,30]}');
 }
 
 console.log('\n' + ok + ' bien, ' + mal + ' mal');

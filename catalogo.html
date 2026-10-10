@@ -89,6 +89,10 @@
 .codigo button{width:28px;height:28px;border-radius:8px;color:var(--tenue);font-size:14px}
 .codigo button:hover{background:#FFEDF1;color:var(--rojo)}
 .agregar-cod{display:flex;gap:8px}
+.segmento-dp{display:inline-flex;background:var(--fondo);border-radius:var(--r-md);padding:3px}
+.segmento-dp button{height:38px;padding:0 14px;border-radius:9px;font-size:13px;font-weight:800;color:var(--tenue)}
+.segmento-dp button.activo{background:var(--panel);color:var(--tinta);box-shadow:0 1px 3px rgba(15,23,41,.12)}
+.segmento-dp button:disabled{cursor:not-allowed}
 .dias-semana{display:flex;gap:6px;flex-wrap:wrap}
 .dias-semana label{flex:1 0 40px;min-width:40px;height:42px;border-radius:10px;
   border:1.5px solid var(--linea);display:grid;place-items:center;font-size:13px;
@@ -364,6 +368,8 @@ const ENTIDADES = {
     nombre:'Clientes', singular:'Cliente', icono:'pedidos',
     tabla:'clientes', nivel:1, orden:'nombre',
     columnas:'id,codigo,nombre,identificacion_fiscal,telefono,email,direccion,limite_credito,saldo,puntos,activo',
+    // dias_pago se lee aparte (fn_situacion_cliente) para que la lista no se
+    // caiga si la migracion 031 todavia no esta instalada.
     buscaEn:['nombre','telefono'],
     fila: r => ({ ini:iniciales(r.nombre), titulo:r.nombre,
                   sub:r.telefono || 'Sin teléfono',
@@ -379,6 +385,7 @@ const ENTIDADES = {
       { k:'limite_credito', e:'Límite de fiado', tipo:'decimal', def:0, nivel:2,
         ayuda:'Cuánto le puede fiar como máximo. En 0 no se le fía.',
         ayudaBloqueado:'Cuánto le puede fiar como máximo. Solo un supervisor lo cambia.' },
+      { k:'__dias_pago', e:'Días de pago', tipo:'dias_pago', nivel:2, ancho:true },
       { k:'activo', e:'Activo', tipo:'si', def:true }
     ],
     soloLectura:['saldo']
@@ -649,6 +656,32 @@ function abrirForm(fila){
       continue;
     }
 
+    if (c.tipo === 'dias_pago'){
+      const bloq = S.nivel < (c.nivel || 0);
+      html += `<div class="ancho-total">
+        <label style="font-size:12px;font-weight:700;color:var(--tenue);display:block;margin-bottom:7px">
+          ${escapar(c.e)}</label>
+        <div class="segmento-dp" id="dp-tipo">
+          <button type="button" data-t="" ${bloq ? 'disabled' : ''}>No tiene</button>
+          <button type="button" data-t="semana" ${bloq ? 'disabled' : ''}>Por semana</button>
+          <button type="button" data-t="mes" ${bloq ? 'disabled' : ''}>Por mes</button>
+        </div>
+        <div class="dias-semana oculto" id="dp-semana" style="margin-top:8px">
+          ${[1,2,3,4,5,6,7].map(d => `<label><input type="checkbox" value="${d}" ${bloq ? 'disabled' : ''}>${DIAS_CORTOS[d]}</label>`).join('')}
+        </div>
+        <div class="oculto" id="dp-mes" style="margin-top:8px">
+          <div class="dias-semana">${[15, 30].map(d => `<label><input type="checkbox" value="${d}" ${bloq ? 'disabled' : ''}>${d}</label>`).join('')}
+            <label style="flex:2"><input type="checkbox" value="otro" id="dp-otro" ${bloq ? 'disabled' : ''}>otro día</label></div>
+          <input class="entrada num oculto" id="dp-otro-dia" inputmode="numeric" maxlength="2"
+                 placeholder="Día del mes (1-31)" style="margin-top:8px" ${bloq ? 'disabled' : ''}>
+        </div>
+        <div class="ayuda" style="margin-top:7px">${bloq
+          ? 'Cuándo paga lo que debe. Solo un supervisor lo cambia.'
+          : 'Cuándo paga lo que debe: el viernes, la quincena… La caja avisa cuando le toca y cuando se atrasa.'}</div>
+      </div>`;
+      continue;
+    }
+
     if (c.tipo === 'presentaciones'){
       html += `<div class="ancho-total">
         <div class="codigos" id="lista-pres"></div>
@@ -733,6 +766,7 @@ function abrirForm(fila){
 
   if (S.entidad === 'productos') prepararCodigos(fila);
   if (S.entidad === 'productos') prepararPresentaciones(fila);
+  if (S.entidad === 'clientes') prepararDiasPago(fila);
   if (S.entidad === 'productos' && fila) cargarPrecio(fila.id);
 
   const primero = $('#form-cuerpo').querySelector('input[data-k],select[data-k]');
@@ -795,6 +829,65 @@ function pintarCodigos(){
     : '<div class="ayuda">Sin códigos todavía.</div>';
   z.querySelectorAll('[data-quitar]').forEach(b =>
     b.onclick = () => { codigos.splice(+b.dataset.quitar, 1); pintarCodigos(); });
+}
+
+/* ---------- días de pago del cliente ---------- */
+let diasPagoOriginal = null;
+let diasPagoDisponible = true;
+
+async function prepararDiasPago(fila){
+  diasPagoOriginal = null;
+  diasPagoDisponible = true;
+  if (fila){
+    const { data, error } = await sb.rpc('fn_situacion_cliente', { p_cliente_id:fila.id });
+    // Sin la migracion 031 el campo se esconde en vez de fallar al guardar
+    if (error && /Could not find|schema cache/i.test(error.message || '')){
+      diasPagoDisponible = false;
+      const z = $('#dp-tipo')?.closest('.ancho-total'); if (z) z.classList.add('oculto');
+      return;
+    }
+    diasPagoOriginal = data?.dias_pago || null;
+  }
+  ponerDiasPago(diasPagoOriginal);
+  $('#dp-tipo')?.addEventListener('click', e => {
+    const b = e.target.closest('[data-t]'); if (!b || b.disabled) return;
+    ponerDiasPago(b.dataset.t ? { tipo:b.dataset.t, dias:[] } : null);
+  });
+  $('#dp-otro')?.addEventListener('change', e => ver('#dp-otro-dia', e.target.checked));
+}
+
+function ponerDiasPago(dp){
+  const t = dp?.tipo || '';
+  $('#dp-tipo')?.querySelectorAll('button').forEach(b => b.classList.toggle('activo', b.dataset.t === t));
+  ver('#dp-semana', t === 'semana');
+  ver('#dp-mes', t === 'mes');
+  const dias = dp?.dias || [];
+  $('#dp-semana')?.querySelectorAll('input').forEach(x => x.checked = t === 'semana' && dias.includes(+x.value));
+  if (t === 'mes'){
+    $('#dp-mes').querySelectorAll('input[type=checkbox]').forEach(x =>
+      x.checked = x.value !== 'otro' && dias.includes(+x.value));
+    const otro = dias.find(d => d !== 15 && d !== 30);
+    $('#dp-otro').checked = !!otro;
+    $('#dp-otro-dia').value = otro || '';
+    ver('#dp-otro-dia', !!otro);
+  }
+}
+
+function leerDiasPago(){
+  const t = $('#dp-tipo .activo')?.dataset.t || '';
+  if (!t) return null;
+  let dias;
+  if (t === 'semana'){
+    dias = [...$('#dp-semana').querySelectorAll('input:checked')].map(x => +x.value);
+  } else {
+    dias = [...$('#dp-mes').querySelectorAll('input:checked')].filter(x => x.value !== 'otro').map(x => +x.value);
+    if ($('#dp-otro').checked){
+      const d = Math.round(num($('#dp-otro-dia').value));
+      if (d >= 1 && d <= 31 && !dias.includes(d)) dias.push(d);
+    }
+  }
+  dias.sort((a, b) => a - b);
+  return dias.length ? { tipo:t, dias } : 'incompleto';
 }
 
 /* ---------- presentaciones ---------- */
@@ -948,6 +1041,12 @@ $('#form-guardar').addEventListener('click', async () => {
     const malo = validarPresentaciones();
     if (malo){ aviso('Revise las presentaciones', malo, 'malo'); return; }
   }
+  const puedeDias = S.entidad === 'clientes' && diasPagoDisponible && S.nivel >= 2 && $('#dp-tipo');
+  const diasPago = puedeDias ? leerDiasPago() : undefined;
+  if (diasPago === 'incompleto'){
+    aviso('Faltan los días de pago', 'Marque al menos un día, o elija «No tiene».', 'malo');
+    return;
+  }
 
   b.disabled = true; b.innerHTML = '<span class="girando"></span>';
 
@@ -992,6 +1091,11 @@ $('#form-guardar').addEventListener('click', async () => {
         const { data, error } = await sb.from(e.tabla).insert(datos).select('id').single();
         if (error) throw error;
         id = data.id;
+      }
+
+      if (diasPago !== undefined && JSON.stringify(diasPago) !== JSON.stringify(diasPagoOriginal)){
+        const { error } = await sb.rpc('fn_fijar_dias_pago', { p_cliente_id:id, p_dias_pago:diasPago });
+        if (error) throw error;
       }
 
       if (limite !== null && limite !== Number(S.editando?.limite_credito || 0)){
