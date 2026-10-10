@@ -93,6 +93,8 @@ async function montar(estado){
     .replace(/^import \{ montarMenu, iniciales, escapar \} from '\.\/menu\.js';$/m, '')
     .replace(/^import \{ escanear, hayCamara \} from '\.\/escaner\.js';$/m,
              'const escanear = async () => null; const hayCamara = async () => false;')
+    .replace(/^import \{ imprimirTicket \} from '\.\/ticket\.js';$/m,
+             'const imprimirTicket = async (d, o) => { (window.__impresos = window.__impresos || []).push({ d, o }); };')
     .replace(/createClient\(SUPABASE_URL, SUPABASE_KEY, \{[\s\S]*?\}\)/, '__sb');
 
   w.__c = {};
@@ -138,7 +140,7 @@ const base = (extra = {}) => ({
       const pagos = a.p_pagos || [];
       const total = pagos.reduce((s,p) => s + Number(p.monto), 0);
       const recibido = pagos.reduce((s,p) => s + Number(p.recibido ?? p.monto), 0);
-      return { data:{ documento:'ticket', numero:'T-S01-00000004',
+      return { data:{ venta_id:'v-123', documento:'ticket', numero:'T-S01-00000004',
                       numero_fiscal:null, total, pagado:total, fiado:0,
                       cambio:Math.max(0, Math.round((recibido - total) * 100) / 100) },
                error:null };
@@ -597,6 +599,91 @@ console.log('\n=== SIN INTERNET ===');
       estado.encoladas.length === 1 && estado.encoladas[0].pagos.length === 2);
   chk('y el vuelto que se calculó aquí también sale del efectivo',
       /12\.00/.test(d.querySelector('#listo-cambio').textContent));
+}
+
+console.log('\n=== TICKET IMPRESO ===');
+async function cobrarUna(estado, w2){
+  const r = await montar(estado);
+  r.C.agregar('p1');
+  await esperar();
+  r.d.querySelector('#btn-cobrar').click();
+  await esperar();
+  const rec = r.d.querySelector('#recibido');
+  rec.value = '200'; rec.dispatchEvent(new r.w.Event('input', { bubbles:true }));
+  r.d.querySelector('#confirmar-cobro').click();
+  await esperar(200);
+  return r;
+}
+const VENTA_COMPLETA = { data:{ venta:{ id:'v-123', numero:'T-S01-00000004', documento:'ticket',
+  total:100, creada_en:new Date().toISOString() }, negocio:{ nombre:'La Esquina' }, lineas:[], pagos:[] }, error:null };
+{
+  const estado = base({ fn_venta_completa:VENTA_COMPLETA });
+  const { w, d } = await cobrarUna(estado);
+  chk('después de cobrar se ofrece imprimir', !d.querySelector('#btn-imprimir').classList.contains('oculto'));
+  chk('sin imprimir solo (la opción viene apagada)', !(w.__impresos || []).length);
+  d.querySelector('#btn-imprimir').click();
+  await esperar(120);
+  const pide = estado.llamadas.find(l => l.fn === 'fn_venta_completa');
+  chk('pide la venta recién hecha', pide && pide.args.p_venta_id === 'v-123');
+  chk('y la manda a la impresora', (w.__impresos || []).length === 1 &&
+      w.__impresos[0].d.venta.numero === 'T-S01-00000004');
+
+  const auto = d.querySelector('#imprimir-auto');
+  auto.checked = true; auto.dispatchEvent(new w.Event('change'));
+  chk('«imprimir siempre» se recuerda', w.localStorage.getItem('imprimir-auto') === '1');
+}
+{
+  const estado = base({ fn_venta_completa:VENTA_COMPLETA });
+  const r = await montar(estado);
+  r.w.localStorage.setItem('imprimir-auto', '1');
+  r.C.agregar('p1');
+  await esperar();
+  r.d.querySelector('#btn-cobrar').click();
+  await esperar();
+  const rec = r.d.querySelector('#recibido');
+  rec.value = '200'; rec.dispatchEvent(new r.w.Event('input', { bubbles:true }));
+  r.d.querySelector('#confirmar-cobro').click();
+  await esperar(250);
+  chk('con «imprimir siempre» sale solo al cobrar', (r.w.__impresos || []).length === 1);
+  chk('y la casilla aparece marcada', r.d.querySelector('#imprimir-auto').checked);
+}
+{
+  const estado = base({
+    fn_venta_completa:VENTA_COMPLETA,
+    fn_estado_facturacion:{ data:{ activa:true, rangos:[{ tipo:'factura', vigente:true, quedan:12, dias:4 }] }, error:null }
+  });
+  const orig = estado.rpc.fn_registrar_venta;
+  estado.rpc.fn_registrar_venta = a => { const r = orig(a); r.data.documento = 'factura';
+    r.data.numero_fiscal = '000-001-01-00000489'; return r; };
+  const { d } = await cobrarUna(estado);
+  const av = d.querySelector('#listo-rango');
+  chk('al facturar avisa si el CAI se acaba o vence',
+      !av.classList.contains('oculto') && /quedan 12 facturas/.test(av.textContent) &&
+      /vence en 4 días/.test(av.textContent));
+}
+{
+  const estado = base({
+    fn_registrar_venta:{ data:null, error:{ message:'P0001: No hay rango de facturacion autorizado disponible' } }
+  });
+  const { d } = await cobrarUna(estado);
+  chk('sin CAI vigente se explica qué hacer',
+      /El gerente lo registra en Configuración/.test(d.querySelector('#cobro-error').textContent));
+}
+{
+  const estado = base();
+  estado.enLinea = false;
+  const r = await montar(estado);
+  r.C.S.enLinea = false;
+  r.C.agregar('p1');
+  await esperar();
+  r.d.querySelector('#btn-cobrar').click();
+  await esperar();
+  const rec = r.d.querySelector('#recibido');
+  rec.value = '200'; rec.dispatchEvent(new r.w.Event('input', { bubbles:true }));
+  r.d.querySelector('#confirmar-cobro').click();
+  await esperar(200);
+  chk('sin internet no se ofrece imprimir (aún no hay número)',
+      r.d.querySelector('#btn-imprimir').classList.contains('oculto'));
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);

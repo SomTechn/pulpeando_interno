@@ -250,6 +250,7 @@ if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin co
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { montarMenu, escapar } from './menu.js';
+import { imprimirTicket } from './ticket.js';
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth:{ persistSession:true, autoRefreshToken:true }
@@ -571,7 +572,11 @@ $('#form-cerrar').addEventListener('click', () => ver('#form-velo', false));
 $('#form-velo').addEventListener('click', e => {
   if (e.target.id === 'form-velo') ver('#form-velo', false);
 });
-$('#btn-imprimir').addEventListener('click', () => window.print());
+// El mismo ticket de la caja, al ancho de la impresora termica. Una factura
+// reimpresa sale marcada como COPIA: el original ya se le dio al cliente.
+$('#btn-imprimir').addEventListener('click', () => {
+  if (S.venta) imprimirTicket(S.venta, { copia:S.venta.venta.documento === 'factura' });
+});
 
 /* ================= anular ================= */
 $('#btn-anular').addEventListener('click', () => {

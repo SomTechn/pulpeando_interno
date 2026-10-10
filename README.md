@@ -304,7 +304,37 @@ Desde la migración 029 un pedido **no sale ni se entrega sin cobrarse**, y uno
 cobrado no se cancela sin anular antes su venta: así la mercadería nunca sale
 ni regresa sin que el kardex se entere.
 
+## Ticket impreso
+
+`ticket.js` arma el comprobante para impresora térmica de 80 o 58 mm. En la
+caja, al cobrar, aparece **Imprimir ticket** y la opción **Imprimir siempre al
+cobrar** (se recuerda en cada aparato). En Ventas se reimprime el mismo
+ticket; una factura reimpresa sale como COPIA.
+
+Con facturación fiscal lleva lo que pide la SAR: RTN y domicilio del emisor,
+CAI, rango autorizado y fecha límite de emisión, número de factura, RTN del
+comprador o «Consumidor final», importe exento / gravado 15% / gravado 18% con
+su ISV, el total en letras y ORIGINAL: CLIENTE.
+
+## Configuración
+
+`configuracion.html`, solo gerente:
+
+- **Negocio y ticket:** nombre, razón social, RTN, domicilio fiscal, teléfono,
+  correo, mensaje al pie y ancho del papel, con impresión de prueba.
+- **Facturación (CAI):** encender o apagar la factura fiscal y registrar los
+  rangos autorizados. Cada rango muestra cuántas facturas quedan y cuántos días
+  faltan; la caja avisa al facturar cuando quedan 50 o faltan 15 días.
+- **Sucursales y cajas** e **Impuestos** (uno predeterminado).
+
+La base de datos protege la numeración (migración 030): el correlativo solo
+avanza de uno en uno al facturar, un rango usado no se edita ni se borra, los
+rangos del mismo prefijo no se enciman y el CAI y el prefijo se validan. El
+gerente no puede cambiar el plan ni el estado de la cuenta.
+
 ## Pendiente
 
+- Traslados de mercadería entre sucursales
+- Devolución parcial de una venta
 - Panel de administración de la plataforma
 - Motor de promociones

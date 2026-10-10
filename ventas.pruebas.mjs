@@ -90,6 +90,8 @@ async function montar(estado){
   const prep = cuerpo
     .replace(/^import \{ createClient \} from 'https:\/\/esm\.sh\/@supabase\/supabase-js@2';$/m, '')
     .replace(/^import \{ montarMenu, escapar \} from '\.\/menu\.js';$/m, '')
+    .replace(/^import \{ imprimirTicket \} from '\.\/ticket\.js';$/m,
+             'const imprimirTicket = async (d, o) => { (window.__impresos = window.__impresos || []).push({ d, o }); };')
     .replace(/createClient\(SUPABASE_URL, SUPABASE_KEY, \{[\s\S]*?\}\)/, '__sb');
 
   w.__caja = {};
@@ -258,7 +260,10 @@ console.log('\n=== EL TICKET ===');
       !d.querySelector('#btn-anular').classList.contains('oculto'));
 
   d.querySelector('#btn-imprimir').click();
-  chk('imprimir llama a la impresión del navegador', estado.impresiones === 1);
+  const imp = (d.defaultView.__impresos || []);
+  chk('imprimir manda la venta al ticket térmico', imp.length === 1 && imp[0].d.venta);
+  chk('una factura reimpresa sale como copia',
+      imp[0]?.o?.copia === (imp[0]?.d.venta.documento === 'factura'));
 }
 
 console.log('\n=== EL TICKET DE UNA VENTA ANULADA ===');

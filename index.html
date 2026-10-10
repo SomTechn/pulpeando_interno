@@ -222,6 +222,9 @@
 .switch.on{background:var(--azul)}
 .switch.on::after{transform:translateX(19px)}
 /* .listo, .marca-ok y .doc viven en ui.css: los comparte la pantalla de fiado */
+.imprimir-auto{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;
+  font-weight:600;color:var(--tenue);margin:-2px 0 14px}
+.imprimir-auto input{width:17px;height:17px;accent-color:var(--verde)}
 /* El vuelto se canta en voz alta. Grande de verdad: la cajera lo lee de un
    vistazo y el cliente lo ve desde el otro lado del mostrador. */
 .entregar b{font-size:clamp(38px,13vw,62px);line-height:1;letter-spacing:-.035em;
@@ -494,6 +497,11 @@
           </div>
         </div>
         <p class="sub" id="listo-aviso"></p>
+        <div class="aviso ojo oculto" id="listo-rango" style="text-align:left"></div>
+        <button class="btn secundario oculto" style="width:100%;margin-bottom:10px" id="btn-imprimir">
+          🖨  Imprimir ticket</button>
+        <label class="imprimir-auto oculto" id="lbl-imprimir-auto">
+          <input type="checkbox" id="imprimir-auto"> Imprimir siempre al cobrar</label>
         <button class="btn principal-b" style="width:100%" id="btn-terminar">Listo</button>
       </div>
     </div>
@@ -552,6 +560,7 @@ if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin co
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { montarMenu, iniciales, escapar } from './menu.js';
 import { escanear, hayCamara } from './escaner.js';
+import { imprimirTicket } from './ticket.js';
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth:{ persistSession:true, autoRefreshToken:true }
@@ -590,8 +599,50 @@ function limpiarError(e){
     .replace(/^(?:[0-9A-Z]{5}|error|Error|ERROR):\s*/, '');
   if (/JWT|token/i.test(m)) return 'La sesión venció. Vuelva a entrar.';
   if (/Failed to fetch|NetworkError/i.test(m)) return 'Sin conexión con el servidor';
+  if (/No hay rango de facturaci/i.test(m))
+    return 'No hay un rango de facturación (CAI) vigente para esta sucursal. ' +
+           'El gerente lo registra en Configuración. Mientras tanto cobre sin factura fiscal.';
   return m;
 }
+
+/* ================= ticket impreso ================= */
+const recordarImp = {
+  leer(){ try{ return localStorage.getItem('imprimir-auto') === '1'; }catch(e){ return false; } },
+  poner(v){ try{ localStorage.setItem('imprimir-auto', v ? '1' : '0'); }catch(e){} }
+};
+
+async function imprimirVenta(id){
+  if (!id) return;
+  const b = $('#btn-imprimir');
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+  const { data, error } = await sb.rpc('fn_venta_completa', { p_venta_id:id });
+  b.disabled = false; b.textContent = '🖨  Imprimir ticket';
+  if (error){
+    $('#listo-aviso').textContent = 'No se pudo imprimir: ' + limpiarError(error);
+    return;
+  }
+  await imprimirTicket(data);
+}
+
+/* Aviso de que el CAI se acaba o vence: la cajera lo ve al emitir, a tiempo
+   para que el gerente pida otro rango a la SAR. */
+async function avisoRango(){
+  const z = $('#listo-rango');
+  ver('#listo-rango', false);
+  const { data } = await sb.rpc('fn_estado_facturacion', { p_sucursal_id:S.sucursal });
+  const r = (data?.rangos || []).filter(x => x.vigente && x.tipo === 'factura')[0];
+  if (!r) return;
+  const partes = [];
+  if (r.quedan <= 50) partes.push(`quedan ${r.quedan} factura${r.quedan === 1 ? '' : 's'} en el rango`);
+  if (r.dias !== null && r.dias <= 15) partes.push(r.dias <= 0 ? 'el CAI vence hoy'
+    : `el CAI vence en ${r.dias} día${r.dias === 1 ? '' : 's'}`);
+  if (!partes.length) return;
+  z.textContent = 'Avísele al gerente: ' + partes.join(' y ') + '.';
+  ver('#listo-rango');
+}
+
+$('#btn-imprimir').addEventListener('click', () => imprimirVenta(S.ultimaVenta));
+$('#imprimir-auto').addEventListener('change', e => recordarImp.poner(e.target.checked));
 
 /* ================= cola sin internet ================= */
 const DB = {
@@ -1845,9 +1896,12 @@ $('#confirmar-cobro').addEventListener('click', async () => {
     if (i >= 0) S.clientes[i] = { ...S.clientes[i], saldo:S.cliente.saldo };
   }
 
+  S.ultimaVenta = data.venta_id;
   mostrarListo({ documento:data.documento, numero:data.numero_fiscal || data.numero,
                  cambio:Number(data.cambio), fiado, cliente:S.cliente?.nombre,
                  recibido:S.metodo === 'efectivo' ? S.recibido : 0, era:falta });
+  if (data.documento === 'factura') avisoRango();
+  if (recordarImp.leer()) imprimirVenta(data.venta_id);
 });
 
 function descontarLocal(){
@@ -1860,6 +1914,12 @@ function descontarLocal(){
 function mostrarListo({ documento, numero, cambio, offline, fiado, cliente,
                         recibido, era }){
   $('#listo-icono').textContent = offline ? '⏳' : '✓';
+  // Sin internet no hay numero de venta todavia: se reimprime desde Ventas
+  ver('#btn-imprimir', !offline);
+  ver('#lbl-imprimir-auto', !offline);
+  ver('#listo-rango', false);
+  $('#imprimir-auto').checked = recordarImp.leer();
+  if (offline) S.ultimaVenta = null;
   $('#listo-icono').classList.toggle('espera', !!offline);
   $('#listo-titulo').textContent = offline ? 'Venta guardada sin internet'
     : fiado > 0 ? 'Venta fiada'

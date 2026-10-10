@@ -94,6 +94,8 @@ async function montar(archivo, estado){
     .replace(/^import .*?from 'https:\/\/esm\.sh\/@supabase\/supabase-js@2';$/m, '')
     .replace(/^import \{([^}]*)\} from '\.\/menu\.js';$/m, '')
     .replace(/^import \{([^}]*)\} from '\.\/escaner\.js';$/m, '')
+    .replace(/^import \{ imprimirTicket \} from '\.\/ticket\.js';$/m,
+             'const imprimirTicket = async (d, o) => { (window.__impresos = window.__impresos || []).push({ d, o }); };')
     .replace(/createClient\(SUPABASE_URL, SUPABASE_KEY, \{[\s\S]*?\}\)/, '__sb');
 
   // menu.js se importa una vez y usa el document global

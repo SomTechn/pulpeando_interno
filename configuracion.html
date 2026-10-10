@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1729">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="icono-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icono-192.png">
+<title>Configuración · Pulpeando</title>
+<script src="config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ui.css">
+<style>
+.zona{flex:1;overflow-y:auto;min-height:0;padding:16px 16px 40px}
+.limite{max-width:860px;margin:0 auto}
+
+.ficha{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);
+  padding:18px;margin-bottom:14px}
+.ficha h3{font-size:16px;font-weight:800;margin-bottom:4px}
+.ficha .sub{font-size:13px;color:var(--tenue);line-height:1.5;margin-bottom:14px}
+.campos{display:grid;gap:13px;grid-template-columns:1fr 1fr}
+.ancho-total{grid-column:1/-1}
+.ayuda{font-size:12px;color:var(--tenue);margin-top:-3px;line-height:1.4}
+.entrada{height:48px;border:1.5px solid var(--linea);border-radius:var(--r-md);padding:0 13px;
+  outline:none;font-size:15px;background:var(--panel);width:100%}
+.entrada:focus{border-color:var(--azul)}
+select.entrada{padding:0 10px}
+textarea.entrada{height:auto;min-height:70px;padding:11px 13px;resize:vertical;font:inherit}
+.pie-ficha{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+
+.interruptor{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:var(--r-md);
+  background:var(--fondo)}
+.interruptor div{flex:1}
+.interruptor b{display:block;font-size:14.5px}
+.interruptor small{display:block;font-size:12.5px;color:var(--tenue);margin-top:2px;line-height:1.45}
+.switch{width:48px;height:28px;border-radius:999px;background:#CBD5E1;position:relative;flex:0 0 auto;
+  transition:background .15s}
+.switch::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .15s}
+.switch.on{background:var(--verde)}
+.switch.on::after{transform:translateX(20px)}
+
+.segmento{display:inline-flex;background:var(--fondo);border-radius:var(--r-md);padding:3px}
+.segmento button{height:40px;padding:0 16px;border-radius:9px;font-size:13.5px;font-weight:800;color:var(--tenue)}
+.segmento button.activo{background:var(--panel);color:var(--tinta);box-shadow:0 1px 3px rgba(15,23,41,.12)}
+
+/* rangos de facturacion */
+.rango{border:1px solid var(--linea);border-radius:var(--r-md);padding:14px 15px;margin-bottom:10px}
+.rango.alerta{border-color:#F3E2BC;background:#FFFBF2}
+.rango.malo{border-color:#F6CBD6;background:#FFF7F9}
+.rango.apagado{opacity:.6}
+.rango-cab{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.rango-cab b{font-family:var(--num);font-size:15px}
+.rango-cab small{display:block;font-size:12px;color:var(--tenue);margin-top:3px;font-family:var(--num);
+  overflow-wrap:anywhere}
+.rango-cab .sello{margin-left:auto}
+.barra-uso{height:8px;border-radius:999px;background:var(--fondo);overflow:hidden;margin:12px 0 8px}
+.barra-uso span{display:block;height:100%;border-radius:999px;background:var(--verde)}
+.rango.alerta .barra-uso span{background:var(--ambar)}
+.rango.malo .barra-uso span{background:var(--rojo)}
+.rango-datos{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--tenue)}
+.rango-datos b{color:var(--tinta);font-family:var(--num)}
+.rango-acc{display:flex;gap:8px;margin-top:10px}
+.rango-acc .btn{height:38px;font-size:13px;padding:0 14px}
+.sello{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:11px;
+  font-weight:800;text-transform:uppercase;letter-spacing:.03em}
+.sello.ok{background:#E7F7EE;color:var(--verde-oscuro)}
+.sello.alerta{background:#FFF4E0;color:#8A5A00}
+.sello.malo{background:#FFEDF1;color:#9F1239}
+.sello.off{background:var(--fondo);color:var(--tenue)}
+
+/* sucursales, cajas, impuestos */
+.fila{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--linea)}
+.fila:first-of-type{border-top:none}
+.fila-txt{flex:1;min-width:0}
+.fila-txt b{display:block;font-size:14.5px;font-weight:700}
+.fila-txt small{display:block;font-size:12.5px;color:var(--tenue);margin-top:2px;line-height:1.45}
+.fila .btn{height:38px;font-size:13px;padding:0 14px;flex:0 0 auto}
+.cajas{margin:4px 0 8px 14px;padding-left:12px;border-left:2px solid var(--linea)}
+.cajas .fila{padding:8px 0}
+.mas{height:40px;border-radius:10px;border:1.5px dashed var(--linea);width:100%;font-size:13.5px;
+  font-weight:700;color:var(--tenue);margin-top:8px}
+.mas:hover{border-color:var(--azul);color:var(--azul)}
+.inactivo{opacity:.5}
+
+@media (max-width:640px){
+  .campos{grid-template-columns:1fr}
+  .zona{padding:12px 12px 40px}
+  .ficha{padding:15px}
+}
+</style>
+</head>
+<body>
+
+<div class="oscura oculto" id="p-config">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Configuración</div>
+    <div class="titulo-o">Falta conectar el proyecto</div>
+    <p class="sub-o">Ponga la URL y la llave publishable en <b>config.js</b>.</p>
+  </div>
+</div>
+
+<div class="oscura oculto" id="p-sesion">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Configuración</div>
+    <div class="titulo-o">Iniciar sesión</div>
+    <p class="sub-o">Use el correo con el que entra al sistema</p>
+    <input class="campo-o" id="s-email" type="email" placeholder="correo@negocio.hn" autocomplete="username">
+    <input class="campo-o" id="s-clave" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <div class="error-o" id="s-error"></div>
+    <button class="btn-o" id="s-entrar">Entrar</button>
+  </div>
+</div>
+
+<div class="oscura oculto" id="p-bloqueado">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Configuración</div>
+    <div class="titulo-o" id="bl-titulo">Sin permiso</div>
+    <p class="sub-o" id="bl-texto"></p>
+    <a class="btn-o" href="index.html" style="display:block;line-height:52px">Ir a la caja</a>
+    <button class="btn-o fantasma" id="bl-salir">Cerrar sesión</button>
+  </div>
+</div>
+
+<div class="armazon oculto" id="app">
+  <aside id="menu"></aside>
+  <div class="principal">
+    <header class="barra">
+      <button class="hamburguesa" id="abrir-menu" aria-label="Menú">
+        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="barra-titulo"><b id="h-titulo">Negocio</b><small id="h-negocio">—</small></div>
+      <div class="barra-fin"><span class="pill" id="h-usuario">—</span></div>
+    </header>
+    <div class="zona"><div class="limite" id="cuerpo"></div></div>
+  </div>
+</div>
+
+<div class="velo oculto" id="velo"><div class="hoja" id="hoja"></div></div>
+
+<script type="module">
+const CFG = window.SUPABASE_CONFIG || {};
+const SUPABASE_URL = CFG.url || 'PEGUE_AQUI_LA_URL';
+const SUPABASE_KEY = CFG.key || 'PEGUE_AQUI_LA_LLAVE';
+
+const $ = s => document.querySelector(s);
+const ver = (id, si = true) => $(id).classList.toggle('oculto', !si);
+
+if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin configurar'); }
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { montarMenu, escapar } from './menu.js';
+import { imprimirTicket } from './ticket.js';
+
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth:{ persistSession:true, autoRefreshToken:true }
+});
+
+const S = { ctx:null, menu:null, vista:'negocio', org:null, sucursales:[], cajas:[],
+            impuestos:[], facturacion:null, moneda:'L' };
+
+const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
+  { minimumFractionDigits:2, maximumFractionDigits:2 });
+const num = v => { const n = parseFloat(String(v).replace(/[^0-9.\-]/g, '')); return isNaN(n) ? 0 : n; };
+const hoyIso = () => { const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function fecha(v){
+  if (!v) return '—';
+  const [a, m, d] = String(v).slice(0,10).split('-').map(Number);
+  return `${d} ${MESES[m-1]} ${a}`;
+}
+
+function limpiarError(e){
+  const m = (e?.message || String(e)).replace(/^(?:[0-9A-Z]{5}|error|Error|ERROR):\s*/, '');
+  if (/JWT|token/i.test(m)) return 'La sesión venció. Vuelva a entrar.';
+  if (/Failed to fetch|NetworkError/i.test(m)) return 'Sin conexión con el servidor';
+  if (/Could not find the function|schema cache/i.test(m)) return 'Falta instalar la migración 030 en Supabase.';
+  if (/sucursales_organizacion_id_codigo_key/.test(m)) return 'Ya hay una sucursal con ese código.';
+  if (/cajas_sucursal_id_codigo_key/.test(m)) return 'Ya hay una caja con ese código en esa sucursal.';
+  if (/impuestos_organizacion_id_nombre_key/.test(m)) return 'Ya hay un impuesto con ese nombre.';
+  return m;
+}
+
+function aviso(titulo, texto, tono = 'malo'){
+  $('#hoja').innerHTML = `<h2>${escapar(titulo)}</h2>
+    <div class="aviso ${tono}" style="margin-top:12px">${escapar(texto)}</div>
+    <button class="btn principal-b" style="width:100%" id="ok">Entendido</button>`;
+  ver('#velo');
+  $('#ok').onclick = () => ver('#velo', false);
+}
+const cerrarHoja = () => ver('#velo', false);
+$('#velo').addEventListener('click', e => { if (e.target.id === 'velo') cerrarHoja(); });
+
+function confirmar(titulo, texto, si = 'Sí'){
+  return new Promise(res => {
+    $('#hoja').innerHTML = `<h2>${escapar(titulo)}</h2>
+      <div class="aviso ojo" style="margin-top:12px">${texto}</div>
+      <div class="acciones"><button class="btn secundario" id="c-no">Volver</button>
+        <button class="btn principal-b" id="c-si">${escapar(si)}</button></div>`;
+    ver('#velo');
+    $('#c-no').onclick = () => { cerrarHoja(); res(false); };
+    $('#c-si').onclick = () => { cerrarHoja(); res(true); };
+  });
+}
+
+/* ================= sesión ================= */
+$('#s-entrar').addEventListener('click', async () => {
+  const b = $('#s-entrar');
+  $('#s-error').textContent = '';
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+  const { error } = await sb.auth.signInWithPassword({
+    email:$('#s-email').value.trim(), password:$('#s-clave').value });
+  b.disabled = false; b.textContent = 'Entrar';
+  if (error){ $('#s-error').textContent = 'Correo o contraseña incorrectos'; return; }
+  arrancar();
+});
+$('#s-clave').addEventListener('keydown', e => { if (e.key === 'Enter') $('#s-entrar').click(); });
+$('#bl-salir').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
+
+async function arrancar(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session){ ver('#p-sesion'); return; }
+  ver('#p-sesion', false);
+
+  const { data, error } = await sb.rpc('fn_pos_contexto');
+  if (error){
+    ver('#p-sesion');
+    $('#s-error').textContent = 'Su usuario no tiene perfil en ningún negocio';
+    await sb.auth.signOut();
+    return;
+  }
+  S.ctx = data;
+  S.moneda = data.organizacion.moneda === 'HNL' ? 'L' : data.organizacion.moneda;
+
+  if (data.usuario.nivel < 3){
+    ver('#p-bloqueado');
+    $('#bl-titulo').textContent = 'Esta pantalla es del gerente';
+    $('#bl-texto').textContent = 'Los datos fiscales, las sucursales y las cajas los configura el gerente.';
+    return;
+  }
+
+  $('#h-usuario').textContent = data.usuario.nombre;
+  $('#h-negocio').textContent = data.organizacion.nombre;
+  $('#app').classList.remove('oculto');
+
+  S.menu = montarMenu({
+    contenedor:'#menu', modulo:'configuracion', ctx:S.ctx,
+    alSalir: async () => { await sb.auth.signOut(); location.reload(); },
+    secciones:[{ id:'config', titulo:'Configuración', items:[
+      { valor:'negocio',     nombre:'Negocio y ticket', icono:'ajustes', activo:true },
+      { valor:'facturacion', nombre:'Facturación (CAI)', icono:'reportes' },
+      { valor:'sucursales',  nombre:'Sucursales y cajas', icono:'caja' },
+      { valor:'impuestos',   nombre:'Impuestos', icono:'etiqueta' } ] }]
+  });
+  S.menu.alElegir(abrir);
+  $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
+
+  await cargarTodo();
+  abrir('negocio');
+}
+
+async function cargarTodo(){
+  const [o, s, c, i, f] = await Promise.all([
+    sb.from('organizaciones').select('id,nombre,identificacion_fiscal,facturacion_fiscal_activa,config,moneda')
+      .eq('id', S.ctx.organizacion.id).single(),
+    sb.from('sucursales').select('id,codigo,nombre,direccion,telefono,es_principal,activa,acepta_domicilio,costo_envio,pedido_minimo')
+      .order('es_principal', { ascending:false }).order('nombre'),
+    sb.from('cajas').select('id,sucursal_id,codigo,nombre,activa').order('codigo'),
+    sb.from('impuestos').select('id,nombre,tasa,incluido_en_precio,es_predeterminado,activo').order('tasa'),
+    sb.rpc('fn_estado_facturacion')
+  ]);
+  S.org = o.data || { config:{} };
+  S.org.config = S.org.config || {};
+  S.sucursales = s.data || [];
+  S.cajas = c.data || [];
+  S.impuestos = i.data || [];
+  S.facturacion = f.error ? { error:limpiarError(f.error), rangos:[] } : f.data;
+}
+
+const TITULOS = { negocio:'Negocio y ticket', facturacion:'Facturación (CAI)',
+                  sucursales:'Sucursales y cajas', impuestos:'Impuestos' };
+
+function abrir(v){
+  S.vista = v;
+  S.menu?.marcar?.(v);
+  $('#h-titulo').textContent = TITULOS[v];
+  ({ negocio:pintarNegocio, facturacion:pintarFacturacion,
+     sucursales:pintarSucursales, impuestos:pintarImpuestos })[v]();
+}
+
+/* ================= negocio y ticket ================= */
+function pintarNegocio(){
+  const o = S.org, c = o.config || {};
+  const ancho = Number(c.ancho_ticket) === 58 ? 58 : 80;
+  $('#cuerpo').innerHTML = `
+    <div class="ficha">
+      <h3>Datos del negocio</h3>
+      <p class="sub">Salen en el encabezado de cada ticket y factura. Para facturar, la SAR
+        pide el RTN y el domicilio fiscal tal como están en su constancia.</p>
+      <div class="campos">
+        <div class="campo-g ancho-total"><label for="n-nombre">Nombre comercial *</label>
+          <input class="entrada" id="n-nombre" value="${escapar(o.nombre)}"></div>
+        <div class="campo-g ancho-total"><label for="n-razon">Razón social</label>
+          <input class="entrada" id="n-razon" value="${escapar(c.razon_social || '')}"
+                 placeholder="Como aparece en el RTN, si es distinta del nombre"></div>
+        <div class="campo-g"><label for="n-rtn">RTN</label>
+          <input class="entrada num" id="n-rtn" inputmode="numeric" maxlength="16"
+                 value="${escapar(o.identificacion_fiscal || '')}" placeholder="14 dígitos"></div>
+        <div class="campo-g"><label for="n-tel">Teléfono</label>
+          <input class="entrada" id="n-tel" inputmode="tel" value="${escapar(c.telefono || '')}"></div>
+        <div class="campo-g ancho-total"><label for="n-dir">Domicilio fiscal</label>
+          <input class="entrada" id="n-dir" value="${escapar(c.direccion_fiscal || '')}"
+                 placeholder="Colonia, calle, municipio, departamento"></div>
+        <div class="campo-g ancho-total"><label for="n-correo">Correo</label>
+          <input class="entrada" id="n-correo" type="email" value="${escapar(c.correo || '')}"></div>
+      </div>
+    </div>
+
+    <div class="ficha">
+      <h3>El ticket</h3>
+      <p class="sub">Cómo sale impreso en la caja y en Ventas.</p>
+      <div class="campos">
+        <div class="campo-g ancho-total"><label>Ancho del papel</label>
+          <div class="segmento" id="n-ancho">
+            <button data-a="80" class="${ancho === 80 ? 'activo' : ''}">80 mm</button>
+            <button data-a="58" class="${ancho === 58 ? 'activo' : ''}">58 mm</button>
+          </div>
+          <div class="ayuda" style="margin-top:6px">El rollo ancho es el común en cajas; el de 58 mm
+            es el de las impresoras portátiles.</div></div>
+        <div class="campo-g ancho-total"><label for="n-msj">Mensaje al pie</label>
+          <input class="entrada" id="n-msj" maxlength="120" value="${escapar(c.mensaje_ticket || '')}"
+                 placeholder="¡Gracias por su compra!"></div>
+      </div>
+      <div class="pie-ficha">
+        <button class="btn secundario" id="n-prueba">Imprimir prueba</button>
+        <button class="btn principal-b" id="n-guardar">Guardar</button>
+      </div>
+    </div>`;
+
+  $('#n-ancho').addEventListener('click', e => {
+    const b = e.target.closest('[data-a]'); if (!b) return;
+    $('#n-ancho').querySelectorAll('button').forEach(x => x.classList.toggle('activo', x === b));
+  });
+  $('#n-guardar').onclick = guardarNegocio;
+  $('#n-prueba').onclick = () => imprimirTicket(ticketDePrueba(), { ancho:anchoElegido() });
+}
+
+const anchoElegido = () => Number($('#n-ancho .activo')?.dataset.a || 80);
+
+function datosNegocioForm(){
+  return {
+    nombre: $('#n-nombre').value.trim(),
+    rtn: $('#n-rtn').value.replace(/\D/g, ''),
+    config: {
+      ...(S.org.config || {}),
+      razon_social: $('#n-razon').value.trim() || null,
+      telefono: $('#n-tel').value.trim() || null,
+      direccion_fiscal: $('#n-dir').value.trim() || null,
+      correo: $('#n-correo').value.trim() || null,
+      mensaje_ticket: $('#n-msj').value.trim() || null,
+      ancho_ticket: anchoElegido()
+    }
+  };
+}
+
+async function guardarNegocio(){
+  const d = datosNegocioForm();
+  if (!d.nombre){ aviso('Falta el nombre', 'Escriba el nombre comercial del negocio.'); return; }
+  if (d.rtn && d.rtn.length !== 14){ aviso('RTN incompleto', 'El RTN tiene 14 dígitos.'); return; }
+  const b = $('#n-guardar');
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+  const { error } = await sb.from('organizaciones')
+    .update({ nombre:d.nombre, identificacion_fiscal:d.rtn || null, config:d.config })
+    .eq('id', S.org.id);
+  b.disabled = false; b.textContent = 'Guardar';
+  if (error){ aviso('No se pudo guardar', limpiarError(error)); return; }
+  S.org = { ...S.org, nombre:d.nombre, identificacion_fiscal:d.rtn || null, config:d.config };
+  $('#h-negocio').textContent = d.nombre;
+  aviso('Guardado', 'Los próximos tickets salen con estos datos.', 'bueno');
+}
+
+function ticketDePrueba(){
+  const d = datosNegocioForm();
+  const suc = S.sucursales[0] || {};
+  return {
+    venta:{ numero:'T-PRUEBA', documento:'ticket', creada_en:new Date().toISOString(),
+            subtotal:86.96, impuesto:13.04, descuento:0, total:100, estado:'completada' },
+    negocio:{ nombre:d.nombre, razon_social:d.config.razon_social, rtn:d.rtn,
+              direccion:d.config.direccion_fiscal, telefono:d.config.telefono, correo:d.config.correo,
+              mensaje_ticket:d.config.mensaje_ticket, moneda:S.org.moneda, ancho_ticket:anchoElegido() },
+    sucursal:{ nombre:suc.nombre, direccion:suc.direccion, telefono:suc.telefono },
+    caja:'Caja 1', cajero:S.ctx.usuario.nombre,
+    lineas:[{ producto:'Prueba de impresión', cantidad:1, precio:100, total:100 }],
+    pagos:[{ metodo:'efectivo', monto:100, recibido:100, cambio:0 }]
+  };
+}
+
+/* ================= facturación ================= */
+function estadoRango(r){
+  if (!r.activa) return { clase:'off', texto:'Inactivo', tono:'apagado' };
+  if (r.quedan <= 0) return { clase:'malo', texto:'Agotado', tono:'malo' };
+  if (r.dias !== null && r.dias < 0) return { clase:'malo', texto:'Vencido', tono:'malo' };
+  if (r.quedan <= 50 || (r.dias !== null && r.dias <= 15))
+    return { clase:'alerta', texto:'Por acabarse', tono:'alerta' };
+  return { clase:'ok', texto:'Vigente', tono:'' };
+}
+
+function pintarFacturacion(){
+  const f = S.facturacion || { rangos:[] };
+  const activa = !!S.org.facturacion_fiscal_activa;
+  const rangos = (f.rangos || []).filter(r => r.tipo === 'factura');
+  const vigentes = rangos.filter(r => r.vigente);
+  const sinRango = S.sucursales.filter(s => s.activa && !vigentes.some(r => r.sucursal_id === s.id));
+
+  $('#cuerpo').innerHTML = `
+    ${f.error ? `<div class="aviso malo">${escapar(f.error)}</div>` : ''}
+    <div class="ficha">
+      <h3>Facturación fiscal</h3>
+      <p class="sub">Con esto encendido la caja puede emitir <b>factura</b> con CAI y correlativo
+        de la SAR. Apagado, todo sale como comprobante interno.</p>
+      <div class="interruptor">
+        <div><b>${activa ? 'La caja emite facturas' : 'Solo comprobantes internos'}</b>
+          <small>${activa
+            ? 'En cada cobro la cajera elige si lleva factura fiscal.'
+            : 'Necesita al menos un rango de CAI vigente para encenderlo.'}</small></div>
+        <button class="switch ${activa ? 'on' : ''}" id="f-activa" aria-label="Facturación fiscal"></button>
+      </div>
+      ${activa && sinRango.length ? `<div class="aviso ojo" style="margin:12px 0 0">
+        ${sinRango.map(s => escapar(s.nombre)).join(', ')} no ${sinRango.length === 1 ? 'tiene' : 'tienen'}
+        rango vigente: ahí no se podrá facturar hasta registrar uno.</div>` : ''}
+    </div>
+
+    <div class="ficha">
+      <h3>Rangos autorizados (CAI)</h3>
+      <p class="sub">Cada rango que le autoriza la SAR, con su CAI y su fecha límite. Cuando se
+        acaba o vence, la caja pasa sola al siguiente rango vigente de la sucursal. Un rango ya usado
+        no se puede editar ni borrar: así nunca se repite un número de factura.</p>
+      ${rangos.length ? rangos.map(r => {
+        const e = estadoRango(r);
+        const total = r.final - r.inicial + 1;
+        const pct = Math.min(100, Math.round(r.usadas / total * 100));
+        const pre = n => escapar(r.prefijo) + '-' + String(n).padStart(8, '0');
+        return `<div class="rango ${e.tono}">
+          <div class="rango-cab">
+            <div><b>${pre(r.inicial)} al ${pre(r.final)}</b>
+              <small>CAI ${escapar(r.cai || '—')}</small></div>
+            <span class="sello ${e.clase}">${e.texto}</span>
+          </div>
+          <div class="barra-uso"><span style="width:${pct}%"></span></div>
+          <div class="rango-datos">
+            <span>${escapar(r.sucursal || '')}</span>
+            <span>Usadas <b>${r.usadas}</b> de ${total}</span>
+            <span>Quedan <b>${r.quedan}</b></span>
+            ${r.quedan > 0 ? `<span>Siguiente <b>${pre(r.siguiente)}</b></span>` : ''}
+            <span>Fecha límite <b>${fecha(r.fecha_limite)}</b>${r.dias !== null && r.dias >= 0
+              ? ` (${r.dias} día${r.dias === 1 ? '' : 's'})` : ''}</span>
+          </div>
+          <div class="rango-acc">
+            <button class="btn secundario" data-act-rango="${escapar(r.id)}" data-on="${r.activa ? 0 : 1}">
+              ${r.activa ? 'Desactivar' : 'Activar'}</button>
+            ${r.usadas === 0 ? `<button class="btn secundario" data-borrar-rango="${escapar(r.id)}"
+              style="color:var(--rojo)">Borrar</button>` : ''}
+          </div>
+        </div>`;
+      }).join('') : `<div class="vacio" style="padding:20px"><p>Todavía no hay rangos registrados.</p></div>`}
+      <button class="mas" id="f-nuevo">+ Registrar rango autorizado</button>
+    </div>`;
+
+  $('#f-activa').onclick = cambiarFacturacion;
+  $('#f-nuevo').onclick = hojaRango;
+  $('#cuerpo').querySelectorAll('[data-act-rango]').forEach(b => b.onclick = async () => {
+    const { error } = await sb.from('series_fiscales').update({ activa:b.dataset.on === '1' })
+      .eq('id', b.dataset.actRango);
+    if (error){ aviso('No se pudo cambiar', limpiarError(error)); return; }
+    await recargarFacturacion();
+  });
+  $('#cuerpo').querySelectorAll('[data-borrar-rango]').forEach(b => b.onclick = async () => {
+    if (!await confirmar('Borrar el rango', 'Este rango no se ha usado. Se borra para corregirlo.', 'Borrar')) return;
+    const { error } = await sb.from('series_fiscales').delete().eq('id', b.dataset.borrarRango);
+    if (error){ aviso('No se pudo borrar', limpiarError(error)); return; }
+    await recargarFacturacion();
+  });
+}
+
+async function recargarFacturacion(){
+  const { data, error } = await sb.rpc('fn_estado_facturacion');
+  S.facturacion = error ? { error:limpiarError(error), rangos:[] } : data;
+  pintarFacturacion();
+}
+
+async function cambiarFacturacion(){
+  const encender = !S.org.facturacion_fiscal_activa;
+  const vigentes = (S.facturacion?.rangos || []).filter(r => r.vigente && r.tipo === 'factura');
+  if (encender && !vigentes.length){
+    aviso('Primero el rango', 'Registre al menos un rango autorizado (CAI) vigente antes de encender la facturación.', 'ojo');
+    return;
+  }
+  if (!encender && !await confirmar('Apagar la facturación',
+      'Desde ya todo sale como <b>comprobante interno</b>. Las facturas ya emitidas no cambian.', 'Apagar')) return;
+  const { error } = await sb.from('organizaciones')
+    .update({ facturacion_fiscal_activa:encender }).eq('id', S.org.id);
+  if (error){ aviso('No se pudo cambiar', limpiarError(error)); return; }
+  S.org.facturacion_fiscal_activa = encender;
+  pintarFacturacion();
+}
+
+function hojaRango(){
+  const sucs = S.sucursales.filter(s => s.activa);
+  $('#hoja').innerHTML = `
+    <h2>Rango autorizado</h2>
+    <p class="sub">Cópielo tal como viene en la resolución de la SAR.</p>
+    <div class="campos">
+      ${sucs.length > 1 ? `<div class="campo-g ancho-total"><label for="r-suc">Sucursal</label>
+        <select class="entrada" id="r-suc">${sucs.map(s =>
+          `<option value="${escapar(s.id)}">${escapar(s.nombre)}</option>`).join('')}</select></div>` : ''}
+      <div class="campo-g ancho-total"><label for="r-cai">CAI *</label>
+        <input class="entrada num" id="r-cai" placeholder="XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-XX"
+               autocomplete="off" style="text-transform:uppercase"></div>
+      <div class="campo-g ancho-total"><label for="r-pre">Prefijo *</label>
+        <input class="entrada num" id="r-pre" placeholder="000-001-01" autocomplete="off">
+        <div class="ayuda" style="margin-top:4px">Establecimiento-punto de emisión-tipo (01 = factura).</div></div>
+      <div class="campo-g"><label for="r-ini">Desde *</label>
+        <input class="entrada num" id="r-ini" inputmode="numeric" placeholder="1"></div>
+      <div class="campo-g"><label for="r-fin">Hasta *</label>
+        <input class="entrada num" id="r-fin" inputmode="numeric" placeholder="500"></div>
+      <div class="campo-g ancho-total"><label for="r-lim">Fecha límite de emisión *</label>
+        <input class="entrada" id="r-lim" type="date" min="${hoyIso()}"></div>
+    </div>
+    <div class="aviso malo oculto" id="r-err" style="margin-top:12px"></div>
+    <div class="acciones" style="margin-top:14px">
+      <button class="btn secundario" id="r-no">Cancelar</button>
+      <button class="btn principal-b" id="r-si">Registrar</button>
+    </div>`;
+  ver('#velo');
+  // Formato al vuelo: el CAI en grupos de 6, el prefijo 000-000-00
+  $('#r-cai').addEventListener('input', e => {
+    const limpio = e.target.value.toUpperCase().replace(/[^0-9A-F]/g, '').slice(0, 32);
+    e.target.value = (limpio.match(/.{1,6}/g) || []).join('-');
+  });
+  $('#r-pre').addEventListener('input', e => {
+    const d = e.target.value.replace(/\D/g, '').slice(0, 8);
+    e.target.value = [d.slice(0,3), d.slice(3,6), d.slice(6,8)].filter(Boolean).join('-');
+  });
+  $('#r-no').onclick = cerrarHoja;
+  $('#r-si').onclick = guardarRango;
+}
+
+async function guardarRango(){
+  const err = $('#r-err');
+  const mal = t => { err.textContent = t; err.classList.remove('oculto'); };
+  const cai = $('#r-cai').value.trim().toUpperCase();
+  const prefijo = $('#r-pre').value.trim();
+  const ini = Math.round(num($('#r-ini').value));
+  const fin = Math.round(num($('#r-fin').value));
+  const lim = $('#r-lim').value;
+  if (!/^[0-9A-F]{6}(-[0-9A-F]{6}){4}-[0-9A-F]{2}$/.test(cai)) return mal('El CAI tiene 32 caracteres: 6-6-6-6-6-2, con números y letras de la A a la F.');
+  if (!/^\d{3}-\d{3}-\d{2}$/.test(prefijo)) return mal('El prefijo es 000-001-01.');
+  if (!(ini >= 1) || !(fin >= ini)) return mal('Revise el rango: «Hasta» debe ser mayor o igual a «Desde».');
+  if (!lim) return mal('Ponga la fecha límite de emisión.');
+  if (lim < hoyIso()) return mal('Esa fecha límite ya pasó.');
+
+  const b = $('#r-si');
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+  const { error } = await sb.from('series_fiscales').insert({
+    organizacion_id:S.org.id,
+    sucursal_id: $('#r-suc')?.value || S.sucursales.find(s => s.activa)?.id,
+    tipo_documento:'factura', cai, prefijo,
+    correlativo_inicial:ini, correlativo_final:fin, correlativo_actual:ini,
+    fecha_limite_emision:lim, activa:true });
+  b.disabled = false; b.textContent = 'Registrar';
+  if (error) return mal(limpiarError(error));
+  cerrarHoja();
+  await recargarFacturacion();
+}
+
+/* ================= sucursales y cajas ================= */
+function pintarSucursales(){
+  $('#cuerpo').innerHTML = `
+    <div class="ficha">
+      <h3>Sucursales</h3>
+      <p class="sub">Cada sucursal tiene su inventario, sus cajas y su numeración. El código va en
+        los números de ticket (T-<b>S01</b>-00000012).</p>
+      ${S.sucursales.map(s => {
+        const cajas = S.cajas.filter(c => c.sucursal_id === s.id);
+        return `<div class="fila ${s.activa ? '' : 'inactivo'}">
+          <div class="fila-txt"><b>${escapar(s.nombre)} <span style="color:var(--tenue);font-weight:600">· ${escapar(s.codigo)}</span>
+            ${s.es_principal ? '<span class="sello ok" style="margin-left:6px">Principal</span>' : ''}</b>
+            <small>${escapar(s.direccion || 'Sin dirección')}${s.telefono ? ' · ' + escapar(s.telefono) : ''}<br>
+              ${s.acepta_domicilio ? `Domicilio: envío ${money(s.costo_envio)}${Number(s.pedido_minimo)
+                ? ', mínimo ' + money(s.pedido_minimo) : ''}` : 'No hace domicilio'}</small></div>
+          <button class="btn secundario" data-suc="${escapar(s.id)}">Editar</button>
+        </div>
+        <div class="cajas">
+          ${cajas.map(c => `<div class="fila ${c.activa ? '' : 'inactivo'}">
+            <div class="fila-txt"><b>${escapar(c.nombre)}</b><small>Código ${escapar(c.codigo)}${c.activa ? '' : ' · inactiva'}</small></div>
+            <button class="btn secundario" data-caja="${escapar(c.id)}">Editar</button>
+          </div>`).join('')}
+          <button class="mas" data-nueva-caja="${escapar(s.id)}">+ Caja en ${escapar(s.nombre)}</button>
+        </div>`;
+      }).join('')}
+      <button class="mas" id="s-nueva" style="margin-top:14px">+ Sucursal</button>
+    </div>`;
+  $('#s-nueva').onclick = () => hojaSucursal(null);
+  $('#cuerpo').querySelectorAll('[data-suc]').forEach(b =>
+    b.onclick = () => hojaSucursal(S.sucursales.find(s => s.id === b.dataset.suc)));
+  $('#cuerpo').querySelectorAll('[data-caja]').forEach(b =>
+    b.onclick = () => hojaCaja(S.cajas.find(c => c.id === b.dataset.caja), null));
+  $('#cuerpo').querySelectorAll('[data-nueva-caja]').forEach(b =>
+    b.onclick = () => hojaCaja(null, b.dataset.nuevaCaja));
+}
+
+function hojaSucursal(s){
+  const siguiente = 'S' + String(S.sucursales.length + 1).padStart(2, '0');
+  $('#hoja').innerHTML = `
+    <h2>${s ? 'Editar sucursal' : 'Sucursal nueva'}</h2>
+    ${s ? '' : '<p class="sub">Nace con su «Piso de ventas» y su «Bodega». Agréguele una caja después.</p>'}
+    <div class="campos">
+      <div class="campo-g"><label for="su-nom">Nombre *</label>
+        <input class="entrada" id="su-nom" value="${escapar(s?.nombre || '')}"></div>
+      <div class="campo-g"><label for="su-cod">Código *</label>
+        <input class="entrada num" id="su-cod" maxlength="5" value="${escapar(s?.codigo || siguiente)}"
+               ${s ? 'disabled' : ''} style="text-transform:uppercase"></div>
+      <div class="campo-g ancho-total"><label for="su-dir">Dirección</label>
+        <input class="entrada" id="su-dir" value="${escapar(s?.direccion || '')}"></div>
+      <div class="campo-g"><label for="su-tel">Teléfono</label>
+        <input class="entrada" id="su-tel" inputmode="tel" value="${escapar(s?.telefono || '')}"></div>
+      <div class="campo-g"><label>&nbsp;</label>
+        <label class="interruptor" style="padding:10px 12px;cursor:pointer">
+          <div><b style="font-size:13.5px">Hace domicilio</b></div>
+          <input type="checkbox" id="su-dom" ${s?.acepta_domicilio ?? true ? 'checked' : ''}
+                 style="width:20px;height:20px;accent-color:var(--verde)"></label></div>
+      <div class="campo-g"><label for="su-env">Costo de envío</label>
+        <input class="entrada num" id="su-env" inputmode="decimal" value="${s ? Number(s.costo_envio) : 0}"></div>
+      <div class="campo-g"><label for="su-min">Pedido mínimo</label>
+        <input class="entrada num" id="su-min" inputmode="decimal" value="${s ? Number(s.pedido_minimo) : 0}"></div>
+      ${s && !s.es_principal ? `<label class="ancho-total" style="display:flex;gap:9px;align-items:center;font-size:14px;font-weight:600">
+        <input type="checkbox" id="su-act" ${s.activa ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--verde)">
+        Activa</label>` : ''}
+    </div>
+    <div class="aviso malo oculto" id="su-err" style="margin-top:12px"></div>
+    <div class="acciones" style="margin-top:14px">
+      <button class="btn secundario" id="su-no">Cancelar</button>
+      <button class="btn principal-b" id="su-si">Guardar</button>
+    </div>`;
+  ver('#velo');
+  $('#su-no').onclick = cerrarHoja;
+  $('#su-si').onclick = async () => {
+    const err = $('#su-err');
+    const nombre = $('#su-nom').value.trim();
+    const codigo = $('#su-cod').value.trim().toUpperCase();
+    if (!nombre || !codigo){ err.textContent = 'Nombre y código son obligatorios.'; err.classList.remove('oculto'); return; }
+    const datos = { nombre, direccion:$('#su-dir').value.trim() || null, telefono:$('#su-tel').value.trim() || null,
+      acepta_domicilio:$('#su-dom').checked, costo_envio:Math.max(0, num($('#su-env').value)),
+      pedido_minimo:Math.max(0, num($('#su-min').value)) };
+    if ($('#su-act')) datos.activa = $('#su-act').checked;
+    const b = $('#su-si'); b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+    const { error } = s
+      ? await sb.from('sucursales').update(datos).eq('id', s.id)
+      : await sb.from('sucursales').insert({ ...datos, codigo, organizacion_id:S.org.id });
+    b.disabled = false; b.textContent = 'Guardar';
+    if (error){ err.textContent = limpiarError(error); err.classList.remove('oculto'); return; }
+    cerrarHoja();
+    await cargarTodo(); pintarSucursales();
+  };
+}
+
+function hojaCaja(c, sucursalId){
+  const suc = S.sucursales.find(s => s.id === (c?.sucursal_id || sucursalId));
+  const n = S.cajas.filter(x => x.sucursal_id === suc?.id).length + 1;
+  $('#hoja').innerHTML = `
+    <h2>${c ? 'Editar caja' : 'Caja nueva'}</h2>
+    <p class="sub">${escapar(suc?.nombre || '')}</p>
+    <div class="campos">
+      <div class="campo-g"><label for="c-nom">Nombre *</label>
+        <input class="entrada" id="c-nom" value="${escapar(c?.nombre || 'Caja ' + n)}"></div>
+      <div class="campo-g"><label for="c-cod">Código *</label>
+        <input class="entrada num" id="c-cod" maxlength="5" value="${escapar(c?.codigo || 'C' + String(n).padStart(2, '0'))}"
+               ${c ? 'disabled' : ''}></div>
+      ${c ? `<label class="ancho-total" style="display:flex;gap:9px;align-items:center;font-size:14px;font-weight:600">
+        <input type="checkbox" id="c-act" ${c.activa ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--verde)">
+        Activa (una caja inactiva no se puede abrir)</label>` : ''}
+    </div>
+    <div class="aviso malo oculto" id="c-err" style="margin-top:12px"></div>
+    <div class="acciones" style="margin-top:14px">
+      <button class="btn secundario" id="c-no">Cancelar</button>
+      <button class="btn principal-b" id="c-si">Guardar</button>
+    </div>`;
+  ver('#velo');
+  $('#c-no').onclick = cerrarHoja;
+  $('#c-si').onclick = async () => {
+    const err = $('#c-err');
+    const nombre = $('#c-nom').value.trim(), codigo = $('#c-cod').value.trim().toUpperCase();
+    if (!nombre || !codigo){ err.textContent = 'Nombre y código son obligatorios.'; err.classList.remove('oculto'); return; }
+    const b = $('#c-si'); b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+    const { error } = c
+      ? await sb.from('cajas').update({ nombre, activa:$('#c-act').checked }).eq('id', c.id)
+      : await sb.from('cajas').insert({ nombre, codigo, sucursal_id:suc.id, organizacion_id:S.org.id });
+    b.disabled = false; b.textContent = 'Guardar';
+    if (error){ err.textContent = limpiarError(error); err.classList.remove('oculto'); return; }
+    cerrarHoja();
+    await cargarTodo(); pintarSucursales();
+  };
+}
+
+/* ================= impuestos ================= */
+function pintarImpuestos(){
+  $('#cuerpo').innerHTML = `
+    <div class="ficha">
+      <h3>Impuestos</h3>
+      <p class="sub">El <b>predeterminado</b> es el que lleva un producto nuevo. En Honduras lo común
+        es ISV 15%, ISV 18% (bebidas alcohólicas y tabaco) y Exento (canasta básica).</p>
+      ${S.impuestos.map(i => `<div class="fila ${i.activo ? '' : 'inactivo'}">
+        <div class="fila-txt"><b>${escapar(i.nombre)} <span class="num" style="color:var(--tenue)">${(Number(i.tasa) * 100).toFixed(0)}%</span>
+          ${i.es_predeterminado ? '<span class="sello ok" style="margin-left:6px">Predeterminado</span>' : ''}</b>
+          <small>${i.incluido_en_precio ? 'Incluido en el precio' : 'Se suma al precio'}${i.activo ? '' : ' · inactivo'}</small></div>
+        ${!i.es_predeterminado && i.activo ? `<button class="btn secundario" data-pred="${escapar(i.id)}">Hacer predeterminado</button>` : ''}
+        <button class="btn secundario" data-imp="${escapar(i.id)}">${i.activo ? 'Desactivar' : 'Activar'}</button>
+      </div>`).join('')}
+      <button class="mas" id="i-nuevo">+ Impuesto</button>
+    </div>`;
+  $('#i-nuevo').onclick = hojaImpuesto;
+  $('#cuerpo').querySelectorAll('[data-pred]').forEach(b => b.onclick = async () => {
+    // Uno solo predeterminado: primero se apagan todos
+    let { error } = await sb.from('impuestos').update({ es_predeterminado:false }).eq('organizacion_id', S.org.id);
+    if (!error) ({ error } = await sb.from('impuestos').update({ es_predeterminado:true }).eq('id', b.dataset.pred));
+    if (error){ aviso('No se pudo cambiar', limpiarError(error)); return; }
+    await cargarTodo(); pintarImpuestos();
+  });
+  $('#cuerpo').querySelectorAll('[data-imp]').forEach(b => b.onclick = async () => {
+    const i = S.impuestos.find(x => x.id === b.dataset.imp);
+    if (i.es_predeterminado && i.activo){ aviso('Es el predeterminado', 'Elija otro como predeterminado antes de desactivar este.', 'ojo'); return; }
+    const { error } = await sb.from('impuestos').update({ activo:!i.activo }).eq('id', i.id);
+    if (error){ aviso('No se pudo cambiar', limpiarError(error)); return; }
+    await cargarTodo(); pintarImpuestos();
+  });
+}
+
+function hojaImpuesto(){
+  $('#hoja').innerHTML = `
+    <h2>Impuesto nuevo</h2>
+    <div class="campos">
+      <div class="campo-g"><label for="i-nom">Nombre *</label>
+        <input class="entrada" id="i-nom" placeholder="ISV 18%"></div>
+      <div class="campo-g"><label for="i-tasa">Tasa % *</label>
+        <input class="entrada num" id="i-tasa" inputmode="decimal" placeholder="18"></div>
+      <label class="ancho-total" style="display:flex;gap:9px;align-items:center;font-size:14px;font-weight:600">
+        <input type="checkbox" id="i-inc" checked style="width:20px;height:20px;accent-color:var(--verde)">
+        Ya viene incluido en el precio de venta</label>
+    </div>
+    <div class="aviso malo oculto" id="i-err" style="margin-top:12px"></div>
+    <div class="acciones" style="margin-top:14px">
+      <button class="btn secundario" id="i-no">Cancelar</button>
+      <button class="btn principal-b" id="i-si">Guardar</button>
+    </div>`;
+  ver('#velo');
+  $('#i-no').onclick = cerrarHoja;
+  $('#i-si').onclick = async () => {
+    const err = $('#i-err');
+    const nombre = $('#i-nom').value.trim();
+    const tasa = num($('#i-tasa').value);
+    if (!nombre || tasa < 0 || tasa > 100){ err.textContent = 'Escriba el nombre y una tasa entre 0 y 100.'; err.classList.remove('oculto'); return; }
+    const { error } = await sb.from('impuestos').insert({ organizacion_id:S.org.id, nombre,
+      tasa:Math.round(tasa * 100) / 10000, incluido_en_precio:$('#i-inc').checked, activo:true });
+    if (error){ err.textContent = limpiarError(error); err.classList.remove('oculto'); return; }
+    cerrarHoja();
+    await cargarTodo(); pintarImpuestos();
+  };
+}
+
+/* ================= al aire ================= */
+arrancar();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>

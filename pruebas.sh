@@ -26,8 +26,10 @@ for f in *.pruebas.mjs cliente/pruebas.mjs repartidor/pruebas.mjs; do
   linea=$(printf '%s\n' "$salida" | grep -E '[0-9]+ bien' | tail -1)
   # Con sed el ".*" de adelante es gloton y se come los digitos: de "225 bien"
   # sacaba 5. grep -o agarra el pedazo entero.
-  bien=$(printf '%s' "$linea" | grep -oE '[0-9]+ bien' | grep -oE '^[0-9]+')
-  mal=$(printf  '%s' "$linea" | grep -oE '[0-9]+ mal'  | grep -oE '^[0-9]+')
+  # || true: con set -e, un grep sin coincidencias (prueba que se cayo antes
+  # de imprimir el total) cortaba el script entero sin decir cual fallo.
+  bien=$(printf '%s' "$linea" | grep -oE '[0-9]+ bien' | grep -oE '^[0-9]+' || true)
+  mal=$(printf  '%s' "$linea" | grep -oE '[0-9]+ mal'  | grep -oE '^[0-9]+' || true)
   bien=${bien:-0}; mal=${mal:-0}
 
   if [ "$mal" -gt 0 ] || [ -z "$linea" ]; then

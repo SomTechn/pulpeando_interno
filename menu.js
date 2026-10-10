@@ -52,7 +52,8 @@ const MODULOS = [
   { id:'auditoria', nombre:'Auditoría', url:'auditoria.html', icono:'auditar', nivel:1 },
   { id:'merma',   nombre:'Merma',       url:'merma.html',   icono:'merma',   nivel:1 },
   { id:'movimientos', nombre:'Movimientos', url:'movimientos.html', icono:'calendario', nivel:2 },
-  { id:'catalogo', nombre:'Catálogos',  url:'catalogo.html', icono:'inventario', nivel:1 }
+  { id:'catalogo', nombre:'Catálogos',  url:'catalogo.html', icono:'inventario', nivel:1 },
+  { id:'configuracion', nombre:'Configuración', url:'configuracion.html', icono:'ajustes', nivel:3 }
 ];
 
 /* Guardar preferencias sin reventar si el navegador las tiene bloqueadas */
