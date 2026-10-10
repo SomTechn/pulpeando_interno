@@ -34,6 +34,20 @@
 .res-datos{text-align:right;flex:0 0 auto}
 .res-datos b{font-family:var(--num);font-size:13px;display:block}
 .res-datos small{font-size:11px;color:var(--tenue);font-family:var(--num)}
+.res-nuevo{display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  padding:13px 14px;font-size:13.5px;font-weight:700;color:var(--azul)}
+.res-nuevo:hover{background:var(--azul-suave)}
+.res-nuevo i{font-style:normal;width:26px;height:26px;border-radius:8px;flex:0 0 auto;
+  background:var(--azul-suave);display:grid;place-items:center;font-size:17px}
+.res-nuevo small{display:block;font-weight:500;color:var(--tenue);font-size:12px;margin-top:2px}
+.np-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.np-grid .ancho{grid-column:1 / -1}
+.np-grid select{height:46px;border:1.5px solid var(--linea);border-radius:var(--r-md);
+  padding:0 10px;font-size:14px;background:var(--panel);width:100%}
+.np-si{display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:600;
+  padding:6px 0}
+.np-si input{width:18px;height:18px;accent-color:var(--verde)}
+@media (max-width:430px){ .np-grid{grid-template-columns:1fr} }
 
 .linea-c{border:1px solid var(--linea);border-radius:var(--r-md);padding:14px;
   margin-bottom:10px;background:var(--panel)}
@@ -227,7 +241,8 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
 });
 
 const S = { ctx:null, sucursal:null, moneda:'L', menu:null,
-            catalogo:[], proveedores:[], lineas:[], guardando:false, vista:'nueva' };
+            catalogo:[], proveedores:[], lineas:[], guardando:false, vista:'nueva',
+            categorias:null, impuestos:null, codigoNuevo:null };
 
 const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
   {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -241,7 +256,9 @@ function limpiarError(e){
   const m = (e?.message || String(e))
     .replace(/^(?:[0-9A-Z]{5}|error|Error|ERROR):\s*/, '');
   if (/duplicate key|llave duplicada|unique/i.test(m))
-    return 'Ya existe una factura con ese número para este proveedor';
+    return /productos?_|sku/i.test(m)
+      ? 'Ya existe un producto con ese código'
+      : 'Ya existe una factura con ese número para este proveedor';
   if (/JWT|token/i.test(m)) return 'La sesión venció. Vuelva a entrar.';
   if (/Failed to fetch|NetworkError/i.test(m)) return 'Sin conexión con el servidor';
   return m;
@@ -365,6 +382,13 @@ caja.addEventListener('input', () => {
     (p.sku||'').toLowerCase().includes(q) ||
     (p.codigos||[]).some(c => c.toLowerCase() === q)).slice(0, 8);
 
+  const crear = r.length
+    ? `<button class="res-nuevo" data-nuevo="1"><i>+</i>
+         <span>¿No es ninguno? Crear producto nuevo</span></button>`
+    : `<button class="res-nuevo" data-nuevo="1"><i>+</i>
+         <span>Crear «${escapar(caja.value.trim())}» como producto nuevo
+           <small>Se agrega a esta entrada al guardarlo</small></span></button>`;
+
   lista.innerHTML = r.length
     ? r.map(p => `
       <button class="res" data-p="${p.producto_id}">
@@ -376,9 +400,9 @@ caja.addEventListener('input', () => {
           <b>${p.precio_venta ? money(p.precio_venta) : 'sin precio'}</b>
           <small>últ. costo ${money(p.ultimo_costo)}</small>
         </div>
-      </button>`).join('')
-    : `<div style="padding:16px;color:var(--tenue);font-size:13.5px">
-        Sin resultados. El producto debe existir en el catálogo antes de recibirlo.</div>`;
+      </button>`).join('') + crear
+    : `<div style="padding:14px 14px 4px;color:var(--tenue);font-size:13px">
+        No está en el catálogo.</div>` + crear;
   ver('#f-resultados');
 });
 
@@ -389,9 +413,11 @@ caja.addEventListener('keydown', e => {
   const primero = lista.querySelector('.res');
   if (exacto) agregar(exacto.producto_id);
   else if (primero) agregar(primero.dataset.p);
+  else if (q) hojaProductoNuevo(q);     // la pistola leyo algo que no existe
 });
 
 lista.addEventListener('click', e => {
+  if (e.target.closest('[data-nuevo]')){ hojaProductoNuevo(caja.value.trim()); return; }
   const b = e.target.closest('.res'); if (!b) return;
   agregar(b.dataset.p);
 });
@@ -407,13 +433,155 @@ $('#btn-camara').addEventListener('click', async () => {
     pista:'Cada código leído se agrega a la entrada',
     alLeer: async (cod) => {
       const p = S.catalogo.find(x => (x.codigos||[]).includes(cod) || x.sku === cod);
-      if (!p) return { ok:false, texto:'No está en el catálogo: ' + cod };
+      if (!p){
+        // No se puede abrir el formulario con la camara encima: se recuerda
+        // el codigo y se ofrece al cerrar.
+        S.codigoNuevo = cod;
+        return { ok:false, texto:'No está en el catálogo: ' + cod + '. Cierre la cámara para crearlo' };
+      }
       agregar(p.producto_id);
       const l = S.lineas.find(x => x.producto_id === p.producto_id);
       return { ok:true, texto:p.nombre, cuenta:'x' + l.cantidad };
     }
   });
+  if (S.codigoNuevo){
+    const cod = S.codigoNuevo;
+    S.codigoNuevo = null;
+    hojaProductoNuevo(cod);
+  }
 });
+
+/* ================= producto nuevo ================= */
+// Un codigo de barras son solo digitos (EAN/UPC); cualquier otra cosa que se
+// haya escrito se toma como el nombre.
+const pareceCodigo = t => /^[0-9]{6,14}$/.test(t);
+
+async function cargarListasProducto(){
+  if (S.categorias && S.impuestos) return;
+  const [c, i] = await Promise.all([
+    sb.from('categorias').select('id,nombre,padre_id').eq('activa', true).order('nombre'),
+    sb.from('impuestos').select('id,nombre,tasa,es_predeterminado').eq('activo', true).order('nombre')
+  ]);
+  S.categorias = c.data || [];
+  S.impuestos = i.data || [];
+}
+
+async function hojaProductoNuevo(texto = ''){
+  ver('#f-resultados', false);
+  await cargarListasProducto();
+  const esGerente = (S.ctx?.usuario?.nivel || 0) >= 3;
+  const codigo = pareceCodigo(texto) ? texto : '';
+  const nombre = codigo ? '' : texto;
+  const prov = S.proveedores.find(p => p.id === $('#f-prov').value);
+
+  const cats = S.categorias.map(c => {
+    const padre = c.padre_id ? S.categorias.find(x => x.id === c.padre_id) : null;
+    return { id:c.id, nombre: padre ? padre.nombre + ' › ' + c.nombre : c.nombre };
+  }).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+
+  $('#hoja').innerHTML = `
+    <h2>Producto nuevo</h2>
+    <p class="sub">Se crea en el catálogo y se agrega a esta entrada${
+      prov ? ' con <b>' + escapar(prov.nombre) + '</b> como proveedor habitual' : ''}.</p>
+    <div class="np-grid">
+      <div class="campo-g ancho"><label for="np-nombre">Nombre *</label>
+        <input class="entrada" id="np-nombre" value="${escapar(nombre)}"
+               placeholder="Ej. Café molido 400 g" autocomplete="off"></div>
+      <div class="campo-g"><label for="np-barras">Código de barras</label>
+        <div style="display:flex;gap:8px">
+          <input class="entrada" id="np-barras" value="${escapar(codigo)}" style="flex:1;min-width:0"
+                 inputmode="numeric" placeholder="Escanee o digite" autocomplete="off">
+          <button class="btn-camara" id="np-escanear" type="button" style="height:46px;flex:0 0 46px;padding:0"
+                  aria-label="Escanear el código">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/>
+            </svg></button>
+        </div></div>
+      <div class="campo-g"><label for="np-sku">Código interno</label>
+        <input class="entrada" id="np-sku" placeholder="Automático" autocomplete="off"></div>
+      <div class="campo-g"><label for="np-cat">Categoría</label>
+        <select id="np-cat"><option value="">Sin categoría</option>${
+          cats.map(c => `<option value="${c.id}">${escapar(c.nombre)}</option>`).join('')}</select></div>
+      <div class="campo-g"><label for="np-imp">Impuesto</label>
+        <select id="np-imp">${S.impuestos.length
+          ? S.impuestos.map(i => `<option value="${i.id}" ${i.es_predeterminado ? 'selected' : ''}>${
+              escapar(i.nombre)} (${(Number(i.tasa) * 100).toFixed(0)}%)</option>`).join('')
+          : '<option value="">Sin impuesto</option>'}</select></div>
+      ${esGerente ? `
+      <div class="campo-g"><label for="np-precio">Precio de venta</label>
+        <input class="entrada num" id="np-precio" inputmode="decimal" placeholder="0.00"></div>` : ''}
+      <div class="campo-g"><label for="np-caja">Unidades por caja</label>
+        <input class="entrada num" id="np-caja" inputmode="decimal" placeholder="Opcional"></div>
+      <label class="np-si ancho"><input type="checkbox" id="np-vence">
+        Es perecedero: pedir lote y fecha de vencimiento al recibir</label>
+    </div>
+    ${esGerente ? '' : `<div class="aviso ojo">El precio de venta lo pone el gerente. El producto
+      entra al inventario, pero no aparece en la caja hasta que tenga precio.</div>`}
+    <div class="aviso malo oculto" id="np-error"></div>
+    <div class="acciones">
+      <button class="btn secundario" id="np-no">Cancelar</button>
+      <button class="btn principal-b" id="np-si">Crear y agregar</button>
+    </div>`;
+  ver('#velo');
+  (nombre ? $('#np-barras') : $('#np-nombre')).focus();
+
+  $('#np-no').onclick = () => ver('#velo', false);
+  $('#np-si').onclick = () => guardarProductoNuevo(esGerente);
+  $('#np-escanear').onclick = async () => {
+    const cod = await escanear({ titulo:'Código del producto nuevo' });
+    if (cod){ $('#np-barras').value = cod; $('#np-nombre').focus(); }
+  };
+  $('#hoja').querySelectorAll('input').forEach(x =>
+    x.addEventListener('keydown', e => { if (e.key === 'Enter' && x.id !== 'np-barras') $('#np-si').click(); }));
+}
+
+async function guardarProductoNuevo(esGerente){
+  const err = $('#np-error');
+  const nombre = $('#np-nombre').value.trim();
+  if (!nombre){
+    err.textContent = 'Escriba el nombre del producto.';
+    err.classList.remove('oculto');
+    $('#np-nombre').focus();
+    return;
+  }
+  const precio = esGerente ? num($('#np-precio').value) : 0;
+  const caja = num($('#np-caja').value);
+
+  const b = $('#np-si');
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+  const { data, error } = await sb.rpc('fn_crear_producto_compra', {
+    p_nombre: nombre,
+    p_codigo_barras: $('#np-barras').value.trim() || null,
+    p_sku: $('#np-sku').value.trim() || null,
+    p_categoria_id: $('#np-cat').value || null,
+    p_impuesto_id: $('#np-imp').value || null,
+    p_precio: precio > 0 ? precio : null,
+    p_controla_vencimiento: $('#np-vence').checked,
+    p_unidades_empaque: caja > 0 ? caja : null,
+    p_proveedor_id: $('#f-prov').value || null
+  });
+  b.disabled = false; b.textContent = 'Crear y agregar';
+
+  if (error){
+    const m = (error.message || '').replace(/^(?:[0-9A-Z]{5}|error|Error|ERROR):\s*/, '');
+    err.textContent = /Could not find the function|schema cache/i.test(m)
+      ? 'Falta instalar la migración 027 en Supabase.' : limpiarError(error);
+    err.classList.remove('oculto');
+    return;
+  }
+
+  ver('#velo', false);
+  await cargarCatalogo();
+  agregar(data.producto_id);
+
+  if (data.precio_pendiente){
+    modalAviso('Producto creado sin precio',
+      `<b>${escapar(data.nombre)}</b> (código ${escapar(data.sku)}) ya está en esta entrada.
+       Todavía no tiene precio de venta: no aparecerá en la caja hasta que
+       ${esGerente ? 'le ponga precio en Catálogos' : 'el gerente le ponga precio en Catálogos'}.`, 'ojo');
+  }
+}
 
 /* ================= líneas ================= */
 function agregar(id){

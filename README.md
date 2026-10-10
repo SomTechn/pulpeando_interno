@@ -176,6 +176,14 @@ esa presentación. La pantalla muestra en vivo cuántas unidades entran, el
 costo unitario resultante y **el margen contra el precio de venta actual**,
 en rojo si quedaría vendiendo con pérdida.
 
+Si el producto es de nuevo ingreso no hace falta salir a Catálogos: al buscar
+algo que no existe (o escanear un código desconocido) aparece **Crear producto
+nuevo**. Se llena nombre, código de barras, categoría, impuesto, precio y si
+es perecedero, y queda agregado a la entrada con el proveedor de la factura
+como habitual. El precio solo lo pone el gerente: si lo crea un supervisor, el
+producto entra al inventario pero no sale en la caja hasta que tenga precio.
+(`fn_crear_producto_compra`, migración 027.)
+
 Se puede guardar como borrador o confirmar. Al confirmar se crean los lotes,
 se mueve el kardex y se recalcula el costo promedio. El historial permite
 confirmar borradores, abonar a la cuenta por pagar y anular.
