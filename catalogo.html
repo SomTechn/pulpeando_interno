@@ -89,6 +89,25 @@
 .codigo button{width:28px;height:28px;border-radius:8px;color:var(--tenue);font-size:14px}
 .codigo button:hover{background:#FFEDF1;color:var(--rojo)}
 .agregar-cod{display:flex;gap:8px}
+.dias-semana{display:flex;gap:6px;flex-wrap:wrap}
+.dias-semana label{flex:1 0 40px;min-width:40px;height:42px;border-radius:10px;
+  border:1.5px solid var(--linea);display:grid;place-items:center;font-size:13px;
+  font-weight:800;color:var(--tenue);cursor:pointer;user-select:none;background:var(--panel)}
+.dias-semana input{position:absolute;opacity:0;pointer-events:none}
+.dias-semana label:has(input:checked){border-color:var(--verde);background:#E7F7EE;
+  color:var(--verde-oscuro)}
+.pres{display:grid;grid-template-columns:minmax(0,1fr) 92px auto 32px;gap:8px;
+  align-items:center;background:var(--fondo);border-radius:10px;padding:8px}
+.pres .entrada{height:40px;font-size:14px}
+.pres .compra{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;
+  color:var(--tenue);white-space:nowrap}
+.pres .compra input{width:18px;height:18px;accent-color:var(--verde)}
+.pres button{width:32px;height:32px;border-radius:8px;color:var(--tenue);font-size:14px}
+.pres button:hover{background:#FFEDF1;color:var(--rojo)}
+@media (max-width:430px){
+  .pres{grid-template-columns:minmax(0,1fr) 78px 32px}
+  .pres .compra{grid-column:1 / -1;order:4}
+}
 
 .seccion{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
   color:#9AA8BC;margin:20px 0 -2px;grid-column:1/-1}
@@ -230,6 +249,8 @@ function limpiarError(e){
    Todo lo que distingue una pantalla de otra vive aquí. El motor de abajo
    es el mismo para las cinco.
    ========================================================================== */
+const DIAS_CORTOS = ['', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];   // 1 = lunes … 7 = domingo
+
 const ENTIDADES = {
   productos: {
     nombre:'Productos', singular:'Producto', icono:'inventario',
@@ -279,19 +300,31 @@ const ENTIDADES = {
         ayuda:'Actívelo en perecederos: pide lote y fecha al recibir.' },
       { k:'controla_lote', e:'Controla lote', tipo:'si', def:false },
       { s:'Códigos de barras' },
-      { k:'__codigos', tipo:'codigos', ancho:true }
+      { k:'__codigos', tipo:'codigos', ancho:true },
+      { s:'Presentaciones' },
+      { k:'__presentaciones', tipo:'presentaciones', ancho:true }
     ]
   },
 
   categorias: {
     nombre:'Categorías', singular:'Categoría', icono:'etiqueta',
     tabla:'categorias', nivel:3, orden:'orden',
-    columnas:'id,nombre,color,icono,orden,activa',
+    columnas:'id,nombre,padre_id,color,icono,orden,activa',
     buscaEn:['nombre'],
-    fila: r => ({ ini:r.nombre?.[0]||'·', titulo:r.nombre,
-                  sub:'Orden ' + (r.orden ?? 0), inactivo:!r.activa }),
+    fila: r => {
+      const padre = r.padre_id && S.filas.find(x => x.id === r.padre_id);
+      const hijos = S.filas.filter(x => x.padre_id === r.id).length;
+      return { ini:r.nombre?.[0]||'·', titulo:r.nombre,
+               sub: padre ? 'Dentro de ' + padre.nombre
+                    : hijos ? 'Departamento · ' + hijos + ' categoría' + (hijos === 1 ? '' : 's')
+                    : 'Orden ' + (r.orden ?? 0),
+               inactivo:!r.activa };
+    },
     campos:[
       { k:'nombre', e:'Nombre', tipo:'texto', req:true, ancho:true },
+      { k:'padre_id', e:'Departamento', tipo:'lista', de:'departamentos', ancho:true,
+        ayuda:'Déjelo en «ninguno» si esta ES un departamento (Abarrotes, Bebidas…). ' +
+              'Si es una categoría de un departamento (Aceites dentro de Abarrotes), elíjalo.' },
       { k:'orden', e:'Orden en la caja', tipo:'entero', def:0,
         ayuda:'Menor número aparece primero.' },
       { k:'activa', e:'Activa', tipo:'si', def:true }
@@ -301,11 +334,13 @@ const ENTIDADES = {
   proveedores: {
     nombre:'Proveedores', singular:'Proveedor', icono:'compras',
     tabla:'proveedores', nivel:3, orden:'nombre',
-    columnas:'id,codigo,nombre,identificacion_fiscal,contacto,telefono,email,direccion,dias_credito,dias_entrega,notas,activo',
+    columnas:'id,codigo,nombre,identificacion_fiscal,contacto,telefono,email,direccion,dias_credito,dias_entrega,dia_visita,notas,activo',
     buscaEn:['nombre','contacto','telefono'],
     fila: r => ({ ini:r.nombre?.[0]||'·', titulo:r.nombre,
                   sub:[r.contacto, r.telefono].filter(Boolean).join(' · ') || 'Sin contacto',
-                  der: r.dias_credito ? r.dias_credito + ' días' : 'Contado',
+                  der: (r.dia_visita?.length ? 'Viene ' + r.dia_visita.slice().sort()
+                          .map(d => DIAS_CORTOS[d]).join(', ') + ' · ' : '') +
+                       (r.dias_credito ? r.dias_credito + ' días' : 'Contado'),
                   inactivo:!r.activo }),
     campos:[
       { k:'nombre', e:'Nombre', tipo:'texto', req:true, ancho:true },
@@ -318,6 +353,8 @@ const ENTIDADES = {
         ayuda:'0 si le vende de contado.' },
       { k:'dias_entrega', e:'Días de entrega', tipo:'entero', def:3,
         ayuda:'Cuánto tarda en traer el pedido. Se usa para sugerir compras.' },
+      { k:'dia_visita', e:'Días que pasa el vendedor', tipo:'dias', ancho:true,
+        ayuda:'En «Qué pedir» se avisa cuándo viene. Déjelos vacíos si se le pide por teléfono.' },
       { k:'notas', e:'Notas', tipo:'texto', ancho:true },
       { k:'activo', e:'Activo', tipo:'si', def:true }
     ]
@@ -446,12 +483,19 @@ async function arrancar(){
 /* listas que alimentan los desplegables */
 async function cargarAuxiliares(){
   const [cat, mar, pro, imp] = await Promise.all([
-    sb.from('categorias').select('id,nombre').eq('activa', true).order('nombre'),
+    sb.from('categorias').select('id,nombre,padre_id').eq('activa', true).order('nombre'),
     sb.from('marcas').select('id,nombre').eq('activa', true).order('nombre'),
     sb.from('proveedores').select('id,nombre').eq('activo', true).order('nombre'),
     sb.from('impuestos').select('id,nombre,tasa').eq('activo', true).order('nombre')
   ]);
-  S.aux.categorias  = cat.data || [];
+  const cats = cat.data || [];
+  // Los departamentos: categorias sin padre. En los desplegables de producto
+  // cada categoria lleva delante su departamento ("Abarrotes › Aceites").
+  S.aux.departamentos = cats.filter(c => !c.padre_id);
+  S.aux.categorias = cats.map(c => {
+    const p = c.padre_id && cats.find(x => x.id === c.padre_id);
+    return { ...c, nombre: p ? p.nombre + ' › ' + c.nombre : c.nombre };
+  }).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
   S.aux.marcas      = mar.data || [];
   S.aux.proveedores = pro.data || [];
   S.aux.impuestos   = imp.data || [];
@@ -591,6 +635,32 @@ function abrirForm(fila){
       continue;
     }
 
+    if (c.tipo === 'dias'){
+      const marcados = fila?.[c.k] || [];
+      html += `<div class="ancho-total">
+        <label style="font-size:12px;font-weight:700;color:var(--tenue);display:block;
+                      margin-bottom:7px">${escapar(c.e)}</label>
+        <div class="dias-semana" data-dias="${c.k}">
+          ${[1,2,3,4,5,6,7].map(d => `<label><input type="checkbox" value="${d}"
+              ${marcados.includes(d) ? 'checked' : ''}>${DIAS_CORTOS[d]}</label>`).join('')}
+        </div>
+        ${c.ayuda ? `<div class="ayuda" style="margin-top:7px">${escapar(c.ayuda)}</div>` : ''}
+      </div>`;
+      continue;
+    }
+
+    if (c.tipo === 'presentaciones'){
+      html += `<div class="ancho-total">
+        <div class="codigos" id="lista-pres"></div>
+        <button class="btn secundario" id="pres-agregar" type="button"
+                style="height:42px;margin-top:8px;width:100%">+ Agregar presentación</button>
+        <div class="ayuda" style="margin-top:7px">Cómo viene del proveedor: «Fardo» de 24,
+          «Caja» de 12. Marque <b>Se compra así</b> en la que le factura el proveedor:
+          Compras y «Qué pedir» la usan para pedir por caja.</div>
+      </div>`;
+      continue;
+    }
+
     if (c.tipo === 'sucursales'){
       const suc = S.ctx?.sucursales || [];
       html += `<div class="ancho-total">
@@ -627,7 +697,7 @@ function abrirForm(fila){
     html += `<div class="${cls}"><label>${escapar(c.e)}${c.req ? ' *' : ''}</label>`;
 
     if (c.tipo === 'lista'){
-      const ops = S.aux[c.de] || [];
+      const ops = (S.aux[c.de] || []).filter(o => !(fila && o.id === fila.id));
       html += `<select class="entrada" data-k="${c.k}">
         <option value="">— ninguno —</option>
         ${ops.map(o => `<option value="${o.id}" ${String(val(c.k)) === String(o.id) ? 'selected' : ''}
@@ -662,6 +732,7 @@ function abrirForm(fila){
   ver('#form-velo');
 
   if (S.entidad === 'productos') prepararCodigos(fila);
+  if (S.entidad === 'productos') prepararPresentaciones(fila);
   if (S.entidad === 'productos' && fila) cargarPrecio(fila.id);
 
   const primero = $('#form-cuerpo').querySelector('input[data-k],select[data-k]');
@@ -726,6 +797,108 @@ function pintarCodigos(){
     b.onclick = () => { codigos.splice(+b.dataset.quitar, 1); pintarCodigos(); });
 }
 
+/* ---------- presentaciones ---------- */
+let presentaciones = [];
+let presentacionesOriginales = [];
+
+async function prepararPresentaciones(fila){
+  presentaciones = [];
+  presentacionesOriginales = [];
+  if (fila){
+    const { data } = await sb.from('presentaciones')
+      .select('id,nombre,factor,es_compra,es_base').eq('producto_id', fila.id)
+      .eq('activa', true).order('factor');
+    presentaciones = (data || []).filter(p => !p.es_base)
+      .map(p => ({ id:p.id, nombre:p.nombre, factor:Number(p.factor), es_compra:!!p.es_compra }));
+    presentacionesOriginales = presentaciones.map(p => ({ ...p }));
+  }
+  pintarPresentaciones();
+  $('#pres-agregar')?.addEventListener('click', () => {
+    leerPresentaciones();
+    presentaciones.push({ id:null, nombre:'', factor:'', es_compra:!presentaciones.length });
+    pintarPresentaciones();
+    const filas = $('#lista-pres').querySelectorAll('.pres');
+    filas[filas.length - 1]?.querySelector('input')?.focus();
+  });
+}
+
+function pintarPresentaciones(){
+  const z = $('#lista-pres'); if (!z) return;
+  z.innerHTML = presentaciones.length
+    ? presentaciones.map((p, i) => `<div class="pres" data-i="${i}">
+        <input class="entrada" data-p="nombre" placeholder="Fardo, caja, docena…"
+               value="${escapar(p.nombre)}" aria-label="Nombre de la presentación">
+        <input class="entrada num" data-p="factor" inputmode="decimal" placeholder="Trae"
+               value="${p.factor === '' ? '' : escapar(p.factor)}" aria-label="Unidades que trae">
+        <label class="compra"><input type="radio" name="pres-compra" data-p="es_compra"
+               ${p.es_compra ? 'checked' : ''}> Se compra así</label>
+        <button type="button" data-quitar-pres="${i}" aria-label="Quitar">✕</button>
+      </div>`).join('')
+    : '<div class="ayuda">Se vende y se compra por unidad.</div>';
+  z.querySelectorAll('[data-quitar-pres]').forEach(b => b.onclick = () => {
+    leerPresentaciones();
+    const era = presentaciones[+b.dataset.quitarPres];
+    presentaciones.splice(+b.dataset.quitarPres, 1);
+    if (era?.es_compra && presentaciones.length) presentaciones[0].es_compra = true;
+    pintarPresentaciones();
+  });
+}
+
+function leerPresentaciones(){
+  const z = $('#lista-pres'); if (!z) return;
+  z.querySelectorAll('.pres').forEach(f => {
+    const p = presentaciones[+f.dataset.i];
+    p.nombre = f.querySelector('[data-p="nombre"]').value.trim();
+    const v = f.querySelector('[data-p="factor"]').value.trim();
+    p.factor = v === '' ? '' : num(v);
+    p.es_compra = f.querySelector('[data-p="es_compra"]').checked;
+  });
+}
+
+function validarPresentaciones(){
+  leerPresentaciones();
+  // una fila sin nada escrito se ignora
+  presentaciones = presentaciones.filter(p => p.nombre || p.factor !== '');
+  const nombres = new Set();
+  for (const p of presentaciones){
+    if (!p.nombre) return 'A una presentación le falta el nombre.';
+    if (!(p.factor > 1)) return `«${p.nombre}» debe traer más de 1 unidad.`;
+    const k = p.nombre.toLowerCase();
+    if (nombres.has(k)) return `«${p.nombre}» está repetida.`;
+    nombres.add(k);
+  }
+  return null;
+}
+
+async function guardarPresentaciones(productoId){
+  const org = S.ctx.organizacion.id;
+  // Las quitadas no se borran: una compra vieja puede apuntar a ellas.
+  const quitadas = presentacionesOriginales.filter(o => !presentaciones.some(p => p.id === o.id));
+  if (quitadas.length){
+    const { error } = await sb.from('presentaciones').update({ activa:false, es_compra:false })
+      .in('id', quitadas.map(q => q.id));
+    if (error) throw error;
+  }
+  for (const p of presentaciones){
+    const datos = { nombre:p.nombre, factor:p.factor, es_compra:!!p.es_compra, activa:true };
+    if (p.id){
+      const o = presentacionesOriginales.find(x => x.id === p.id);
+      if (o && o.nombre === p.nombre && o.factor === p.factor && o.es_compra === p.es_compra) continue;
+      const { error } = await sb.from('presentaciones').update(datos).eq('id', p.id);
+      if (error) throw error;
+    } else {
+      // Puede existir una inactiva con el mismo nombre (se quitó antes):
+      // se revive en vez de chocar con la llave unica.
+      const { data:vieja } = await sb.from('presentaciones').select('id')
+        .eq('producto_id', productoId).eq('nombre', p.nombre).limit(1);
+      const { error } = vieja?.length
+        ? await sb.from('presentaciones').update(datos).eq('id', vieja[0].id)
+        : await sb.from('presentaciones').insert({ ...datos, organizacion_id:org, producto_id:productoId });
+      if (error) throw error;
+    }
+  }
+}
+
 /* ---------- guardar ---------- */
 $('#form-cerrar').addEventListener('click', () => ver('#form-velo', false));
 $('#form-cancelar').addEventListener('click', () => ver('#form-velo', false));
@@ -738,6 +911,12 @@ $('#form-guardar').addEventListener('click', async () => {
   for (const c of e.campos){
     if (!c.k || c.k.startsWith('__')) continue;
     if (e.soloLectura?.includes(c.k)) continue;
+    if (c.tipo === 'dias'){
+      const marcados = [...$('#form-cuerpo').querySelectorAll(`[data-dias="${c.k}"] input:checked`)]
+        .map(x => Number(x.value));
+      datos[c.k] = marcados.length ? marcados : null;
+      continue;
+    }
     const el = $('#form-cuerpo').querySelector(`[data-k="${c.k}"]`);
     if (!el) continue;
 
@@ -764,6 +943,11 @@ $('#form-guardar').addEventListener('click', async () => {
 
   const precio = S.entidad === 'productos'
     ? num($('#form-cuerpo').querySelector('[data-k="precio"]')?.value) : null;
+
+  if (S.entidad === 'productos'){
+    const malo = validarPresentaciones();
+    if (malo){ aviso('Revise las presentaciones', malo, 'malo'); return; }
+  }
 
   b.disabled = true; b.innerHTML = '<span class="girando"></span>';
 
@@ -820,6 +1004,7 @@ $('#form-guardar').addEventListener('click', async () => {
     if (S.entidad === 'productos'){
       await guardarPrecio(id, precio);
       await guardarCodigos(id);
+      await guardarPresentaciones(id);
     }
 
     ver('#form-velo', false);

@@ -15,7 +15,7 @@ function hacerSb(estado){
   const tabla = nombre => {
     const q = {
       _t:nombre,
-      select(){ return q; }, eq(){ return q; }, order(){ return q; },
+      select(){ return q; }, eq(){ return q; }, order(){ return q; }, is(){ return q; }, in(){ return q; },
       limit(){ return Promise.resolve({ data:estado.tablas[nombre] || [], error:null }); },
       // Se apunta lo que se escribe para poder revisar QUE se guardo, no solo
       // que la pantalla no se cayo.
@@ -24,7 +24,9 @@ function hacerSb(estado){
                        ({ data:{ id:'nuevo-1' }, error:null }) }; },
                        then(r){ return Promise.resolve({ data:null, error:null }).then(r); } }; },
       update(datos){ estado.escrituras.push({ tabla:nombre, op:'update', datos });
-                     return { eq(){ return Promise.resolve({ data:null, error:null }); } }; },
+                     const ok = () => Promise.resolve({ data:null, error:null });
+                     return { eq:ok, in(campo, ids){ estado.escrituras[estado.escrituras.length - 1].ids = ids;
+                                                     return ok(); } }; },
       then(r){ return Promise.resolve({ data:estado.tablas[nombre] || [], error:null }).then(r); }
     };
     return q;
@@ -634,6 +636,147 @@ console.log('\n=== CATÁLOGOS: productos, empaque y máximo ===');
   chk('con número puesto se guarda el número',
       esc && Number(esc.datos.unidades_empaque) === 24 &&
              Number(esc.datos.stock_maximo) === 120);
+}
+
+console.log('\n=== CATÁLOGOS: departamentos, visitas y presentaciones ===');
+const estadoCat = extra => ({
+  enLinea:true, alertas:[], llamadas:[],
+  tablas:{ productos:[], marcas:[], proveedores:[], impuestos:[], precios:[], producto_codigos:[],
+           presentaciones:[],
+           categorias:[{ id:'c1', nombre:'Abarrotes', padre_id:null, orden:0, activa:true },
+                       { id:'c2', nombre:'Aceites', padre_id:'c1', orden:0, activa:true },
+                       { id:'c3', nombre:'Bebidas', padre_id:null, orden:0, activa:true }], ...extra },
+  rpc:{ fn_pos_contexto:{ data:{ ...CTX_BASE,
+    usuario:{ ...CTX_BASE.usuario, rol:'gerente', nivel:3 } }, error:null } }
+});
+{
+  const estado = estadoCat();
+  const { d, caja } = await montar('catalogo.html', estado);
+  caja.S.entidad = 'categorias';
+  await caja.S.filas;  // la lista se carga al abrir la entidad
+  d.querySelector('[data-valor="categorias"]').click();
+  await new Promise(r => setTimeout(r, 60));
+  const filas = [...d.querySelectorAll('#lista .fila')].map(x => x.textContent.replace(/\s+/g, ' '));
+  chk('la lista dice qué es departamento', filas.some(f => /Abarrotes Departamento · 1 categoría/.test(f)));
+  chk('y dónde está cada categoría', filas.some(f => /Aceites Dentro de Abarrotes/.test(f)));
+
+  d.querySelector('#btn-nuevo').click();
+  await new Promise(r => setTimeout(r, 40));
+  const sel = d.querySelector('[data-k="padre_id"]');
+  const ops = [...sel.options].map(o => o.textContent.trim());
+  chk('se elige el departamento', !!sel && ops.includes('Abarrotes') && ops.includes('Bebidas'));
+  chk('una categoría hija no se ofrece como departamento', !ops.includes('Aceites'));
+  d.querySelector('[data-k="nombre"]').value = 'Harinas';
+  sel.value = 'c1';
+  d.querySelector('#form-guardar').click();
+  await new Promise(r => setTimeout(r, 120));
+  const esc = estado.escrituras.find(e => e.tabla === 'categorias');
+  chk('se guarda dentro del departamento', esc && esc.datos.padre_id === 'c1');
+}
+{
+  const estado = estadoCat();
+  const { d, caja } = await montar('catalogo.html', estado);
+  d.querySelector('[data-valor="categorias"]').click();
+  await new Promise(r => setTimeout(r, 60));
+  d.querySelector('[data-id="c1"]').click();
+  await new Promise(r => setTimeout(r, 40));
+  const ops = [...d.querySelectorAll('[data-k="padre_id"] option')].map(o => o.textContent.trim());
+  chk('una categoría no puede ser su propio departamento', !ops.includes('Abarrotes'));
+}
+{
+  const estado = estadoCat({ proveedores:[{ id:'pv1', nombre:'La Ceiba', dias_credito:15,
+    dias_entrega:2, dia_visita:[2,5], activo:true }] });
+  const { d } = await montar('catalogo.html', estado);
+  d.querySelector('[data-valor="proveedores"]').click();
+  await new Promise(r => setTimeout(r, 60));
+  chk('la lista dice cuándo viene', /Viene mar, vie · 15 días/.test(d.querySelector('#lista').textContent));
+  d.querySelector('[data-id="pv1"]').click();
+  await new Promise(r => setTimeout(r, 40));
+  const dias = [...d.querySelectorAll('[data-dias="dia_visita"] input')];
+  chk('siete días para marcar', dias.length === 7);
+  chk('vienen marcados martes y viernes', dias[1].checked && dias[4].checked && !dias[0].checked);
+  dias[4].checked = false; dias[0].checked = true;
+  d.querySelector('#form-guardar').click();
+  await new Promise(r => setTimeout(r, 120));
+  const esc = estado.escrituras.find(e => e.tabla === 'proveedores');
+  chk('se guardan lunes y martes', esc && JSON.stringify(esc.datos.dia_visita) === '[1,2]');
+}
+{
+  const estado = estadoCat({ proveedores:[{ id:'pv1', nombre:'La Ceiba', dias_credito:0,
+    dias_entrega:2, dia_visita:[3], activo:true }] });
+  const { d } = await montar('catalogo.html', estado);
+  d.querySelector('[data-valor="proveedores"]').click();
+  await new Promise(r => setTimeout(r, 60));
+  d.querySelector('[data-id="pv1"]').click();
+  await new Promise(r => setTimeout(r, 40));
+  d.querySelector('[data-dias="dia_visita"] input:checked').checked = false;
+  d.querySelector('#form-guardar').click();
+  await new Promise(r => setTimeout(r, 120));
+  const esc = estado.escrituras.find(e => e.tabla === 'proveedores');
+  chk('sin días marcados se guarda vacío (null)', esc && esc.datos.dia_visita === null);
+}
+{
+  const estado = estadoCat();
+  const { d } = await montar('catalogo.html', estado);
+  d.querySelector('[data-valor="productos"]').click();
+  await new Promise(r => setTimeout(r, 60));
+  d.querySelector('#btn-nuevo').click();
+  await new Promise(r => setTimeout(r, 60));
+  const cats = [...d.querySelectorAll('[data-k="categoria_id"] option')].map(o => o.textContent.trim());
+  chk('en el producto la categoría lleva su departamento', cats.includes('Abarrotes › Aceites'));
+
+  chk('sin presentaciones: se explica', /Se vende y se compra por unidad/.test(d.querySelector('#lista-pres').textContent));
+  d.querySelector('#pres-agregar').click();
+  d.querySelector('#pres-agregar').click();
+  const filas = d.querySelectorAll('#lista-pres .pres');
+  chk('se agregan filas', filas.length === 2);
+  chk('la primera queda como la de compra', filas[0].querySelector('[data-p="es_compra"]').checked);
+  filas[0].querySelector('[data-p="nombre"]').value = 'Fardo';
+  filas[0].querySelector('[data-p="factor"]').value = '24';
+  filas[1].querySelector('[data-p="nombre"]').value = 'Media docena';
+  filas[1].querySelector('[data-p="factor"]').value = '1';
+
+  d.querySelector('[data-k="nombre"]').value = 'Refresco 600 ml';
+  d.querySelector('[data-k="sku"]').value = 'REF600';
+  d.querySelector('[data-k="precio"]').value = '20';
+  d.querySelector('#form-guardar').click();
+  await new Promise(r => setTimeout(r, 120));
+  chk('una presentación de 1 unidad no se acepta',
+      !estado.escrituras.some(e => e.tabla === 'productos') &&
+      /debe traer más de 1 unidad/.test(d.body.textContent));
+
+  d.querySelector('#lista-pres .pres:nth-child(2) [data-p="factor"]').value = '6';
+  d.querySelector('#form-guardar').click();
+  await new Promise(r => setTimeout(r, 160));
+  const ins = estado.escrituras.filter(e => e.tabla === 'presentaciones' && e.op === 'insert');
+  chk('se guardan las dos presentaciones', ins.length === 2);
+  chk('fardo de 24 como la de compra', ins[0] && ins[0].datos.nombre === 'Fardo' &&
+      ins[0].datos.factor === 24 && ins[0].datos.es_compra === true && ins[0].datos.producto_id === 'nuevo-1');
+  chk('la otra no es de compra', ins[1] && ins[1].datos.es_compra === false);
+}
+{
+  const estado = estadoCat({
+    productos:[{ id:'p1', sku:'REF600', nombre:'Refresco 600 ml', activo:true, se_vende:true, se_compra:true }],
+    presentaciones:[{ id:'pr1', nombre:'Fardo', factor:24, es_compra:true, es_base:false },
+                    { id:'pr2', nombre:'Docena', factor:12, es_compra:false, es_base:false }] });
+  const { d } = await montar('catalogo.html', estado);
+  d.querySelector('[data-valor="productos"]').click();
+  await new Promise(r => setTimeout(r, 60));
+  d.querySelector('[data-id="p1"]').click();
+  await new Promise(r => setTimeout(r, 80));
+  const filas = d.querySelectorAll('#lista-pres .pres');
+  chk('al editar trae sus presentaciones', filas.length === 2 &&
+      filas[0].querySelector('[data-p="nombre"]').value === 'Fardo');
+  filas[0].querySelector('[data-quitar-pres]').click();
+  d.querySelector('[data-k="precio"]').value = '20';
+  chk('quitar la de compra pasa la marca a la otra',
+      d.querySelector('#lista-pres .pres [data-p="es_compra"]').checked);
+  d.querySelector('#form-guardar').click();
+  await new Promise(r => setTimeout(r, 160));
+  const baja = estado.escrituras.find(e => e.tabla === 'presentaciones' && e.op === 'update' && e.datos.activa === false);
+  chk('la quitada se desactiva, no se borra', baja && JSON.stringify(baja.ids) === '["pr1"]');
+  const cambio = estado.escrituras.find(e => e.tabla === 'presentaciones' && e.op === 'update' && e.datos.nombre === 'Docena');
+  chk('y la docena queda como la de compra', cambio && cambio.datos.es_compra === true);
 }
 
 console.log('\n' + ok + ' bien, ' + mal + ' mal');
