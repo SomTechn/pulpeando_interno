@@ -104,6 +104,7 @@
 .p-marca.repartidor{background:#F3E8FF;color:#6D28D9}
 .p-marca.recoge{background:var(--fondo);color:var(--tenue)}
 .p-marca.facturado{background:#E7F7EE;color:var(--verde-oscuro)}
+.p-marca.fallo{background:#9F1239;color:#fff}
 
 .col-vacia{
   border:2px dashed var(--linea);border-radius:var(--r-md);padding:22px 12px;
@@ -470,6 +471,7 @@ const ORIGEN = { app_cliente:'App', mostrador:'Mostrador', telefono:'Teléfono',
 function tarjeta(p){
   const tarde = p.minutos >= 20 && !['entregado','cancelado'].includes(p.estado);
   const marcas = [];
+  if (p.incidencia)                         marcas.push('<span class="p-marca fallo">No se entregó</span>');
   if (p.tiene_faltantes)                    marcas.push('<span class="p-marca falta">Falta stock</span>');
   if (p.tipo_entrega === 'recoge_en_tienda')marcas.push('<span class="p-marca recoge">Recoge</span>');
   if (p.repartidor)                          marcas.push(`<span class="p-marca repartidor">${escapar(p.repartidor.split(' ')[0])}</span>`);
@@ -581,6 +583,10 @@ async function abrirPedido(id, silencioso){
     </div>` : `
     <div class="bloque"><h4>Entrega</h4><p>El cliente pasa a recoger a la tienda</p></div>`}
 
+    ${p.incidencia ? `<div class="aviso malo" style="margin-bottom:12px"><b>No se pudo entregar:</b>
+        ${escapar(p.incidencia)}. Llame al cliente y decida si sale otra vez${p.venta_id
+          ? '. Si ya no se va a entregar, anule la venta en Ventas para que la mercadería regrese al inventario y después cancele el pedido'
+          : ' o se cancela'}.</div>` : ''}
     ${p.notas ? `<div class="bloque"><h4>Nota del cliente</h4><p>${escapar(p.notas)}</p></div>` : ''}
 
     <div class="bloque">
@@ -687,12 +693,16 @@ function pintarPasos(p){
     b.push(['cancelar','secundario','Cancelar pedido']);
   } else if (p.estado === 'listo'){
     if (!p.venta_id) b.push(['facturar','principal-b','Cobrar y despachar']);
+    // Sin cobrar no sale: la mercaderia se iria sin descargarse del
+    // inventario (la base tambien lo impide).
     if (p.tipo_entrega === 'domicilio'){
       b.push(['repartidor','secundario', p.repartidor ? 'Cambiar repartidor' : 'Asignar repartidor']);
-      if (p.repartidor_id) b.push(['ruta','principal-b','Sale a entregar']);
-    } else {
+      if (p.repartidor_id && p.venta_id) b.push(['ruta','principal-b','Sale a entregar']);
+    } else if (p.venta_id){
       b.push(['entregado','principal-b','Entregado en tienda']);
     }
+    if (p.incidencia && !p.venta_id && (S.ctx?.usuario?.nivel || 0) >= 2)
+      b.push(['cancelar','secundario','Cancelar pedido']);
   } else if (p.estado === 'en_ruta'){
     b.push(['entregado','principal-b','Marcar entregado']);
   }

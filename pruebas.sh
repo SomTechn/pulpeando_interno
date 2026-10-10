@@ -18,7 +18,7 @@ total_bien=0
 total_mal=0
 fallaron=''
 
-for f in *.pruebas.mjs cliente/pruebas.mjs; do
+for f in *.pruebas.mjs cliente/pruebas.mjs repartidor/pruebas.mjs; do
   [ -f "$f" ] || continue
   case "$f" in *"$filtro"*) ;; *) [ -n "$filtro" ] && continue ;; esac
 

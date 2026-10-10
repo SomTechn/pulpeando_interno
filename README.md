@@ -291,8 +291,20 @@ Las cantidades se pueden corregir y desmarcar, y **Pasar a la entrada** arma la
 compra con ese proveedor, en su presentación de compra. El costo estimado solo
 lo ve el gerente. (`fn_sugerencias_compra`, migración 028.)
 
+## App del repartidor
+
+`repartidor/`, una PWA aparte para el rol repartidor. Muestra sus entregas
+(primero lo que va en camino), con llamar, WhatsApp y cómo llegar; cuánto
+cobrar y el vuelto que debe llevar; lo que lleva el pedido; y los botones
+«Ya lo llevo, salgo», «Entregado» y «No se pudo entregar» (con motivo: el
+pedido vuelve al tablero marcado en rojo). Arriba, siempre, el **efectivo
+que lleva encima**: lo que tiene que entregar en la tienda al volver.
+
+Desde la migración 029 un pedido **no sale ni se entrega sin cobrarse**, y uno
+cobrado no se cancela sin anular antes su venta: así la mercadería nunca sale
+ni regresa sin que el kardex se entere.
+
 ## Pendiente
 
-- App del repartidor — la base ya está lista: `fn_mis_entregas`
 - Panel de administración de la plataforma
 - Motor de promociones

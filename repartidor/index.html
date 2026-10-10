@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1729">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="../icono-192.png">
+<title>Repartidor · Pulpeando</title>
+<script src="../config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================================================
+   Pulpeando · la app del repartidor
+
+   Se usa en la calle, con una mano, con sol y muchas veces sin buena senal.
+   De ahi todo: letra grande, contraste alto, botones de dedo entero, y lo
+   que importa en orden de uso: a donde voy, como llego, cuanto cobro, ya
+   entregue. Arriba siempre a la vista el efectivo que lleva encima, porque
+   es lo que tiene que entregar en la tienda al volver.
+   =========================================================================== */
+:root{
+  --noche:#0F1729;
+  --noche-2:#1B2540;
+  --papel:#FFFFFF;
+  --fondo:#EEF1F6;
+  --tinta:#0F1729;
+  --tenue:#5B6B85;
+  --linea:#DCE2EC;
+  --verde:#12A150;
+  --verde-hondo:#0B7A3B;
+  --verde-suave:#E4F6EC;
+  --ambar:#B86E00;
+  --ambar-suave:#FFF2DB;
+  --rojo:#C8102E;
+  --rojo-suave:#FFE8EC;
+  --azul:#1D5BD6;
+  --azul-suave:#E6EEFD;
+  --ui:'Plus Jakarta Sans',system-ui,sans-serif;
+  --num:'IBM Plex Mono',ui-monospace,monospace;
+  --r:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:var(--ui);background:var(--fondo);color:var(--tinta);font-size:16px;
+  -webkit-font-smoothing:antialiased}
+button{font:inherit;border:none;background:none;color:inherit;cursor:pointer}
+a{color:inherit;text-decoration:none}
+.oculto{display:none!important}
+.num{font-family:var(--num);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+
+/* ---------- entrar ---------- */
+.entrar{min-height:100%;display:grid;place-items:center;padding:24px;background:var(--noche);color:#fff}
+.entrar-caja{width:100%;max-width:380px}
+.entrar h1{font-size:28px;font-weight:800;line-height:1.15;margin:18px 0 6px}
+.entrar p{color:#A8B4CA;font-size:15px;margin-bottom:24px;line-height:1.5}
+.sello-app{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:14px;
+  color:#A8B4CA;letter-spacing:.02em}
+.sello-app i{width:30px;height:30px;border-radius:9px;background:var(--verde);display:grid;
+  place-items:center;font-style:normal;color:#fff;font-size:16px}
+.campo{width:100%;height:56px;border-radius:14px;border:1.5px solid #2E3A57;background:var(--noche-2);
+  color:#fff;padding:0 16px;font:inherit;font-size:17px;outline:none;margin-bottom:12px}
+.campo:focus{border-color:var(--verde)}
+.error{color:#FF9DAE;font-size:14px;min-height:20px;margin-bottom:8px}
+.btn-grande{width:100%;height:58px;border-radius:14px;background:var(--verde);color:#fff;
+  font-weight:800;font-size:17px}
+.btn-grande:disabled{opacity:.6}
+
+/* ---------- cabecera ---------- */
+.cab{background:var(--noche);color:#fff;padding:calc(14px + env(safe-area-inset-top)) 16px 16px;
+  position:sticky;top:0;z-index:5}
+.cab-fila{display:flex;align-items:center;gap:10px}
+.cab-fila b{font-size:17px;font-weight:800}
+.cab-fila small{display:block;font-size:12.5px;color:#A8B4CA;margin-top:1px}
+.cab-fila .salir{margin-left:auto;height:38px;padding:0 12px;border-radius:10px;
+  background:var(--noche-2);color:#A8B4CA;font-size:13px;font-weight:700}
+.bolsa{display:flex;gap:10px;margin-top:14px}
+.bolsa div{flex:1;background:var(--noche-2);border-radius:14px;padding:11px 13px;min-width:0}
+.bolsa small{display:block;font-size:11px;font-weight:800;letter-spacing:.06em;
+  text-transform:uppercase;color:#A8B4CA}
+.bolsa b{display:block;font-family:var(--num);font-size:22px;font-weight:700;margin-top:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bolsa .efectivo b{color:#6EE7A2}
+.pestanas{display:flex;gap:6px;margin-top:14px}
+.pes{flex:1;height:42px;border-radius:11px;background:var(--noche-2);color:#A8B4CA;
+  font-size:14px;font-weight:800}
+.pes.activo{background:#fff;color:var(--tinta)}
+.sin-red{background:var(--ambar);color:#fff;text-align:center;font-size:13.5px;font-weight:700;
+  padding:8px 12px}
+
+/* ---------- entregas ---------- */
+.lista{padding:14px 14px calc(30px + env(safe-area-inset-bottom));max-width:640px;margin:0 auto}
+.ent{background:var(--papel);border-radius:var(--r);margin-bottom:14px;overflow:hidden;
+  box-shadow:0 1px 2px rgba(15,23,41,.06),0 8px 24px -16px rgba(15,23,41,.25)}
+.ent.ruta{outline:2.5px solid var(--azul)}
+.ent-top{padding:15px 16px 4px}
+.ent-est{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.05em}
+.chip{padding:4px 10px;border-radius:999px}
+.chip.ruta{background:var(--azul-suave);color:var(--azul)}
+.chip.recoger{background:var(--ambar-suave);color:var(--ambar)}
+.chip.prog{background:var(--fondo);color:var(--tenue)}
+.ent-est .numero{margin-left:auto;font-family:var(--num);color:var(--tenue);font-size:13px;
+  text-transform:none;letter-spacing:0}
+.ent h2{font-size:21px;font-weight:800;line-height:1.2;margin-top:10px}
+.dir{font-size:16px;line-height:1.4;margin-top:6px}
+.ref{font-size:14px;color:var(--tenue);line-height:1.4;margin-top:4px}
+.recoger{margin-top:10px;font-size:14px;line-height:1.45;background:var(--ambar-suave);
+  color:#6B4000;border-radius:12px;padding:10px 12px}
+.incid{margin-top:10px;font-size:14px;line-height:1.45;background:var(--rojo-suave);
+  color:#8A0A20;border-radius:12px;padding:10px 12px}
+.notas{margin-top:10px;font-size:14px;line-height:1.45;background:var(--fondo);
+  border-radius:12px;padding:10px 12px}
+
+.acciones-c{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 16px 0}
+.acc{height:54px;border-radius:13px;background:var(--fondo);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:800;color:var(--tinta)}
+.acc svg{width:21px;height:21px}
+.acc.wa{color:#0B7A3B}
+.acc[aria-disabled="true"]{opacity:.35;pointer-events:none}
+
+.cobro{margin:14px 16px 0;border-radius:14px;padding:13px 14px;display:flex;align-items:center;gap:12px}
+.cobro.efectivo{background:var(--verde-suave)}
+.cobro.no{background:var(--fondo)}
+.cobro small{display:block;font-size:12px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.05em;color:var(--tenue)}
+.cobro.efectivo small{color:var(--verde-hondo)}
+.cobro b{display:block;font-family:var(--num);font-size:28px;font-weight:700;line-height:1.1;margin-top:2px}
+.cobro .vuelto{margin-left:auto;text-align:right;font-size:13px;color:var(--tenue);line-height:1.35}
+.cobro .vuelto b{font-size:19px;color:var(--tinta);white-space:nowrap}
+.cobro>div:first-child{min-width:0}
+
+.prods{margin:12px 16px 0}
+.prods>button{width:100%;height:44px;border-radius:12px;border:1.5px dashed var(--linea);
+  color:var(--tenue);font-size:14px;font-weight:700}
+.prods ul{list-style:none;border-radius:12px;background:var(--fondo);padding:4px 12px}
+.prods li{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--linea);font-size:15px}
+.prods li:last-child{border-bottom:none}
+.prods li b{font-family:var(--num);flex:0 0 auto;min-width:34px}
+
+.pasos{padding:14px 16px 16px;display:grid;gap:8px}
+.btn-paso{height:58px;border-radius:14px;font-weight:800;font-size:17px}
+.btn-paso.salir{background:var(--azul);color:#fff}
+.btn-paso.entregar{background:var(--verde);color:#fff}
+.btn-paso.fallo{height:48px;background:none;color:var(--rojo);font-size:15px}
+.btn-paso:disabled{opacity:.55}
+
+.vacio{text-align:center;padding:56px 24px;color:var(--tenue)}
+.vacio .ico{font-size:44px;margin-bottom:10px}
+.vacio b{display:block;font-size:19px;color:var(--tinta);margin-bottom:6px}
+.vacio p{font-size:15px;line-height:1.5}
+
+.hecho{background:var(--papel);border-radius:14px;padding:13px 15px;margin-bottom:9px;
+  display:flex;align-items:center;gap:12px}
+.hecho div{flex:1;min-width:0}
+.hecho b{display:block;font-size:15.5px;font-weight:800}
+.hecho small{display:block;font-size:13px;color:var(--tenue);margin-top:2px}
+.hecho .monto{flex:0 0 auto;text-align:right;font-family:var(--num);font-weight:700;font-size:16px}
+.hecho .monto small{font-family:var(--ui);font-weight:700}
+
+/* ---------- hoja ---------- */
+.velo{position:fixed;inset:0;z-index:20;background:rgba(15,23,41,.6);display:flex;
+  align-items:flex-end;justify-content:center}
+.hoja{background:var(--papel);width:100%;max-width:560px;border-radius:22px 22px 0 0;
+  padding:22px 18px calc(18px + env(safe-area-inset-bottom));max-height:92vh;overflow-y:auto;
+  animation:sube .22s cubic-bezier(.2,.8,.3,1)}
+@keyframes sube{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+.hoja h3{font-size:21px;font-weight:800;margin-bottom:6px}
+.hoja p{font-size:15px;color:var(--tenue);line-height:1.5;margin-bottom:14px}
+.motivos{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.motivo{padding:11px 14px;border-radius:999px;background:var(--fondo);font-size:14.5px;font-weight:700}
+.motivo.sel{background:var(--rojo-suave);color:var(--rojo)}
+.texto{width:100%;min-height:80px;border-radius:12px;border:1.5px solid var(--linea);padding:12px;
+  font:inherit;font-size:16px;outline:none;resize:vertical;margin-bottom:6px}
+.texto:focus{border-color:var(--azul)}
+.hoja .err{color:var(--rojo);font-size:14px;min-height:20px;margin-bottom:6px}
+.dos-btn{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;margin-top:6px}
+.btn-sec{height:56px;border-radius:14px;background:var(--fondo);font-weight:800;font-size:16px}
+.btn-rojo{height:56px;border-radius:14px;background:var(--rojo);color:#fff;font-weight:800;font-size:16px}
+.btn-verde{height:56px;border-radius:14px;background:var(--verde);color:#fff;font-weight:800;font-size:16px}
+.recibe{background:var(--verde-suave);border-radius:14px;padding:14px;margin-bottom:14px;
+  font-size:15px;line-height:1.5}
+.recibe b{font-family:var(--num);font-size:24px;display:block;color:var(--verde-hondo)}
+
+.aviso-flot{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));
+  transform:translateX(-50%);background:var(--noche);color:#fff;padding:13px 18px;border-radius:14px;
+  font-size:15px;font-weight:700;z-index:30;max-width:calc(100% - 32px);text-align:center;
+  box-shadow:0 12px 30px -10px rgba(0,0,0,.5)}
+.girando{display:inline-block;width:22px;height:22px;border-radius:50%;border:3px solid currentColor;
+  border-right-color:transparent;animation:gira .7s linear infinite;vertical-align:middle}
+@keyframes gira{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="entrar oculto" id="p-entrar">
+  <div class="entrar-caja">
+    <span class="sello-app"><i>◧</i> Pulpeando · Repartidor</span>
+    <h1>Sus entregas del día</h1>
+    <p>Entre con el correo que le dio la tienda.</p>
+    <input class="campo" id="e-correo" type="email" placeholder="correo@negocio.hn" autocomplete="username">
+    <input class="campo" id="e-clave" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <div class="error" id="e-error"></div>
+    <button class="btn-grande" id="e-entrar">Entrar</button>
+  </div>
+</div>
+
+<div class="entrar oculto" id="p-otro">
+  <div class="entrar-caja">
+    <span class="sello-app"><i>◧</i> Pulpeando · Repartidor</span>
+    <h1>Esta app es para repartidores</h1>
+    <p id="o-texto">Su usuario no tiene rol de repartidor. Los pedidos de la tienda se manejan
+      desde el tablero de Pedidos.</p>
+    <a class="btn-grande" href="../pedidos.html" style="display:grid;place-items:center">Ir al tablero</a>
+    <button class="btn-grande" id="o-salir" style="background:var(--noche-2);margin-top:10px">Cerrar sesión</button>
+  </div>
+</div>
+
+<div class="oculto" id="app">
+  <div class="sin-red oculto" id="sin-red">Sin señal. Lo que ve puede no estar al día.</div>
+  <header class="cab">
+    <div class="cab-fila">
+      <div><b id="c-nombre">—</b><small id="c-negocio">—</small></div>
+      <button class="salir" id="c-salir">Salir</button>
+    </div>
+    <div class="bolsa">
+      <div class="efectivo"><small>Efectivo que lleva</small><b id="c-efectivo">L 0.00</b></div>
+      <div><small>Entregados hoy</small><b id="c-entregados">0</b></div>
+    </div>
+    <div class="pestanas">
+      <button class="pes activo" data-v="pendientes" id="t-pend">Por entregar</button>
+      <button class="pes" data-v="hoy">Entregados</button>
+    </div>
+  </header>
+  <main class="lista" id="lista"></main>
+</div>
+
+<div class="velo oculto" id="velo"><div class="hoja" id="hoja"></div></div>
+<div class="aviso-flot oculto" id="flot"></div>
+
+<script type="module">
+const CFG = window.SUPABASE_CONFIG || {};
+const SUPABASE_URL = CFG.url || 'PEGUE_AQUI_LA_URL';
+const SUPABASE_KEY = CFG.key || 'PEGUE_AQUI_LA_LLAVE';
+
+const $ = s => document.querySelector(s);
+const ver = (s, si = true) => $(s).classList.toggle('oculto', !si);
+const escapar = t => String(t ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+if (SUPABASE_URL.startsWith('PEGUE')){
+  document.body.innerHTML = '<div class="vacio"><b>Falta configurar</b><p>Ponga la URL y la llave en config.js.</p></div>';
+  throw new Error('sin configurar');
+}
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth:{ persistSession:true, autoRefreshToken:true }
+});
+
+const S = {
+  yo:null, moneda:'L', vista:'pendientes',
+  entregas:[], conocidos:null, lineas:{}, abiertos:new Set(),
+  ocupado:new Set(), reloj:null
+};
+
+const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
+  { minimumFractionDigits:2, maximumFractionDigits:2 });
+const cant = n => (Number(n)||0).toLocaleString('es-HN', { maximumFractionDigits:3 });
+const hora = v => v ? new Date(v).toLocaleTimeString('es-HN', { hour:'numeric', minute:'2-digit' }) : '';
+
+function limpiarError(e){
+  const m = (e?.message || String(e)).replace(/^(?:[0-9A-Z]{5}|error|Error|ERROR):\s*/, '');
+  if (/JWT|token/i.test(m)) return 'La sesión venció. Vuelva a entrar.';
+  if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'Sin señal. Intente de nuevo cuando tenga internet.';
+  if (/Could not find the function|schema cache/i.test(m)) return 'Falta instalar la migración 029 en Supabase.';
+  return m;
+}
+
+let flotT = null;
+function flot(texto){
+  $('#flot').textContent = texto;
+  ver('#flot');
+  clearTimeout(flotT);
+  flotT = setTimeout(() => ver('#flot', false), 3200);
+}
+
+/* Telefono hondureno a formato de WhatsApp: 8 digitos → 504XXXXXXXX */
+function telWa(t){
+  const d = String(t || '').replace(/\D/g, '');
+  if (!d) return null;
+  if (d.length === 8) return '504' + d;
+  return d;
+}
+function urlMapa(e){
+  if (e.latitud && e.longitud)
+    return `https://www.google.com/maps/dir/?api=1&destination=${e.latitud},${e.longitud}`;
+  if (e.direccion)
+    return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(e.direccion);
+  return null;
+}
+
+/* ================= entrar ================= */
+$('#e-entrar').addEventListener('click', async () => {
+  const b = $('#e-entrar');
+  $('#e-error').textContent = '';
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+  const { error } = await sb.auth.signInWithPassword({
+    email:$('#e-correo').value.trim(), password:$('#e-clave').value });
+  b.disabled = false; b.textContent = 'Entrar';
+  if (error){ $('#e-error').textContent = 'Correo o contraseña incorrectos'; return; }
+  arrancar();
+});
+$('#e-clave').addEventListener('keydown', e => { if (e.key === 'Enter') $('#e-entrar').click(); });
+const salir = async () => { await sb.auth.signOut(); location.reload(); };
+$('#c-salir').addEventListener('click', salir);
+$('#o-salir').addEventListener('click', salir);
+
+async function arrancar(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session){ ver('#p-entrar'); return; }
+  ver('#p-entrar', false);
+
+  const { data, error } = await sb.rpc('fn_mi_jornada');
+  if (error){
+    ver('#p-entrar');
+    $('#e-error').textContent = limpiarError(error);
+    return;
+  }
+  if (data.rol !== 'repartidor'){
+    ver('#p-otro');
+    return;
+  }
+  S.yo = data;
+  S.moneda = data.moneda === 'HNL' || !data.moneda ? 'L' : data.moneda;
+  pintarCabecera();
+  ver('#app');
+
+  await cargar();
+  // La lista se refresca sola: un pedido nuevo asignado o uno que la tienda
+  // cancelo tienen que aparecer sin que el repartidor haga nada.
+  S.reloj = setInterval(() => { if (!document.hidden) cargar(true); }, 30000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) cargar(true); });
+}
+
+function pintarCabecera(){
+  const y = S.yo;
+  $('#c-nombre').textContent = y.nombre;
+  $('#c-negocio').textContent = y.negocio;
+  $('#c-efectivo').textContent = money(y.efectivo);
+  $('#c-entregados').textContent = y.entregados;
+  $('#t-pend').textContent = 'Por entregar' + (S.entregas.length ? ` (${S.entregas.length})` : '');
+}
+
+/* ================= cargar ================= */
+async function cargar(silencioso = false){
+  if (!silencioso && !S.entregas.length)
+    $('#lista').innerHTML = '<div class="vacio"><span class="girando"></span></div>';
+
+  const [ent, jor] = await Promise.all([sb.rpc('fn_mis_entregas'), sb.rpc('fn_mi_jornada')]);
+  if (ent.error){
+    if (!silencioso) $('#lista').innerHTML = `<div class="vacio"><div class="ico">📡</div>
+      <b>No se pudo cargar</b><p>${escapar(limpiarError(ent.error))}</p></div>`;
+    ver('#sin-red', /señal/.test(limpiarError(ent.error)));
+    return;
+  }
+  ver('#sin-red', false);
+
+  const nuevas = ent.data || [];
+  // Aviso de entrega nueva (no en la primera carga)
+  if (S.conocidos){
+    const llegaron = nuevas.filter(e => !S.conocidos.has(e.pedido_id));
+    if (llegaron.length){
+      flot(llegaron.length === 1 ? `Nueva entrega: ${llegaron[0].numero}` : `${llegaron.length} entregas nuevas`);
+      try{ navigator.vibrate?.([120, 80, 120]); }catch(e){}
+    }
+  }
+  S.conocidos = new Set(nuevas.map(e => e.pedido_id));
+  S.entregas = nuevas;
+  if (!jor.error) S.yo = { ...S.yo, ...jor.data };
+  pintarCabecera();
+  pintar();
+}
+
+/* ================= pintar ================= */
+$('.pestanas').addEventListener('click', e => {
+  const b = e.target.closest('[data-v]'); if (!b) return;
+  S.vista = b.dataset.v;
+  document.querySelectorAll('.pes').forEach(x => x.classList.toggle('activo', x === b));
+  pintar();
+});
+
+function pintar(){
+  if (S.vista === 'hoy') return pintarHoy();
+  const l = S.entregas;
+  if (!l.length){
+    $('#lista').innerHTML = `<div class="vacio"><div class="ico">🛵</div>
+      <b>Sin entregas pendientes</b>
+      <p>Cuando la tienda le asigne un pedido, aparece aquí solo.</p></div>`;
+    return;
+  }
+  $('#lista').innerHTML = l.map(tarjeta).join('');
+}
+
+const SVG = {
+  tel:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>',
+  wa:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l1.7-5A8.5 8.5 0 1 1 8 19.4z"/><path d="M9 10c0 3 2 5 5 5l1.5-1.5-2-1-1 .8c-1-.4-1.6-1-2-2l.8-1-1-2z"/></svg>',
+  mapa:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>'
+};
+
+const PAGO = { efectivo:'efectivo', tarjeta:'tarjeta', transferencia:'transferencia',
+               credito:'fiado', otro:'otro medio' };
+
+function cajaCobro(e){
+  if (e.metodo_pago === 'efectivo'){
+    const vuelto = Number(e.paga_con) > Number(e.total) ? Number(e.paga_con) - Number(e.total) : 0;
+    return `<div class="cobro efectivo">
+      <div><small>Cobrar en efectivo</small><b>${money(e.total)}</b></div>
+      ${vuelto > 0 ? `<div class="vuelto">Paga con ${money(e.paga_con)}<br>
+        lleve de vuelto <b class="num">${money(vuelto)}</b></div>` : ''}
+    </div>`;
+  }
+  if (e.metodo_pago === 'credito'){
+    return `<div class="cobro no"><div><small>No cobre</small>
+      <b style="font-size:19px;font-family:var(--ui)">Es fiado</b></div>
+      <div class="vuelto">Total<br><b class="num">${money(e.total)}</b></div></div>`;
+  }
+  return `<div class="cobro no"><div><small>No cobre efectivo</small>
+    <b style="font-size:19px;font-family:var(--ui)">Pagó por ${escapar(PAGO[e.metodo_pago] || e.metodo_pago)}</b></div>
+    <div class="vuelto">Total<br><b class="num">${money(e.total)}</b></div></div>`;
+}
+
+function tarjeta(e){
+  const ruta = e.estado === 'en_ruta';
+  const wa = telWa(e.telefono);
+  const mapa = urlMapa(e);
+  const id = escapar(e.pedido_id);
+  const ocupado = S.ocupado.has(e.pedido_id);
+  const abierto = S.abiertos.has(e.pedido_id);
+  const lineas = S.lineas[e.pedido_id];
+
+  return `<article class="ent ${ruta ? 'ruta' : ''}" data-id="${id}">
+    <div class="ent-top">
+      <div class="ent-est">
+        <span class="chip ${ruta ? 'ruta' : 'recoger'}">${ruta ? 'En camino' : 'Por recoger'}</span>
+        ${e.programado_para ? `<span class="chip prog">Para las ${hora(e.programado_para)}</span>` : ''}
+        <span class="numero">${escapar(e.numero)}</span>
+      </div>
+      <h2>${escapar(e.cliente)}</h2>
+      <div class="dir">${escapar(e.direccion || 'Sin dirección: llame al cliente')}</div>
+      ${e.referencia ? `<div class="ref">${escapar(e.referencia)}</div>` : ''}
+      ${!ruta ? `<div class="recoger">Recójalo en <b>${escapar(e.tienda)}</b>${
+          e.tienda_dir ? ' · ' + escapar(e.tienda_dir) : ''}</div>` : ''}
+      ${e.incidencia ? `<div class="incid"><b>No se pudo entregar:</b> ${escapar(e.incidencia)}</div>` : ''}
+      ${e.notas ? `<div class="notas"><b>Nota:</b> ${escapar(e.notas)}</div>` : ''}
+    </div>
+
+    <div class="acciones-c">
+      <a class="acc" href="${e.telefono ? 'tel:' + escapar(String(e.telefono).replace(/\s/g, '')) : '#'}"
+         aria-disabled="${e.telefono ? 'false' : 'true'}">${SVG.tel}Llamar</a>
+      <a class="acc wa" href="${wa ? 'https://wa.me/' + wa : '#'}" target="_blank" rel="noopener"
+         aria-disabled="${wa ? 'false' : 'true'}">${SVG.wa}WhatsApp</a>
+      <a class="acc" href="${mapa ? escapar(mapa) : '#'}" target="_blank" rel="noopener"
+         aria-disabled="${mapa ? 'false' : 'true'}">${SVG.mapa}Cómo llegar</a>
+    </div>
+
+    ${cajaCobro(e)}
+
+    <div class="prods">
+      ${abierto && lineas
+        ? `<ul>${lineas.map(l => `<li><b>${cant(l.cantidad_surtida ?? l.cantidad)}</b>
+             <span>${escapar(l.producto)}</span></li>`).join('')}</ul>`
+        : `<button data-prods="${id}">${abierto ? '<span class="girando" style="width:16px;height:16px"></span>'
+             : `Ver lo que lleva (${e.productos} producto${e.productos === 1 ? '' : 's'})`}</button>`}
+    </div>
+
+    <div class="pasos">
+      ${ruta
+        ? `<button class="btn-paso entregar" data-entregar="${id}" ${ocupado ? 'disabled' : ''}>
+             ${ocupado ? '<span class="girando"></span>' : 'Entregado'}</button>
+           <button class="btn-paso fallo" data-fallo="${id}">No se pudo entregar</button>`
+        : `<button class="btn-paso salir" data-salir="${id}" ${ocupado ? 'disabled' : ''}>
+             ${ocupado ? '<span class="girando"></span>' : 'Ya lo llevo, salgo'}</button>`}
+    </div>
+  </article>`;
+}
+
+function pintarHoy(){
+  const h = S.yo?.hoy || [];
+  if (!h.length){
+    $('#lista').innerHTML = `<div class="vacio"><div class="ico">📦</div>
+      <b>Todavía nada hoy</b><p>Lo que entregue aparece aquí, con lo que cobró.</p></div>`;
+    return;
+  }
+  $('#lista').innerHTML = `
+    <div class="cobro efectivo" style="margin:0 0 14px">
+      <div><small>Entregue en la tienda</small><b>${money(S.yo.efectivo)}</b></div>
+      <div class="vuelto">en efectivo de<br><b class="num">${S.yo.entregados}</b> entrega${S.yo.entregados === 1 ? '' : 's'}</div>
+    </div>
+    ${h.map(x => `<div class="hecho">
+      <div><b>${escapar(x.cliente)}</b><small>${escapar(x.numero)} · ${hora(x.entregado_en)}</small></div>
+      <div class="monto">${money(x.total)}<small style="color:${x.metodo_pago === 'efectivo' ? 'var(--verde-hondo)' : 'var(--tenue)'}">
+        ${escapar(PAGO[x.metodo_pago] || x.metodo_pago)}</small></div>
+    </div>`).join('')}`;
+}
+
+/* ================= acciones ================= */
+$('#lista').addEventListener('click', async ev => {
+  const a = ev.target.closest('a.acc');
+  if (a && a.getAttribute('aria-disabled') === 'true'){ ev.preventDefault(); return; }
+
+  const p = ev.target.closest('[data-prods]');
+  if (p){ verProductos(p.dataset.prods); return; }
+
+  const s = ev.target.closest('[data-salir]');
+  if (s){ cambiar(s.dataset.salir, 'en_ruta'); return; }
+
+  const en = ev.target.closest('[data-entregar]');
+  if (en){ hojaEntregar(en.dataset.entregar); return; }
+
+  const f = ev.target.closest('[data-fallo]');
+  if (f){ hojaFallo(f.dataset.fallo); return; }
+});
+
+async function verProductos(id){
+  S.abiertos.add(id);
+  pintar();
+  if (!S.lineas[id]){
+    const { data, error } = await sb.rpc('fn_pedido_lineas', { p_pedido_id:id });
+    if (error){ S.abiertos.delete(id); flot(limpiarError(error)); pintar(); return; }
+    S.lineas[id] = (data || []).filter(l => Number(l.cantidad_surtida ?? l.cantidad) > 0);
+  }
+  pintar();
+}
+
+async function cambiar(id, estado){
+  S.ocupado.add(id); pintar();
+  const { error } = await sb.rpc('fn_cambiar_estado_pedido', { p_pedido_id:id, p_estado:estado });
+  S.ocupado.delete(id);
+  if (error){ pintar(); flot(limpiarError(error)); return false; }
+  await cargar(true);
+  return true;
+}
+
+const cerrarHoja = () => ver('#velo', false);
+$('#velo').addEventListener('click', e => { if (e.target.id === 'velo') cerrarHoja(); });
+
+function hojaEntregar(id){
+  const e = S.entregas.find(x => x.pedido_id === id);
+  if (!e) return;
+  const efectivo = e.metodo_pago === 'efectivo';
+  $('#hoja').innerHTML = `
+    <h3>¿Entregado a ${escapar(e.cliente)}?</h3>
+    ${efectivo ? `<div class="recibe">Confirme que recibió
+        <b>${money(e.total)}</b>${Number(e.paga_con) > Number(e.total)
+          ? `Le pagaron con ${money(e.paga_con)} y dio ${money(Number(e.paga_con) - Number(e.total))} de vuelto.` : ''}
+      </div>`
+      : `<p>Este pedido ${e.metodo_pago === 'credito' ? 'es fiado' : 'ya está pagado por ' + escapar(PAGO[e.metodo_pago] || '')}:
+         no cobre nada.</p>`}
+    <div class="dos-btn">
+      <button class="btn-sec" id="h-no">Todavía no</button>
+      <button class="btn-verde" id="h-si">${efectivo ? 'Sí, entregado y cobrado' : 'Sí, entregado'}</button>
+    </div>`;
+  ver('#velo');
+  $('#h-no').onclick = cerrarHoja;
+  $('#h-si').onclick = async () => {
+    const b = $('#h-si');
+    b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+    cerrarHoja();
+    const ok = await cambiar(id, 'entregado');
+    if (ok){
+      flot(efectivo ? `Entregado. Lleva ${money(S.yo.efectivo)} en efectivo` : 'Entregado');
+      try{ navigator.vibrate?.(60); }catch(err){}
+    }
+  };
+}
+
+const MOTIVOS = ['No abren / nadie contesta', 'No contesta el teléfono', 'Dirección no existe',
+                 'El cliente no lo quiso', 'No tenía el dinero', 'Se dañó en el camino'];
+
+function hojaFallo(id){
+  const e = S.entregas.find(x => x.pedido_id === id);
+  if (!e) return;
+  let elegido = null;
+  $('#hoja').innerHTML = `
+    <h3>No se pudo entregar</h3>
+    <p>El pedido vuelve a la tienda con el motivo. Ellos deciden si se intenta otra vez.</p>
+    <div class="motivos">${MOTIVOS.map((m, i) =>
+      `<button class="motivo" data-m="${i}">${escapar(m)}</button>`).join('')}</div>
+    <textarea class="texto" id="h-texto" placeholder="Algo más que deba saber la tienda (opcional)"></textarea>
+    <div class="err" id="h-err"></div>
+    <div class="dos-btn">
+      <button class="btn-sec" id="h-no">Volver</button>
+      <button class="btn-rojo" id="h-si">Avisar a la tienda</button>
+    </div>`;
+  ver('#velo');
+  $('#hoja').querySelectorAll('[data-m]').forEach(b => b.onclick = () => {
+    $('#hoja').querySelectorAll('.motivo').forEach(x => x.classList.toggle('sel', x === b));
+    elegido = MOTIVOS[+b.dataset.m];
+  });
+  $('#h-no').onclick = cerrarHoja;
+  $('#h-si').onclick = async () => {
+    const extra = $('#h-texto').value.trim();
+    const motivo = [elegido, extra].filter(Boolean).join('. ');
+    if (!motivo){ $('#h-err').textContent = 'Elija un motivo o escríbalo.'; return; }
+    const b = $('#h-si');
+    b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+    const { error } = await sb.rpc('fn_entrega_fallida', { p_pedido_id:id, p_motivo:motivo });
+    if (error){
+      b.disabled = false; b.textContent = 'Avisar a la tienda';
+      $('#h-err').textContent = limpiarError(error);
+      return;
+    }
+    cerrarHoja();
+    flot('Listo, la tienda ya sabe');
+    await cargar(true);
+  };
+}
+
+window.addEventListener('online', () => { ver('#sin-red', false); cargar(true); });
+window.addEventListener('offline', () => ver('#sin-red'));
+
+/* ================= al aire ================= */
+arrancar();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
