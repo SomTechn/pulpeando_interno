@@ -40,6 +40,49 @@
 .res-nuevo i{font-style:normal;width:26px;height:26px;border-radius:8px;flex:0 0 auto;
   background:var(--azul-suave);display:grid;place-items:center;font-size:17px}
 .res-nuevo small{display:block;font-weight:500;color:var(--tenue);font-size:12px;margin-top:2px}
+.sg-barra{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.sg-barra select{flex:1 1 220px;height:46px;border:1.5px solid var(--linea);border-radius:var(--r-md);
+  padding:0 10px;font-size:14px;background:var(--panel);min-width:0}
+.sg-barra label{display:flex;align-items:center;gap:7px;height:46px;padding:0 12px;
+  border:1px solid var(--linea);border-radius:var(--r-md);background:var(--panel);
+  font-size:13px;font-weight:700;color:var(--tenue);white-space:nowrap}
+.sg-barra label input{width:17px;height:17px;accent-color:var(--azul)}
+.sg-res{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.sg-res div{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);
+  padding:11px 12px;min-width:0}
+.sg-res small{display:block;font-size:10.5px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.04em;color:var(--tenue)}
+.sg-res b{display:block;font-family:var(--num);font-size:19px;margin-top:3px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.sg-res .rojo{background:#FFEDF1;border-color:#F6CBD6}
+.sg-res .rojo small,.sg-res .rojo b{color:#9F1239}
+.sg-res .ambar{background:#FFF4E0;border-color:#F3E2BC}
+.sg-res .ambar small,.sg-res .ambar b{color:#8A5A00}
+.sg-prov{margin-bottom:14px}
+.sg-cab{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
+.sg-cab b{display:block;font-size:15.5px;font-weight:800}
+.sg-cab small{display:block;font-size:12px;color:var(--tenue);margin-top:2px}
+.sg-cab .num{margin-left:auto;font-weight:700;font-size:14px;white-space:nowrap}
+.sg-it{display:flex;align-items:center;gap:11px;padding:11px 0;border-top:1px solid var(--linea)}
+.sg-it.apagado{opacity:.5}
+.sg-it input[type=checkbox]{width:20px;height:20px;flex:0 0 auto;accent-color:var(--verde)}
+.sg-txt{flex:1;min-width:0}
+.sg-txt b{display:block;font-size:14px;font-weight:700;line-height:1.3;overflow-wrap:anywhere}
+.sg-txt small{display:block;font-size:12px;color:var(--tenue);margin-top:3px;line-height:1.45}
+.sg-est{display:inline-block;padding:1px 8px;border-radius:999px;font-size:10px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.03em;margin-right:5px;vertical-align:1px}
+.sg-est.agotado{background:#FFEDF1;color:#9F1239}
+.sg-est.urgente{background:#FFF4E0;color:#8A5A00}
+.sg-est.pedir{background:var(--azul-suave);color:var(--azul)}
+.sg-est.ok{background:#E7F7EE;color:var(--verde-oscuro)}
+.sg-cant{flex:0 0 auto;text-align:right}
+.sg-cant input{width:74px;height:40px;text-align:right;font-family:var(--num);font-size:15px;
+  font-weight:700;border:1.5px solid var(--linea);border-radius:10px;padding:0 9px;outline:none}
+.sg-cant input:focus{border-color:var(--azul)}
+.sg-cant small{display:block;font-size:11px;color:var(--tenue);margin-top:3px;font-family:var(--num);
+  white-space:nowrap}
+.sg-pasar{width:100%;margin-top:12px}
+.sg-nota{font-size:12px;color:var(--tenue);line-height:1.6;margin:4px 2px 18px}
 .np-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
 .np-grid .ancho{grid-column:1 / -1}
 .np-grid select{height:46px;border:1.5px solid var(--linea);border-radius:var(--r-md);
@@ -47,7 +90,8 @@
 .np-si{display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:600;
   padding:6px 0}
 .np-si input{width:18px;height:18px;accent-color:var(--verde)}
-@media (max-width:430px){ .np-grid{grid-template-columns:1fr} }
+@media (max-width:430px){ .np-grid{grid-template-columns:1fr}
+  .sg-res b{font-size:15px} .sg-res div{padding:10px 9px} }
 
 .linea-c{border:1px solid var(--linea);border-radius:var(--r-md);padding:14px;
   margin-bottom:10px;background:var(--panel)}
@@ -199,6 +243,14 @@
       </div>
 
       <!-- ====== HISTORIAL ====== -->
+      <div class="limite oculto" id="t-sugerencias">
+        <div class="sg-barra">
+          <select id="sg-prov" aria-label="Proveedor"></select>
+          <label><input type="checkbox" id="sg-todos"> Ver también lo que no hace falta</label>
+        </div>
+        <div id="sg-lista"></div>
+      </div>
+
       <div class="limite oculto" id="t-historial">
         <div id="h-lista"></div>
       </div>
@@ -242,7 +294,8 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 const S = { ctx:null, sucursal:null, moneda:'L', menu:null,
             catalogo:[], proveedores:[], lineas:[], guardando:false, vista:'nueva',
-            categorias:null, impuestos:null, codigoNuevo:null };
+            categorias:null, impuestos:null, codigoNuevo:null,
+            sugerencias:null, sgTodos:false, sgProv:'' };
 
 const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
   {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -322,6 +375,7 @@ async function arrancar(){
       id:'vistas', titulo:'Compras',
       items:[
         { valor:'nueva',     nombre:'Nueva entrada', icono:'compras', activo:true },
+        { valor:'sugerencias', nombre:'Qué pedir',   icono:'inventario' },
         { valor:'historial', nombre:'Historial',     icono:'reportes' }
       ]
     }]
@@ -338,10 +392,225 @@ function cambiarVista(v){
   S.vista = v;
   const nueva = v === 'nueva';
   ver('#t-nueva', nueva);
-  ver('#t-historial', !nueva);
+  ver('#t-historial', v === 'historial');
+  ver('#t-sugerencias', v === 'sugerencias');
   ver('#barra-totales', nueva);
-  $('#h-titulo').textContent = nueva ? 'Nueva entrada' : 'Historial de compras';
-  if (!nueva) cargarHistorial();
+  $('#h-titulo').textContent = { nueva:'Nueva entrada', historial:'Historial de compras',
+                                 sugerencias:'Qué pedir' }[v] || 'Compras';
+  S.menu?.marcar?.(v);
+  if (v === 'historial') cargarHistorial();
+  if (v === 'sugerencias') cargarSugerencias();
+}
+
+/* ================= qué pedir (sugerencias) ================= */
+const DIAS_SEMANA = ['', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+const ESTADO_SG = { agotado:'Agotado', urgente:'Urgente', pedir:'Pedir', ok:'Alcanza' };
+const cantTxt = n => (Number(n)||0).toLocaleString('es-HN', { maximumFractionDigits:2 });
+
+function proximaVisita(dias){
+  if (!Array.isArray(dias) || !dias.length) return null;
+  const hoyIso = (new Date().getDay() + 6) % 7 + 1;          // 1 = lunes … 7 = domingo
+  const orden = [...dias].sort((a, b) => ((a - hoyIso + 7) % 7) - ((b - hoyIso + 7) % 7));
+  const d = orden[0];
+  const falta = (d - hoyIso + 7) % 7;
+  return falta === 0 ? 'viene hoy' : falta === 1 ? 'viene mañana' : 'viene el ' + DIAS_SEMANA[d];
+}
+
+function llenarProveedoresSg(){
+  const sel = $('#sg-prov');
+  sel.innerHTML = '<option value="">Todos los proveedores</option>' +
+    S.proveedores.map(p => `<option value="${p.id}">${escapar(p.nombre)}</option>`).join('');
+  sel.value = S.sgProv;
+}
+
+async function cargarSugerencias(){
+  llenarProveedoresSg();
+  $('#sg-lista').innerHTML = '<div class="vacio"><span class="girando"></span></div>';
+  const { data, error } = await sb.rpc('fn_sugerencias_compra', {
+    p_sucursal_id:S.sucursal, p_proveedor_id:S.sgProv || null, p_todos:S.sgTodos });
+  if (error){
+    const m = limpiarError(error);
+    $('#sg-lista').innerHTML = `<div class="tarjeta"><div class="vacio"><p>${escapar(
+      /Could not find the function|schema cache/i.test(m)
+        ? 'Falta instalar la migración 028 en Supabase.' : m)}</p></div></div>`;
+    return;
+  }
+  // La cantidad a pedir se puede corregir a mano y desmarcar: se guarda
+  // en cada item para que al pasar a la entrada vaya lo que el usuario dejó.
+  for (const g of data.proveedores || [])
+    for (const it of g.items) { it.pedir = it.cajas; it.marcado = it.estado !== 'ok'; }
+  S.sugerencias = data;
+  pintarSugerencias();
+}
+
+$('#sg-prov').addEventListener('change', e => { S.sgProv = e.target.value; cargarSugerencias(); });
+$('#sg-todos').addEventListener('change', e => { S.sgTodos = e.target.checked; cargarSugerencias(); });
+
+function pintarSugerencias(){
+  const d = S.sugerencias;
+  const grupos = d.proveedores || [];
+  const ve = d.puede_ver_costos;
+  const r = d.resumen;
+
+  if (!grupos.length){
+    $('#sg-lista').innerHTML = `<div class="tarjeta"><div class="vacio"><div>✅</div>
+      <p><b>No hace falta pedir nada${S.sgProv ? ' a este proveedor' : ''}.</b><br>
+      Con lo que hay alcanza hasta que llegue el próximo pedido.</p></div></div>`;
+    return;
+  }
+
+  const unidadDe = it => it.presentacion ? it.presentacion.nombre.toLowerCase()
+                       : Number(it.caja) > 1 ? 'cajas' : (it.unidad || 'und').toLowerCase();
+
+  $('#sg-lista').innerHTML = `
+    <div class="sg-res">
+      <div class="rojo"><small>Agotados</small><b>${r.agotados}</b></div>
+      <div class="ambar"><small>Urgentes</small><b>${r.urgentes}</b></div>
+      <div><small>${ve ? 'Costo estimado' : 'Por pedir'}</small><b>${ve ? money(r.costo) : r.productos}</b></div>
+    </div>
+    ${grupos.map((g, gi) => {
+      const visita = proximaVisita(g.dia_visita);
+      const sinProv = !g.proveedor_id;
+      return `<div class="tarjeta sg-prov" data-g="${gi}">
+        <div class="sg-cab">
+          <div><b>${escapar(g.proveedor)}</b>
+            <small>${sinProv ? 'Asígneles proveedor habitual en Catálogos'
+              : `Entrega en ${g.dias_entrega} día${g.dias_entrega === 1 ? '' : 's'}${visita ? ' · ' + visita : ''}`}</small></div>
+          ${ve ? `<span class="num" data-costo="${gi}"></span>` : ''}
+        </div>
+        ${g.items.map((it, ii) => `
+          <div class="sg-it ${it.marcado ? '' : 'apagado'}">
+            <input type="checkbox" data-mk="${gi}:${ii}" ${it.marcado ? 'checked' : ''}
+                   aria-label="Pedir ${escapar(it.nombre)}">
+            <div class="sg-txt">
+              <b>${escapar(it.nombre)}</b>
+              <small><span class="sg-est ${it.estado}">${ESTADO_SG[it.estado] || it.estado}</span>${
+                Number(it.venta_diaria) > 0
+                  ? `vende ${cantTxt(it.venta_diaria)}/día · hay ${cantTxt(it.disponible)}${
+                      it.dias_alcanza !== null && it.dias_alcanza !== undefined
+                        ? ' · alcanza ' + it.dias_alcanza + ' día' + (it.dias_alcanza === 1 ? '' : 's') : ''}`
+                  : `no se vendió · hay ${cantTxt(it.disponible)}, mínimo ${cantTxt(it.stock_minimo)}`}${
+                Number(it.en_camino) ? ` · ${cantTxt(it.en_camino)} en un borrador` : ''}${
+                Number(it.apartado) ? ` · ${cantTxt(it.apartado)} apartados` : ''}</small>
+            </div>
+            <div class="sg-cant">
+              <input inputmode="numeric" data-q="${gi}:${ii}" value="${it.pedir}"
+                     aria-label="Cantidad a pedir">
+              <small>${escapar(unidadDe(it))}${Number(it.caja) > 1 ? ' × ' + cantTxt(it.caja) : ''}</small>
+            </div>
+          </div>`).join('')}
+        ${sinProv
+          ? `<button class="btn secundario sg-pasar" data-pasar="${gi}">Pasar a una entrada (elija el proveedor)</button>`
+          : `<button class="btn principal-b sg-pasar" data-pasar="${gi}"></button>`}
+      </div>`;
+    }).join('')}
+    <p class="sg-nota">
+      Se calcula con la venta de los últimos ${d.dias} días, contando solo los días en
+      que hubo producto (un día agotado no es un día sin demanda). Se pide para cubrir
+      los días de entrega del proveedor más los días de cobertura de cada producto,
+      sin pasar del stock máximo, y se redondea a la caja en que viene. Lo que ya está
+      en una compra en borrador se descuenta.
+    </p>`;
+  grupos.forEach((g, gi) => actualizarGrupo(gi));
+}
+
+function actualizarGrupo(gi){
+  const g = S.sugerencias.proveedores[gi];
+  const elegidos = g.items.filter(it => it.marcado && num(it.pedir) > 0);
+  const b = document.querySelector(`[data-pasar="${gi}"]`);
+  if (b && g.proveedor_id){
+    b.textContent = elegidos.length
+      ? `Pasar ${elegidos.length} producto${elegidos.length === 1 ? '' : 's'} a la entrada`
+      : 'Marque lo que va a pedir';
+    b.disabled = !elegidos.length;
+  }
+  const c = document.querySelector(`[data-costo="${gi}"]`);
+  if (c) c.textContent = money(elegidos.reduce((a, it) =>
+    a + num(it.pedir) * Number(it.caja) * Number(it.ultimo_costo || 0), 0));
+}
+
+$('#sg-lista').addEventListener('change', e => {
+  const mk = e.target.dataset.mk;
+  if (mk){
+    const [gi, ii] = mk.split(':').map(Number);
+    const it = S.sugerencias.proveedores[gi].items[ii];
+    it.marcado = e.target.checked;
+    e.target.closest('.sg-it').classList.toggle('apagado', !it.marcado);
+    actualizarGrupo(gi);
+  }
+});
+$('#sg-lista').addEventListener('input', e => {
+  const q = e.target.dataset.q;
+  if (!q) return;
+  const [gi, ii] = q.split(':').map(Number);
+  const it = S.sugerencias.proveedores[gi].items[ii];
+  it.pedir = Math.max(0, Math.round(num(e.target.value)));
+  actualizarGrupo(gi);
+});
+$('#sg-lista').addEventListener('click', e => {
+  const b = e.target.closest('[data-pasar]');
+  if (b) pasarAEntrada(Number(b.dataset.pasar));
+});
+
+async function pasarAEntrada(gi){
+  const g = S.sugerencias.proveedores[gi];
+  const elegidos = g.items.filter(it => it.marcado && num(it.pedir) > 0);
+  if (!elegidos.length) return;
+
+  const provActual = $('#f-prov').value;
+  if (S.lineas.length && g.proveedor_id && provActual && provActual !== g.proveedor_id){
+    const si = await modalConfirmar('Ya hay una entrada en curso',
+      `La entrada que está armando es de otro proveedor y tiene ${S.lineas.length}
+       producto(s). Si sigue, se reemplaza por el pedido de <b>${escapar(g.proveedor)}</b>.`,
+      'Reemplazar');
+    if (!si) return;
+    S.lineas = [];
+  }
+
+  // Algunos productos pueden haberse creado despues de cargar el catalogo
+  if (elegidos.some(it => !S.catalogo.find(p => p.producto_id === it.producto_id)))
+    await cargarCatalogo();
+
+  if (g.proveedor_id){
+    $('#f-prov').value = g.proveedor_id;
+    $('#f-prov').dispatchEvent(new Event('change'));
+  }
+  for (const it of elegidos) agregarCantidad(it);
+
+  cambiarVista('nueva');
+  pintarLineas();
+}
+
+/* Agrega una linea con la cantidad y la presentacion de la sugerencia. Si el
+   producto ya estaba en la entrada, se reemplaza su cantidad (no se suma: la
+   sugerencia ya tomo en cuenta lo que hay). */
+function agregarCantidad(it){
+  const p = S.catalogo.find(x => x.producto_id === it.producto_id);
+  if (!p) return;
+  const pres = p.presentaciones || [];
+  const elegida = it.presentacion ? pres.find(x => x.id === it.presentacion.id) || null : null;
+  // Sin presentacion de compra pero con unidades por caja: se pide en
+  // unidades (la factura del proveedor las trae sueltas o por caja, y la
+  // linea se puede cambiar de presentacion despues).
+  const factor = elegida ? Number(elegida.factor) : 1;
+  const cantidad = elegida ? num(it.pedir) : num(it.pedir) * Number(it.caja || 1);
+
+  const ya = S.lineas.find(l => l.producto_id === it.producto_id);
+  if (ya){
+    ya.presentacion_id = elegida ? elegida.id : '';
+    ya.factor = factor;
+    ya.cantidad = cantidad;
+    return;
+  }
+  S.lineas.push({
+    producto_id:p.producto_id, nombre:p.nombre, sku:p.sku, unidad_base:p.unidad_base,
+    tasa:Number(p.tasa_impuesto || 0), precio_venta:Number(p.precio_venta || 0),
+    presentaciones:pres, presentacion_id:elegida ? elegida.id : '', factor,
+    cantidad,
+    costo:p.ultimo_costo ? +(Number(p.ultimo_costo) * factor).toFixed(4) : 0,
+    lote:'', vence:'',
+    pide_vencimiento:p.controla_vencimiento || p.controla_lote
+  });
 }
 
 async function cargarProveedores(){

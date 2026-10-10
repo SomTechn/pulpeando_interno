@@ -271,14 +271,28 @@ para gerente.
 Funciones: `fn_control_inventario`, `fn_categorias_arbol` (026),
 `fn_inventario_por_fecha`, `fn_kardex_producto` (025).
 
+## Qué pedir (sugerencias de compra)
+
+En Compras → **Qué pedir**, para supervisor en adelante. Por proveedor, lo que
+hay que pedirle y cuánto:
+
+- **Venta diaria**: lo vendido en los últimos 28 días entre los días en que
+  **hubo producto**. Un día agotado no es un día sin demanda; contarlo bajaría
+  el promedio y el pedido volvería a quedarse corto.
+- **Disponible**: existencia − apartado por pedidos + lo que ya está en una
+  compra en borrador.
+- **Se pide** para cubrir los días de entrega del proveedor más los días de
+  cobertura del producto, más el stock mínimo, sin pasar del máximo, y se
+  redondea hacia arriba a la caja en que viene.
+- **Agotado** (no hay), **Urgente** (se acaba antes de que llegue el pedido),
+  **Pedir** (bajo el punto de pedido).
+
+Las cantidades se pueden corregir y desmarcar, y **Pasar a la entrada** arma la
+compra con ese proveedor, en su presentación de compra. El costo estimado solo
+lo ve el gerente. (`fn_sugerencias_compra`, migración 028.)
+
 ## Pendiente
 
-- App del cliente (catálogo, carrito, seguimiento) — la base ya está lista:
-  `fn_tiendas_cliente`, `fn_catalogo_cliente`, `fn_crear_pedido`,
-  `fn_mis_pedidos`, `fn_cancelar_mi_pedido`
 - App del repartidor — la base ya está lista: `fn_mis_entregas`
-- Fiado (cuentas por cobrar de los clientes)
 - Panel de administración de la plataforma
 - Motor de promociones
-- Sugerencias de compra por promedio de ventas y tiempo de entrega
-- Conteos de inventario y ajustes

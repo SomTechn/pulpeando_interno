@@ -311,5 +311,144 @@ console.log('\n=== SUPERVISOR ===');
   chk('y el aviso dice que lo ponga el gerente', /el gerente le ponga precio/.test(d.querySelector('#hoja').textContent));
 }
 
+console.log('\n=== QUÉ PEDIR ===');
+const SUG = (ve = true) => ({
+  sucursal_id:'s1', sucursal:'Central', dias:28, desde:'2026-09-12', hasta:'2026-10-09',
+  puede_ver_costos:ve,
+  resumen:{ productos:3, agotados:1, urgentes:1, costo: ve ? 2365 : null },
+  proveedores:[
+    { proveedor_id:'pv1', proveedor:'Distribuidora La Ceiba', dias_entrega:3, dia_visita:[2,5],
+      costo: ve ? 2330 : null, items:[
+      { producto_id:'p1', nombre:'Aceite vegetal 500ml', sku:'ACE500', unidad:'UND', estado:'agotado',
+        venta_diaria:2, disponible:0, dias_alcanza:0, en_camino:0, apartado:0, stock_minimo:0,
+        caja:1, presentacion:null, cajas:20, unidades:20, ultimo_costo: ve ? 11.11 : null },
+      { producto_id:'p9', nombre:'Leche 1 L', sku:'LEC1', unidad:'UND', estado:'urgente',
+        venta_diaria:10, disponible:25, dias_alcanza:2, en_camino:0, apartado:3, stock_minimo:5,
+        caja:12, presentacion:{ id:'pr9', nombre:'Caja', factor:12 }, cajas:7, unidades:84,
+        ultimo_costo: ve ? 20 : null } ] },
+    { proveedor_id:null, proveedor:'Sin proveedor habitual', dias_entrega:3, dia_visita:null,
+      costo: ve ? 35 : null, items:[
+      { producto_id:'p7', nombre:'Sal', sku:'SAL1', unidad:'UND', estado:'pedir',
+        venta_diaria:0, disponible:3, dias_alcanza:null, en_camino:0, apartado:0, stock_minimo:10,
+        caja:1, presentacion:null, cajas:7, unidades:7, ultimo_costo: ve ? 5 : null } ] } ] });
+
+function conSugerencias(rol = 'gerente', nivel = 3){
+  const e = base(rol, nivel);
+  e.catalogo.push({ producto_id:'p9', sku:'LEC1', nombre:'Leche 1 L', unidad_base:'UND',
+    controla_lote:false, controla_vencimiento:true, tasa_impuesto:0, precio_venta:28,
+    ultimo_costo:20, existencia:25, codigos:[],
+    presentaciones:[{ id:'pr9', nombre:'Caja', factor:12, es_compra:true }] });
+  e.rpc.fn_sugerencias_compra = a => ({ data: a.p_proveedor_id
+      ? { ...SUG(nivel >= 3), proveedores:[SUG(nivel >= 3).proveedores[0]] } : SUG(nivel >= 3), error:null });
+  return e;
+}
+const irA = async (d, v) => {
+  d.querySelector(`[data-valor="${v}"]`).click();
+  await esperar(150);
+};
+{
+  const estado = conSugerencias();
+  const { d, m } = await montar(estado);
+  await irA(d, 'sugerencias');
+  chk('el menú tiene «Qué pedir»', !!d.querySelector('[data-valor="sugerencias"]'));
+  chk('la vista se muestra y la barra de totales no',
+      !d.querySelector('#t-sugerencias').classList.contains('oculto') &&
+      d.querySelector('#barra-totales').classList.contains('oculto'));
+  chk('pide las sugerencias de la sucursal',
+      ultima(estado, 'fn_sugerencias_compra').args.p_sucursal_id === 's1');
+  const res = [...d.querySelectorAll('.sg-res div')].map(x => x.textContent.replace(/\s+/g, ' '));
+  chk('resumen: agotados, urgentes y costo', /Agotados ?1/.test(res[0]) && /1/.test(res[1]) && /L 2,365\.00/.test(res[2]));
+  const provs = d.querySelectorAll('.sg-prov');
+  chk('agrupado por proveedor', provs.length === 2 && /Distribuidora La Ceiba/.test(provs[0].textContent));
+  chk('días de entrega y próxima visita', /Entrega en 3 días · viene/.test(provs[0].textContent));
+  const leche = [...provs[0].querySelectorAll('.sg-it')][1].textContent.replace(/\s+/g, ' ');
+  chk('dice cuánto vende, cuánto hay y cuánto alcanza', /vende 10\/día · hay 25 · alcanza 2 días/.test(leche));
+  chk('y lo apartado', /3 apartados/.test(leche));
+  chk('pide en cajas de 12', /caja × 12/.test(leche) &&
+      provs[0].querySelector('[data-q="0:1"]').value === '7');
+  chk('el estado se ve', provs[0].querySelector('.sg-est.agotado') && provs[0].querySelector('.sg-est.urgente'));
+  chk('el botón cuenta lo marcado', /Pasar 2 productos a la entrada/.test(provs[0].querySelector('[data-pasar]').textContent));
+  chk('el costo del proveedor', provs[0].querySelector('[data-costo]').textContent === 'L 1,902.20');
+  chk('sin proveedor: pide asignarlo', /Asígneles proveedor habitual/.test(provs[1].textContent));
+
+  // corregir cantidad y desmarcar uno
+  const q = provs[0].querySelector('[data-q="0:1"]');
+  q.value = '5'; q.dispatchEvent(new window.Event('input', { bubbles:true }));
+  chk('cambiar la cantidad recalcula el costo', provs[0].querySelector('[data-costo]').textContent === 'L 1,422.20');
+  const mk = provs[0].querySelector('[data-mk="0:0"]');
+  mk.checked = false; mk.dispatchEvent(new window.Event('change', { bubbles:true }));
+  chk('desmarcar apaga la fila y descuenta', provs[0].querySelector('.sg-it').classList.contains('apagado') &&
+      /Pasar 1 producto a la entrada/.test(provs[0].querySelector('[data-pasar]').textContent));
+
+  provs[0].querySelector('[data-pasar]').click();
+  await esperar(150);
+  chk('vuelve a la entrada', !d.querySelector('#t-nueva').classList.contains('oculto'));
+  chk('con el proveedor elegido', d.querySelector('#f-prov').value === 'pv1');
+  chk('solo lo marcado', m.S.lineas.length === 1 && m.S.lineas[0].nombre === 'Leche 1 L');
+  chk('en la presentación de compra y con la cantidad corregida',
+      m.S.lineas[0].presentacion_id === 'pr9' && m.S.lineas[0].cantidad === 5 && m.S.lineas[0].factor === 12);
+  chk('con el costo de la caja', m.S.lineas[0].costo === 240);
+}
+{
+  const estado = conSugerencias();
+  const { d, m } = await montar(estado);
+  await irA(d, 'sugerencias');
+  d.querySelector('[data-pasar="0"]').click();
+  await esperar(150);
+  const aceite = m.S.lineas.find(l => l.producto_id === 'p1');
+  chk('sin presentación se pide en unidades', aceite && aceite.cantidad === 20 && aceite.factor === 1);
+}
+{
+  const estado = conSugerencias();
+  const { d, w, m } = await montar(estado);
+  // una entrada en curso con otro proveedor
+  d.querySelector('#f-prov').innerHTML += '<option value="pv2">Otro</option>';
+  d.querySelector('#f-prov').value = 'pv2';
+  buscar(d, w, 'aceite');
+  d.querySelector('.res').click();
+  await irA(d, 'sugerencias');
+  d.querySelector('[data-pasar="0"]').click();
+  await esperar(100);
+  chk('si hay otra entrada en curso pregunta antes', /Ya hay una entrada en curso/.test(d.querySelector('#hoja').textContent));
+  d.querySelector('#no').click();
+  await esperar(50);
+  chk('y «Volver» no toca nada', m.S.lineas.length === 1 && d.querySelector('#f-prov').value === 'pv2');
+}
+{
+  const estado = conSugerencias();
+  const { d } = await montar(estado);
+  await irA(d, 'sugerencias');
+  const sel = d.querySelector('#sg-prov');
+  chk('filtro de proveedores', [...sel.options].some(o => o.textContent === 'Distribuidora La Ceiba'));
+  sel.value = 'pv1'; sel.dispatchEvent(new window.Event('change'));
+  await esperar();
+  chk('filtrar viaja al servidor', ultima(estado, 'fn_sugerencias_compra').args.p_proveedor_id === 'pv1');
+  const t = d.querySelector('#sg-todos');
+  t.checked = true; t.dispatchEvent(new window.Event('change'));
+  await esperar();
+  chk('«ver también lo que no hace falta» viaja', ultima(estado, 'fn_sugerencias_compra').args.p_todos === true);
+}
+{
+  const estado = conSugerencias('supervisor', 2);
+  const { d } = await montar(estado);
+  await irA(d, 'sugerencias');
+  chk('el supervisor no ve costo', !/L \d/.test(d.querySelector('.sg-res').textContent) &&
+      !d.querySelector('[data-costo]'));
+}
+{
+  const estado = conSugerencias();
+  estado.rpc.fn_sugerencias_compra = { data:{ ...SUG(), proveedores:[] }, error:null };
+  const { d } = await montar(estado);
+  await irA(d, 'sugerencias');
+  chk('si no hace falta nada lo dice', /No hace falta pedir nada/.test(d.querySelector('#sg-lista').textContent));
+}
+{
+  const estado = conSugerencias();
+  estado.rpc.fn_sugerencias_compra = { data:null, error:{ message:'Could not find the function public.fn_sugerencias_compra' } };
+  const { d } = await montar(estado);
+  await irA(d, 'sugerencias');
+  chk('si falta la migración lo dice', /migración 028/.test(d.querySelector('#sg-lista').textContent));
+}
+
 console.log(`\n${ok} bien · ${mal} mal`);
 process.exit(mal ? 1 : 0);
