@@ -115,6 +115,28 @@
   border-top:1px solid var(--linea)}
 .ticket-pagos{margin-top:12px;padding-top:12px;border-top:1px dashed var(--linea)}
 .ticket-pie{text-align:center;margin-top:16px;font-size:11.5px;color:var(--tenue)}
+.devol-sello{background:#FFF4E0;color:#8A5A00;border-radius:var(--r-sm);
+  padding:11px 13px;margin-bottom:10px;font-family:var(--ui);font-size:13px;line-height:1.45}
+.devol-sello b{font-family:var(--num)}
+.devol-sello button{margin-top:6px;font-size:12.5px;font-weight:700;color:var(--azul);
+  background:none;padding:0;text-decoration:underline}
+.tl-dev{color:#8A5A00;font-family:var(--ui);font-size:11.5px;font-weight:700}
+.dv-linea{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--linea)}
+.dv-linea:last-child{border-bottom:none}
+.dv-nom{flex:1;min-width:0;font-size:14px}
+.dv-nom small{display:block;color:var(--tenue);font-size:12px;font-family:var(--num)}
+.dv-cant{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.dv-cant button{width:34px;height:34px;border-radius:10px;background:var(--fondo);
+  font-size:18px;font-weight:700;color:var(--tinta)}
+.dv-cant input{width:64px;height:34px;text-align:center;border:1.5px solid var(--linea);
+  border-radius:10px;font-family:var(--num);font-size:14px;outline:none}
+.dv-cant input:focus{border-color:var(--azul)}
+.dv-lista{max-height:38vh;overflow-y:auto;margin-bottom:12px}
+.dv-total{display:flex;justify-content:space-between;font-weight:800;font-size:16px;
+  padding:10px 0;border-top:1px solid var(--linea);margin-bottom:6px}
+.dv-total span:last-child{font-family:var(--num)}
+.dv-nota{font-size:12.5px;color:var(--tenue);margin-bottom:12px;line-height:1.45}
+.dv-metodos{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
 .anulado-sello{background:#FFEDF1;color:#9F1239;border-radius:var(--r-sm);
   padding:11px 13px;margin-bottom:14px;font-family:var(--ui);font-size:13px;
   font-weight:600;line-height:1.45}
@@ -230,6 +252,7 @@
     <div class="cajon-cuerpo" id="cajon-cuerpo"></div>
     <div class="cajon-pie">
       <button class="btn secundario" id="btn-imprimir">Imprimir</button>
+      <button class="btn secundario oculto" id="btn-devolver">Devolver</button>
       <button class="btn secundario oculto" id="btn-anular"
               style="color:var(--rojo)">Anular</button>
     </div>
@@ -284,7 +307,8 @@ function aviso(titulo, texto){
   $('#ok').onclick = () => ver('#velo', false);
 }
 
-const iso = d => d.toISOString().slice(0,10);
+// Fecha local: con toISOString, de noche ya era el dia siguiente
+const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,10);
 
 /* Los metodos vienen de la base en minuscula y sin tilde. En pantalla se leen
    como palabras, no como valores de una tabla. */
@@ -419,11 +443,13 @@ function pintarResumen(){
   const ganancia = r.ganancia === null || r.ganancia === undefined
     ? '' : `<div class="tj bien"><small>Ganancia</small><b>${money(r.ganancia)}</b></div>`;
   $('#tarjetas').innerHTML = `
-    <div class="tj"><small>Vendido</small><b>${money(r.total)}</b></div>
+    <div class="tj"><small>${Number(r.devuelto) > 0 ? 'Vendido neto' : 'Vendido'}</small><b>${money(r.total)}</b></div>
     <div class="tj"><small>Ventas</small><b>${r.ventas || 0}</b></div>
     <div class="tj"><small>Efectivo</small><b>${money(r.efectivo)}</b></div>
     <div class="tj"><small>Fiado</small><b>${money(r.fiado)}</b></div>
     ${ganancia}
+    ${Number(r.devuelto) > 0
+      ? `<div class="tj malo"><small>Devuelto</small><b>${money(r.devuelto)}</b></div>` : ''}
     ${(r.anuladas || 0) > 0
       ? `<div class="tj malo"><small>Anuladas</small><b>${r.anuladas}</b></div>` : ''}`;
 }
@@ -456,7 +482,8 @@ function pintar(){
     const sellos = [
       v.estado === 'anulada' ? '<span class="sello-v anulada">Anulada</span>' : '',
       v.es_credito ? '<span class="sello-v fiado">Fiado</span>' : '',
-      v.documento === 'factura' ? '<span class="sello-v factura">Factura</span>' : ''
+      v.documento === 'factura' ? '<span class="sello-v factura">Factura</span>' : '',
+      Number(v.devuelto) > 0 ? '<span class="sello-v fiado">Devolución</span>' : ''
     ].filter(Boolean).join(' ');
     const quien = [v.cliente, v.cajero].filter(Boolean).join(' · ');
     return `
@@ -483,6 +510,7 @@ async function abrirVenta(id){
   $('#t-numero').textContent = '—';
   $('#cajon-cuerpo').innerHTML = '<div class="vacio"><span class="girando"></span></div>';
   ver('#btn-anular', false);
+  ver('#btn-devolver', false);
   ver('#form-velo');
 
   const { data, error } = await sb.rpc('fn_venta_completa', { p_venta_id:id });
@@ -499,8 +527,13 @@ function pintarTicket(){
   const anulada = v.estado === 'anulada';
   $('#t-numero').textContent = v.numero_fiscal || v.numero;
 
-  // Anular es de supervisor para arriba, y una venta anulada ya no se toca.
-  ver('#btn-anular', S.nivel >= 2 && !anulada);
+  // Anular y devolver son de supervisor para arriba, y una venta anulada ya
+  // no se toca. Con devoluciones ya no se anula entera: se devuelve lo que
+  // quede (si no, la mercaderia volveria dos veces).
+  const devs = d.devoluciones || [];
+  const quedan = (d.lineas || []).some(l => Number(l.cantidad) - Number(l.devuelto || 0) > 0.0005);
+  ver('#btn-anular', S.nivel >= 2 && !anulada && !devs.length);
+  ver('#btn-devolver', S.nivel >= 2 && !anulada && quedan);
 
   const fecha = new Date(v.creada_en).toLocaleString('es-HN',
     { day:'numeric', month:'short', year:'numeric',
@@ -510,7 +543,8 @@ function pintarTicket(){
     <div class="tl">
       <span class="tl-nom">${escapar(l.producto)}
         <small>${Number(l.cantidad)} × ${money(l.precio)}${
-          Number(l.descuento) > 0 ? ' − ' + money(l.descuento) : ''}</small></span>
+          Number(l.descuento) > 0 ? ' − ' + money(l.descuento) : ''}</small>${
+          Number(l.devuelto) > 0 ? `<span class="tl-dev">Devuelto: ${Number(l.devuelto)}</span>` : ''}</span>
       <b>${money(l.total)}</b>
     </div>`).join('');
 
@@ -528,6 +562,14 @@ function pintarTicket(){
       Esta venta se anuló${v.anulada_por ? ' (' + escapar(v.anulada_por) + ')' : ''}.
       ${v.motivo_anulacion ? 'Motivo: ' + escapar(v.motivo_anulacion) : ''}
       <br>La mercadería volvió al inventario.</div>` : ''}
+    ${devs.map(x => `<div class="devol-sello">
+      <b>${escapar(x.numero_fiscal || x.numero)}</b> · devolución de <b>${money(x.total)}</b>
+      ${x.por ? ' (' + escapar(x.por) + ')' : ''}<br>
+      Motivo: ${escapar(x.motivo)}
+      ${Number(x.rebaja_fiado) > 0 ? '<br>Se rebajó ' + money(x.rebaja_fiado) + ' del fiado' : ''}
+      ${Number(x.reembolso) > 0 ? '<br>Se devolvió ' + money(x.reembolso) + ' en ' + escapar(comoPago(x.metodo).toLowerCase()) : ''}
+      <br><button data-dev="${escapar(x.id)}">Imprimir comprobante</button>
+    </div>`).join('')}
 
     <div class="ticket">
       <div class="ticket-enc">
@@ -567,6 +609,10 @@ function pintarTicket(){
       <div class="ticket-pie">¡Gracias por su compra!</div>
     </div>`;
 }
+
+$('#cajon-cuerpo').addEventListener('click', e => {
+  const b = e.target.closest('[data-dev]'); if (b) imprimirDevolucion(b.dataset.dev);
+});
 
 $('#form-cerrar').addEventListener('click', () => ver('#form-velo', false));
 $('#form-velo').addEventListener('click', e => {
@@ -616,6 +662,163 @@ $('#btn-anular').addEventListener('click', () => {
     ver('#velo', false);
     await abrirVenta(v.id);
     await cargar();
+  };
+});
+
+/* ================= devolver ================= */
+/* Se devuelve parte de la venta: algunas lineas o algunas unidades. Lo fiado
+   de esa venta se rebaja primero; lo demas se le devuelve al cliente. El
+   efectivo sale de una caja abierta de la sucursal de la venta. */
+async function imprimirDevolucion(id){
+  const { data, error } = await sb.rpc('fn_devolucion_completa', { p_devolucion_id:id });
+  if (error){ aviso('No se pudo imprimir', limpiarError(error)); return; }
+  imprimirTicket(data, { copia:false });
+}
+
+$('#btn-devolver').addEventListener('click', async () => {
+  const d = S.venta, v = d?.venta; if (!v) return;
+  const lineas = (d.lineas || [])
+    .map(l => ({ ...l, queda: Math.round((Number(l.cantidad) - Number(l.devuelto || 0)) * 1000) / 1000 }))
+    .filter(l => l.queda > 0);
+  const cant = {};
+  const fiado = (d.pagos || []).filter(p => p.metodo === 'credito')
+    .reduce((a, p) => a + Number(p.monto || 0), 0)
+    - (d.devoluciones || []).reduce((a, x) => a + Number(x.rebaja_fiado || 0), 0);
+  let metodo = 'efectivo';
+
+  // Las cajas pueden haberse abierto despues de entrar a esta pantalla
+  const ctx = await sb.rpc('fn_pos_contexto');
+  if (!ctx.error && ctx.data) S.ctx = ctx.data;
+  const cajas = (S.ctx?.cajas || []).filter(c => c.turno_id && c.sucursal_id === v.sucursal_id);
+
+  $('#hoja').innerHTML = `
+    <h2>Devolver de ${escapar(v.numero_fiscal || v.numero)}</h2>
+    <p class="sub">Marque cuánto de cada producto regresa. Vuelve al inventario
+      al mismo costo con que salió.</p>
+    <div class="dv-lista">${lineas.map(l => `
+      <div class="dv-linea">
+        <span class="dv-nom">${escapar(l.producto)}
+          <small>${money(Number(l.total) / Number(l.cantidad))} c/u · puede devolver ${l.queda}</small></span>
+        <span class="dv-cant">
+          <button data-menos="${escapar(l.detalle_id)}" aria-label="Menos">−</button>
+          <input inputmode="decimal" data-cant="${escapar(l.detalle_id)}" value="0" aria-label="Cantidad">
+          <button data-mas="${escapar(l.detalle_id)}" aria-label="Más">+</button>
+        </span>
+      </div>`).join('')}
+    </div>
+    <div class="dv-total"><span>Se devuelve</span><span id="dv-total">${money(0)}</span></div>
+    <div class="dv-nota" id="dv-nota"></div>
+    <div id="dv-pago">
+      <div class="dv-metodos" id="dv-metodos">
+        ${['efectivo','tarjeta','transferencia'].map(m =>
+          `<button class="fl ${m === 'efectivo' ? 'activo' : ''}" data-m="${m}">${comoPago(m)}</button>`).join('')}
+      </div>
+      <div class="campo-g" id="dv-caja-campo" style="margin-bottom:12px">
+        <label for="dv-caja">¿De qué caja sale el efectivo?</label>
+        ${cajas.length
+          ? `<select class="entrada" id="dv-caja">${cajas.map(c =>
+              `<option value="${escapar(c.turno_id)}">${escapar(c.caja)} · ${escapar(c.cajero || '')}</option>`).join('')}</select>`
+          : `<div class="aviso malo" id="dv-sin-caja">No hay ninguna caja abierta en esta sucursal.
+               Abra un turno o devuelva por tarjeta o transferencia.</div>`}
+      </div>
+    </div>
+    <div class="campo-g" style="margin-bottom:14px">
+      <label for="dv-motivo">¿Por qué se devuelve?</label>
+      <input class="entrada" id="dv-motivo" placeholder="Vencido, dañado, se cobró de más…">
+    </div>
+    <div class="aviso malo oculto" id="dv-error"></div>
+    <div class="acciones">
+      <button class="btn secundario" id="dv-no">Mejor no</button>
+      <button class="btn principal-b" id="dv-si">Registrar devolución</button>
+    </div>`;
+  ver('#velo');
+
+  const hoja = $('#hoja');
+  const total = () => Math.round(lineas.reduce((a, l) =>
+    a + (cant[l.detalle_id] || 0) * Number(l.total) / Number(l.cantidad), 0) * 100) / 100;
+
+  function repintar(){
+    const t = total();
+    const rebaja = Math.max(0, Math.min(t, fiado, Number.MAX_VALUE));
+    const devolver = Math.round((t - rebaja) * 100) / 100;
+    $('#dv-total').textContent = money(t);
+    $('#dv-nota').textContent = !t ? ''
+      : rebaja > 0 && devolver > 0
+        ? `Se rebajan ${money(rebaja)} del fiado y se le devuelven ${money(devolver)}.`
+      : rebaja > 0 ? `Todo se rebaja del fiado (${money(rebaja)}). No se le entrega dinero.`
+      : `Se le devuelven ${money(devolver)}.`;
+    ver('#dv-pago', devolver > 0 || !t);
+    ver('#dv-caja-campo', metodo === 'efectivo');
+    S.dvDevolver = devolver;
+  }
+
+  function poner(id, valor){
+    const l = lineas.find(x => x.detalle_id === id); if (!l) return;
+    let n = Number(String(valor).replace(',', '.'));
+    if (!isFinite(n) || n < 0) n = 0;
+    n = Math.min(Math.round(n * 1000) / 1000, l.queda);
+    cant[id] = n;
+    const inp = hoja.querySelector(`[data-cant="${id}"]`);
+    if (inp && Number(inp.value) !== n) inp.value = String(n);
+    repintar();
+  }
+
+  hoja.querySelectorAll('[data-mas]').forEach(b => b.onclick = () =>
+    poner(b.dataset.mas, (cant[b.dataset.mas] || 0) + 1));
+  hoja.querySelectorAll('[data-menos]').forEach(b => b.onclick = () =>
+    poner(b.dataset.menos, (cant[b.dataset.menos] || 0) - 1));
+  hoja.querySelectorAll('[data-cant]').forEach(i => i.onchange = () => poner(i.dataset.cant, i.value));
+  $('#dv-metodos').addEventListener('click', e => {
+    const b = e.target.closest('[data-m]'); if (!b) return;
+    metodo = b.dataset.m;
+    $('#dv-metodos').querySelectorAll('[data-m]').forEach(x => x.classList.toggle('activo', x === b));
+    repintar();
+  });
+  // Si solo hay una cosa que devolver, se propone toda
+  if (lineas.length === 1 && lineas[0].queda === 1) poner(lineas[0].detalle_id, 1);
+  repintar();
+
+  $('#dv-no').onclick = () => ver('#velo', false);
+  $('#dv-si').onclick = async () => {
+    const b = $('#dv-si'), err = $('#dv-error');
+    err.classList.add('oculto');
+    const malo = m => { err.textContent = m; err.classList.remove('oculto'); };
+    const pedido = lineas.filter(l => cant[l.detalle_id] > 0)
+      .map(l => ({ detalle_id:l.detalle_id, cantidad:cant[l.detalle_id] }));
+    const motivo = $('#dv-motivo').value.trim();
+    if (!pedido.length) return malo('Marque al menos un producto para devolver.');
+    if (!motivo) return malo('Escriba por qué se devuelve. Queda apuntado.');
+    const turno = metodo === 'efectivo' && S.dvDevolver > 0 ? ($('#dv-caja')?.value || null) : null;
+    if (metodo === 'efectivo' && S.dvDevolver > 0 && !turno)
+      return malo('Para devolver efectivo hace falta una caja abierta.');
+
+    b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+    const { data, error } = await sb.rpc('fn_devolver_venta', {
+      p_venta_id:v.id, p_lineas:pedido, p_motivo:motivo,
+      p_turno_id:turno, p_metodo:metodo });
+    b.disabled = false; b.textContent = 'Registrar devolución';
+    if (error){
+      const m = limpiarError(error);
+      return malo(/fn_devolver_venta|does not exist|Could not find/i.test(m)
+        ? 'Falta instalar la actualización de devoluciones en la base (032).' : m);
+    }
+    await abrirVenta(v.id);
+    cargar();
+    $('#hoja').innerHTML = `<h2>Devolución ${escapar(data.numero_fiscal || data.numero)}</h2>
+      <p class="sub">${[
+        Number(data.rebaja_fiado) > 0 ? 'Se rebajaron ' + money(data.rebaja_fiado) + ' del fiado'
+          + (data.saldo_cliente !== null && data.saldo_cliente !== undefined ? ' (ahora debe ' + money(data.saldo_cliente) + ')' : '') + '.' : '',
+        Number(data.reembolso) > 0 ? 'Entregue ' + money(data.reembolso) + ' en ' + comoPago(data.metodo).toLowerCase() + '.' : ''
+      ].filter(Boolean).join(' ') || 'Listo.'}</p>
+      ${data.falta_nota_credito ? `<div class="aviso malo" style="margin-bottom:12px">Esta venta fue factura,
+        pero no hay rango de notas de crédito vigente: la devolución se registró sin nota de crédito.
+        El gerente debe registrar el rango en Configuración.</div>` : ''}
+      <div class="acciones">
+        <button class="btn secundario" id="dv-cerrar">Cerrar</button>
+        <button class="btn principal-b" id="dv-imprimir">Imprimir comprobante</button>
+      </div>`;
+    $('#dv-cerrar').onclick = () => ver('#velo', false);
+    $('#dv-imprimir').onclick = () => { imprimirDevolucion(data.devolucion_id); ver('#velo', false); };
   };
 });
 

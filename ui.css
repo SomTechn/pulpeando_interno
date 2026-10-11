@@ -302,7 +302,7 @@ select.entrada{cursor:pointer}
    MODALES
    ========================================================================== */
 .velo{
-  position:fixed;inset:0;z-index:90;background:rgba(15,23,41,.55);display:grid;
+  position:fixed;inset:0;z-index:96;background:rgba(15,23,41,.55);display:grid;
   place-items:center;padding:20px;backdrop-filter:blur(3px);overflow-y:auto;
 }
 .hoja{

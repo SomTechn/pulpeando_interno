@@ -234,6 +234,29 @@ console.log('\n=== FACTURACIÓN ===');
       ins.datos.fecha_limite_emision === '2027-01-31' && ins.datos.sucursal_id === 's2');
 }
 {
+  // Notas de credito: su propio rango, para devolver de una factura
+  const estado = base(3, [...RANGOS(), { id:'r3', sucursal_id:'s1', sucursal:'Central', tipo:'nota_credito',
+    cai:'ABCDEF-ABCDEF-ABCDEF-ABCDEF-ABCDEF-34', prefijo:'000-001-03', inicial:1, final:100, siguiente:1,
+    usadas:0, quedan:100, fecha_limite:'2027-01-31', dias:100, activa:true, vigente:true }]);
+  const { w, d } = await montar(estado);
+  await ir(d, 'facturacion');
+  chk('los rangos de notas de crédito se ven aparte', [...d.querySelectorAll('.rango')].some(r =>
+      /Notas de crédito/.test(txt(r)) && /000-001-03/.test(txt(r))));
+  chk('y los de factura dicen Facturas', /Facturas/.test(txt(d.querySelector('.rango'))));
+  d.querySelector('#f-nuevo').click();
+  await esperar(30);
+  d.querySelector('#r-tipo').value = 'nota_credito';
+  teclear(w, d.querySelector('#r-cai'), 'ABCDEFABCDEFABCDEFABCDEFABCDEF35');
+  teclear(w, d.querySelector('#r-pre'), '00000103');
+  d.querySelector('#r-ini').value = '101'; d.querySelector('#r-fin').value = '200';
+  d.querySelector('#r-lim').value = '2027-01-31';
+  d.querySelector('#r-si').click();
+  await esperar();
+  const ins = escrito(estado, 'series_fiscales', 'insert')[0];
+  chk('registra el rango como nota de crédito', ins?.datos?.tipo_documento === 'nota_credito' &&
+      ins?.datos?.prefijo === '000-001-03');
+}
+{
   const estado = base();
   const { w, d } = await montar(estado);
   await ir(d, 'facturacion');

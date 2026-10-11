@@ -414,8 +414,12 @@ function estadoRango(r){
 function pintarFacturacion(){
   const f = S.facturacion || { rangos:[] };
   const activa = !!S.org.facturacion_fiscal_activa;
-  const rangos = (f.rangos || []).filter(r => r.tipo === 'factura');
-  const vigentes = rangos.filter(r => r.vigente);
+  // Facturas primero; las notas de credito (devoluciones de una factura)
+  // llevan su propio rango y su propio CAI.
+  const rangos = (f.rangos || []).filter(r => r.tipo === 'factura' || r.tipo === 'nota_credito')
+    .sort((a, b) => (a.tipo === 'factura' ? 0 : 1) - (b.tipo === 'factura' ? 0 : 1));
+  const vigentes = rangos.filter(r => r.vigente && r.tipo === 'factura');
+  const conNC = rangos.some(r => r.vigente && r.tipo === 'nota_credito');
   const sinRango = S.sucursales.filter(s => s.activa && !vigentes.some(r => r.sucursal_id === s.id));
 
   $('#cuerpo').innerHTML = `
@@ -434,6 +438,9 @@ function pintarFacturacion(){
       ${activa && sinRango.length ? `<div class="aviso ojo" style="margin:12px 0 0">
         ${sinRango.map(s => escapar(s.nombre)).join(', ')} no ${sinRango.length === 1 ? 'tiene' : 'tienen'}
         rango vigente: ahí no se podrá facturar hasta registrar uno.</div>` : ''}
+      ${activa && !conNC ? `<div class="aviso ojo" style="margin:12px 0 0" id="f-sin-nc">
+        No hay rango de <b>notas de crédito</b>: si se devuelve algo de una factura, la devolución
+        se registra pero sin nota de crédito fiscal.</div>` : ''}
     </div>
 
     <div class="ficha">
@@ -449,7 +456,7 @@ function pintarFacturacion(){
         return `<div class="rango ${e.tono}">
           <div class="rango-cab">
             <div><b>${pre(r.inicial)} al ${pre(r.final)}</b>
-              <small>CAI ${escapar(r.cai || '—')}</small></div>
+              <small>${r.tipo === 'nota_credito' ? 'Notas de crédito' : 'Facturas'} · CAI ${escapar(r.cai || '—')}</small></div>
             <span class="sello ${e.clase}">${e.texto}</span>
           </div>
           <div class="barra-uso"><span style="width:${pct}%"></span></div>
@@ -516,6 +523,11 @@ function hojaRango(){
     <h2>Rango autorizado</h2>
     <p class="sub">Cópielo tal como viene en la resolución de la SAR.</p>
     <div class="campos">
+      <div class="campo-g ancho-total"><label for="r-tipo">Documento</label>
+        <select class="entrada" id="r-tipo">
+          <option value="factura">Factura</option>
+          <option value="nota_credito">Nota de crédito (devoluciones de facturas)</option>
+        </select></div>
       ${sucs.length > 1 ? `<div class="campo-g ancho-total"><label for="r-suc">Sucursal</label>
         <select class="entrada" id="r-suc">${sucs.map(s =>
           `<option value="${escapar(s.id)}">${escapar(s.nombre)}</option>`).join('')}</select></div>` : ''}
@@ -524,7 +536,8 @@ function hojaRango(){
                autocomplete="off" style="text-transform:uppercase"></div>
       <div class="campo-g ancho-total"><label for="r-pre">Prefijo *</label>
         <input class="entrada num" id="r-pre" placeholder="000-001-01" autocomplete="off">
-        <div class="ayuda" style="margin-top:4px">Establecimiento-punto de emisión-tipo (01 = factura).</div></div>
+        <div class="ayuda" style="margin-top:4px">Establecimiento-punto de emisión-tipo de documento,
+          como viene en la resolución.</div></div>
       <div class="campo-g"><label for="r-ini">Desde *</label>
         <input class="entrada num" id="r-ini" inputmode="numeric" placeholder="1"></div>
       <div class="campo-g"><label for="r-fin">Hasta *</label>
@@ -570,7 +583,7 @@ async function guardarRango(){
   const { error } = await sb.from('series_fiscales').insert({
     organizacion_id:S.org.id,
     sucursal_id: $('#r-suc')?.value || S.sucursales.find(s => s.activa)?.id,
-    tipo_documento:'factura', cai, prefijo,
+    tipo_documento: $('#r-tipo')?.value === 'nota_credito' ? 'nota_credito' : 'factura', cai, prefijo,
     correlativo_inicial:ini, correlativo_final:fin, correlativo_actual:ini,
     fecha_limite_emision:lim, activa:true });
   b.disabled = false; b.textContent = 'Registrar';

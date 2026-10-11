@@ -91,7 +91,13 @@ function fecha(v){
 export function htmlTicket(d, opciones = {}){
   const ancho = Number(opciones.ancho || d.negocio?.ancho_ticket) === 58 ? 58 : 80;
   const v = d.venta, neg = d.negocio || {}, suc = d.sucursal || {};
-  const fiscal = v.documento === 'factura' && v.numero_fiscal;
+  // Una devolucion se imprime igual que una venta: como NOTA DE CREDITO si
+  // corrige una factura (lleva su propio CAI) o como comprobante interno.
+  const nc = v.documento === 'nota_credito';
+  const dev = d.devolucion || null;
+  const fiscal = (v.documento === 'factura' || nc) && v.numero_fiscal;
+  const titulo = nc ? 'NOTA DE CRÉDITO' : v.documento === 'factura' ? 'FACTURA'
+               : dev ? 'DEVOLUCIÓN' : 'COMPROBANTE';
   const mon = neg.moneda === 'HNL' || !neg.moneda ? 'L' : neg.moneda;
   const des = d.desglose || {};
   const lineas = d.lineas || [];
@@ -134,15 +140,15 @@ hr{border:none;border-top:1px dashed #000;margin:4px 0}
 <hr>
 ${anulada ? '<div class="anulada">ANULADA</div>' : ''}
 ${fiscal ? `
-<div class="c b g">FACTURA</div>
+<div class="c b g">${titulo}</div>
 <div class="c b">No. ${esc(v.numero_fiscal)}</div>
 <div class="chico">CAI: ${esc(v.cai)}</div>
 ${d.rango ? `<div class="chico">Rango autorizado: ${esc(d.rango.desde)} al ${esc(d.rango.hasta)}</div>
 <div class="chico">Fecha límite de emisión: ${esc(fecha(d.rango.fecha_limite))}</div>` : ''}
 ` : `
-<div class="c b g">COMPROBANTE</div>
+<div class="c b g">${titulo}</div>
 <div class="c b">${esc(v.numero)}</div>
-<div class="c chico">Comprobante interno. No es factura.</div>
+<div class="c chico">${dev ? 'Devolución interna. No es nota de crédito.' : 'Comprobante interno. No es factura.'}</div>
 `}
 <hr>
 ${fila('Fecha:', esc(fechaHora(v.creada_en)))}
@@ -151,6 +157,8 @@ ${d.cajero ? fila('Atendió:', esc(d.cajero)) : ''}
 ${fiscal ? `${fila('Cliente:', esc(d.cliente?.nombre || 'Consumidor final'))}
 ${fila('RTN:', esc(d.cliente?.rtn || '—'))}`
   : d.cliente ? fila('Cliente:', esc(d.cliente.nombre)) : ''}
+${dev ? `${fila(nc ? 'Factura que corrige:' : 'Venta:', esc(dev.referencia))}
+<div class="chico">Motivo: ${esc(dev.motivo)}</div>` : ''}
 <hr>
 ${lineas.map(l => `<div class="it">
   <div class="n">${esc(l.producto)}${l.exento ? ' (E)' : ''}</div>
@@ -174,17 +182,21 @@ ${Number(v.descuento) ? fila('Descuento', '-' + n2(v.descuento)) : ''}
 ${fila('TOTAL ' + esc(mon), n2(v.total), true).replace('class="f b"', 'class="f b g"')}
 ${fiscal ? `<div class="chico" style="margin-top:3px">Son: ${esc(numeroALetras(v.total))}</div>` : ''}
 <hr>
-${pagos.map(p => fila(esc(METODO[p.metodo] || p.metodo),
+${dev ? `${Number(dev.rebaja_fiado) ? fila('Rebajado del fiado', n2(dev.rebaja_fiado)) : ''}
+${Number(dev.reembolso) ? fila('Devuelto en ' + esc((METODO[dev.metodo] || dev.metodo || '').toLowerCase()), n2(dev.reembolso), true) : ''}`
+: `${pagos.map(p => fila(esc(METODO[p.metodo] || p.metodo),
   n2(p.metodo === 'efectivo' && p.recibido ? p.recibido : p.monto))).join('')}
-${cambio > 0 ? fila('Cambio', n2(cambio), true) : ''}
+${cambio > 0 ? fila('Cambio', n2(cambio), true) : ''}`}
 <hr>
-${fiscal ? `<div class="c chico">
+${fiscal && !nc ? `<div class="c chico">
   No. correlativo de orden de compra exenta: ____<br>
   No. correlativo constancia de registro exonerado: ____<br>
   No. identificativo registro SAG: ____
 </div><hr>` : ''}
-<div class="c">${esc(neg.mensaje_ticket || '¡Gracias por su compra!')}</div>
-${fiscal ? `<div class="c chico" style="margin-top:4px">La factura es beneficio de todos. Exíjala.</div>
+${dev ? `<div class="c" style="margin-top:14px">______________________</div>
+<div class="c chico">Recibí conforme</div>`
+: `<div class="c">${esc(neg.mensaje_ticket || '¡Gracias por su compra!')}</div>`}
+${fiscal ? `${nc ? '' : '<div class="c chico" style="margin-top:4px">La factura es beneficio de todos. Exíjala.</div>'}
 <div class="c chico">${opciones.copia ? 'COPIA: EMISOR' : 'ORIGINAL: CLIENTE'}</div>` : ''}
 ${anulada ? `<div class="anulada">ANULADA</div>` : ''}
 </body></html>`;

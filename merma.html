@@ -224,7 +224,8 @@ const S = {
 const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
   { minimumFractionDigits:2, maximumFractionDigits:2 });
 const cant = n => (Number(n)||0).toLocaleString('es-HN', { maximumFractionDigits:3 });
-const iso = d => d.toISOString().slice(0,10);
+// Fecha local: con toISOString, de noche ya era el dia siguiente
+const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,10);
 
 const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 function fecha(v){

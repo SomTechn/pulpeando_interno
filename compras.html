@@ -300,7 +300,8 @@ const S = { ctx:null, sucursal:null, moneda:'L', menu:null,
 const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
   {minimumFractionDigits:2, maximumFractionDigits:2});
 const num = v => { const n = parseFloat(String(v).replace(/[^0-9.\-]/g,'')); return isNaN(n) ? 0 : n; };
-const hoy = () => new Date().toISOString().slice(0,10);
+// La fecha del dispositivo, no la de UTC: a las 7 de la noche en Honduras UTC ya es mañana
+const hoy = (d = new Date()) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,10);
 
 function limpiarError(e){
   // Antes se cortaba hasta el primer ":", lo que se comia la mitad de los

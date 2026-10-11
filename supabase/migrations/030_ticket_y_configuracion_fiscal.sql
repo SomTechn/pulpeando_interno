@@ -134,6 +134,7 @@ declare
   v    record;
   o    record;
   s    record;
+  v_rango jsonb;
   v_ve_costos boolean;
   v_res jsonb;
 begin
@@ -155,6 +156,13 @@ begin
        and sf.cai is not distinct from v.cai
        and v.numero_fiscal like sf.prefijo || '-%'
      order by sf.creada_en desc limit 1;
+    -- (s queda sin asignar si no hay numero fiscal: no se lee fuera de este if)
+    if found then
+      v_rango := jsonb_build_object(
+        'desde', s.prefijo || '-' || lpad(s.correlativo_inicial::text, 8, '0'),
+        'hasta', s.prefijo || '-' || lpad(s.correlativo_final::text, 8, '0'),
+        'fecha_limite', s.fecha_limite_emision);
+    end if;
   end if;
 
   select jsonb_build_object(
@@ -167,10 +175,7 @@ begin
       'costo', case when v_ve_costos then v.costo_total end,
       'anulada_por', (select nombre from perfiles where id = v.anulada_por)
     ),
-    'rango', case when s.id is not null then jsonb_build_object(
-      'desde', s.prefijo || '-' || lpad(s.correlativo_inicial::text, 8, '0'),
-      'hasta', s.prefijo || '-' || lpad(s.correlativo_final::text, 8, '0'),
-      'fecha_limite', s.fecha_limite_emision) end,
+    'rango', v_rango,
     'negocio', jsonb_build_object(
       'nombre', o.nombre, 'rtn', o.identificacion_fiscal, 'moneda', o.moneda,
       'razon_social', o.config->>'razon_social',

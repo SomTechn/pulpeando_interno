@@ -347,9 +347,30 @@ gerente no puede cambiar el plan ni el estado de la cuenta.
   **Les toca hoy** y **Atrasados**: pasó su día de pago con deuda de antes y
   no abonó desde entonces. (Migración 031.)
 
+## Devoluciones
+
+En **Ventas**, al abrir una venta, un supervisor tiene **Devolver**: marca
+cuánto de cada producto regresa (una línea, varias o parte de una).
+
+- La mercadería vuelve al inventario **al mismo costo con que salió**, para
+  que el costo promedio no se mueva.
+- Si la venta fue fiada, **primero se rebaja la deuda** del cliente (hasta lo
+  que quedó fiado de esa venta); lo demás se le devuelve en efectivo, tarjeta
+  o transferencia.
+- El efectivo sale de una **caja abierta** de la sucursal y el cierre de
+  turno lo descuenta, para que la caja no aparezca con sobrante.
+- No se puede devolver más de lo vendido contando devoluciones anteriores.
+  Una venta con devoluciones ya no se anula entera: se devuelve lo que quede.
+- Si la venta fue **factura**, la devolución sale como **nota de crédito**
+  con su propio rango (regístrelo en Configuración › Facturación como «Nota
+  de crédito»). Sin rango vigente se registra igual y avisa.
+- Se imprime un comprobante con firma de «Recibí conforme». En el historial,
+  lo devuelto se resta del vendido del día en que se devolvió.
+- Los días del historial ahora son los de Honduras: antes «Hoy» se cortaba a
+  las 6 de la tarde. (Migración 032.)
+
 ## Pendiente
 
 - Traslados de mercadería entre sucursales
-- Devolución parcial de una venta
 - Panel de administración de la plataforma
 - Motor de promociones

@@ -356,6 +356,167 @@ console.log('\n=== UNA AUXILIAR NO PUEDE ANULAR ===');
       !d.querySelector('#btn-imprimir').classList.contains('oculto'));
 }
 
+/* ===================================================================== */
+const TICKET_DV = { ...TICKET,
+  venta:{ ...TICKET.venta, sucursal_id:'s1', devuelto:0 },
+  lineas:[
+    { detalle_id:'d1', producto:'Arroz 5lb', cantidad:3, devuelto:1, precio:60, descuento:0, total:180, costo:40 },
+    { detalle_id:'d2', producto:'Leche 1L', cantidad:1, devuelto:0, precio:30, descuento:0, total:30, costo:22 }],
+  pagos:[{ metodo:'efectivo', monto:90, recibido:90, cambio:0 },
+         { metodo:'credito', monto:120, recibido:null, cambio:0 }],
+  devoluciones:[{ id:'dv0', numero:'DV-S01-00000001', numero_fiscal:null, documento:'ticket',
+    total:60, motivo:'venía rota', rebaja_fiado:60, reembolso:0, metodo:null, por:'Sup' }] };
+const CTX_CAJA = { ...CTX, cajas:[
+  { caja_id:'c1', caja:'Caja 1', sucursal_id:'s1', turno_id:'t1', cajero:'Ana' },
+  { caja_id:'c2', caja:'Caja 2', sucursal_id:'s1', turno_id:null, cajero:null },
+  { caja_id:'c9', caja:'Otra', sucursal_id:'s9', turno_id:'t9', cajero:'Zoe' }] };
+
+console.log('\n=== DEVOLVER PARTE DE UNA VENTA ===');
+{
+  const estado = baseEstado();
+  estado.rpc.fn_pos_contexto = { data:CTX_CAJA, error:null };
+  estado.rpc.fn_venta_completa = { data:TICKET_DV, error:null };
+  estado.rpc.fn_devolver_venta = { data:{ devolucion_id:'dv1', numero:'DV-S01-00000002',
+    documento:'ticket', total:90, rebaja_fiado:60, reembolso:30, metodo:'efectivo',
+    falta_nota_credito:false, saldo_cliente:0 }, error:null };
+  estado.rpc.fn_devolucion_completa = { data:{ venta:{ numero:'DV-S01-00000002', documento:'devolucion' },
+    devolucion:{ motivo:'x' } }, error:null };
+  const { d } = await montar(estado);
+  d.querySelector('.venta').click();
+  await esperar(90);
+  const t = d.querySelector('#cajon-cuerpo').textContent;
+  chk('el ticket muestra lo devuelto por línea', /Devuelto: 1/.test(t));
+  chk('y la devolución anterior con su motivo', /DV-S01-00000001/.test(t) && /venía rota/.test(t));
+  chk('dice que se rebajó del fiado', /rebajó L 60\.00 del fiado/.test(t));
+  chk('con devoluciones ya no se anula entera',
+      d.querySelector('#btn-anular').classList.contains('oculto'));
+  chk('pero sí se puede devolver lo que queda',
+      !d.querySelector('#btn-devolver').classList.contains('oculto'));
+
+  d.querySelector('#btn-devolver').click();
+  await esperar(80);
+  const h = () => d.querySelector('#hoja');
+  chk('abre la hoja de devolución', /Devolver de/.test(h().textContent));
+  chk('ofrece solo lo que queda del arroz', /puede devolver 2/.test(h().textContent));
+  chk('ofrece la leche', /Leche 1L/.test(h().textContent));
+  const cajas = [...h().querySelectorAll('#dv-caja option')];
+  chk('solo cajas abiertas de la sucursal de la venta',
+      cajas.length === 1 && cajas[0].value === 't1');
+
+  // sin productos no manda nada
+  d.querySelector('#dv-motivo').value = 'vencido';
+  d.querySelector('#dv-si').click();
+  await esperar(40);
+  chk('sin productos no registra', !estado.llamadas.some(l => l.fn === 'fn_devolver_venta'));
+  chk('y lo pide', /Marque al menos/.test(d.querySelector('#dv-error').textContent));
+
+  // + tres veces al arroz: no pasa de 2
+  const mas = h().querySelector('[data-mas="d1"]');
+  mas.click(); mas.click(); mas.click();
+  chk('no deja pasar de lo que queda', h().querySelector('[data-cant="d1"]').value === '2');
+  h().querySelector('[data-menos="d1"]').click();
+  h().querySelector('[data-mas="d2"]').click();
+  chk('suma lo que se devuelve', /L 90\.00/.test(d.querySelector('#dv-total').textContent));
+  chk('explica que primero rebaja el fiado',
+      /rebajan L 60\.00 del fiado y se le devuelven L 30\.00/.test(d.querySelector('#dv-nota').textContent));
+
+  d.querySelector('#dv-si').click();
+  await esperar(140);
+  const ll = estado.llamadas.find(l => l.fn === 'fn_devolver_venta');
+  chk('registra la devolución', !!ll);
+  chk('de la venta correcta', ll?.args?.p_venta_id === 'v1');
+  chk('con las cantidades por línea', JSON.stringify(ll?.args?.p_lineas) ===
+      JSON.stringify([{ detalle_id:'d1', cantidad:1 }, { detalle_id:'d2', cantidad:1 }]));
+  chk('con el motivo', ll?.args?.p_motivo === 'vencido');
+  chk('el efectivo sale de la caja abierta', ll?.args?.p_turno_id === 't1' && ll?.args?.p_metodo === 'efectivo');
+  chk('dice cuánto entregar', /Entregue L 30\.00 en efectivo/.test(h().textContent));
+  chk('y cuánto se rebajó del fiado', /rebajaron L 60\.00 del fiado/.test(h().textContent));
+  d.querySelector('#dv-imprimir').click();
+  await esperar(60);
+  const imp = d.defaultView.__impresos || [];
+  chk('imprime el comprobante de la devolución',
+      estado.llamadas.some(l => l.fn === 'fn_devolucion_completa' && l.args.p_devolucion_id === 'dv1')
+      && imp.some(x => x.d?.venta?.documento === 'devolucion'));
+}
+
+console.log('\n=== LO DEVUELTO EN EL RESUMEN ===');
+{
+  const estado = baseEstado();
+  estado.rpc.fn_ventas_resumen = { data:{ ventas:2, total:215, bruto:275, devuelto:60, devoluciones:1,
+    efectivo:155, fiado:60, anuladas:0, ganancia:70 }, error:null };
+  estado.rpc.fn_historial_ventas = { data:[{ ...VENTAS[0], devuelto:60 }, VENTAS[1]], error:null };
+  const { d } = await montar(estado);
+  const tjs = [...d.querySelectorAll('.tj')];
+  chk('lo vendido sale neto', tjs.some(t => /Vendido neto/.test(t.textContent) && /L 215\.00/.test(t.textContent)));
+  chk('y lo devuelto aparte', tjs.some(t => /Devuelto/.test(t.textContent) && /L 60\.00/.test(t.textContent)));
+  chk('la venta con devolución se marca', /Devolución/.test(d.querySelectorAll('.venta')[0].textContent));
+  chk('la que no, no', !/Devolución/.test(d.querySelectorAll('.venta')[1].textContent));
+}
+
+console.log('\n=== DEVOLVER POR TRANSFERENCIA Y SIN CAJA ===');
+{
+  const estado = baseEstado();
+  estado.rpc.fn_pos_contexto = { data:CTX, error:null };   // sin cajas abiertas
+  estado.rpc.fn_venta_completa = { data:{ ...TICKET_DV, devoluciones:[],
+    pagos:[{ metodo:'efectivo', monto:210, recibido:210, cambio:0 }],
+    venta:{ ...TICKET_DV.venta, documento:'factura', numero_fiscal:'000-001-01-00000009' },
+    lineas:TICKET_DV.lineas.map(l => ({ ...l, devuelto:0 })) }, error:null };
+  estado.rpc.fn_devolver_venta = { data:{ devolucion_id:'dv2', numero:'DV-S01-00000003',
+    documento:'ticket', total:30, rebaja_fiado:0, reembolso:30, metodo:'transferencia',
+    falta_nota_credito:true, saldo_cliente:null }, error:null };
+  const { d } = await montar(estado);
+  d.querySelector('.venta').click();
+  await esperar(90);
+  chk('sin devoluciones todavía se puede anular',
+      !d.querySelector('#btn-anular').classList.contains('oculto'));
+  d.querySelector('#btn-devolver').click();
+  await esperar(80);
+  chk('avisa que no hay caja abierta', !!d.querySelector('#dv-sin-caja'));
+  d.querySelector('[data-mas="d2"]').click();
+  d.querySelector('#dv-motivo').value = 'no la quiso';
+  d.querySelector('#dv-si').click();
+  await esperar(60);
+  chk('en efectivo sin caja no registra', !estado.llamadas.some(l => l.fn === 'fn_devolver_venta'));
+  chk('y explica por qué', /caja abierta/.test(d.querySelector('#dv-error').textContent));
+  d.querySelector('[data-m="transferencia"]').click();
+  chk('por transferencia no pide caja', d.querySelector('#dv-caja-campo').classList.contains('oculto'));
+  d.querySelector('#dv-si').click();
+  await esperar(140);
+  const ll = estado.llamadas.find(l => l.fn === 'fn_devolver_venta');
+  chk('registra por transferencia sin turno', ll?.args?.p_metodo === 'transferencia' && ll?.args?.p_turno_id === null);
+  chk('avisa que faltó el rango de notas de crédito',
+      /no hay rango de notas de crédito/.test(d.querySelector('#hoja').textContent));
+}
+
+console.log('\n=== DEVOLVER: sin la actualización instalada ===');
+{
+  const estado = baseEstado();
+  estado.rpc.fn_pos_contexto = { data:CTX_CAJA, error:null };
+  estado.rpc.fn_venta_completa = { data:TICKET_DV, error:null };
+  estado.rpc.fn_devolver_venta = { data:null, error:{ message:'Could not find the function public.fn_devolver_venta' } };
+  const { d } = await montar(estado);
+  d.querySelector('.venta').click();
+  await esperar(90);
+  d.querySelector('#btn-devolver').click();
+  await esperar(80);
+  d.querySelector('[data-mas="d2"]').click();
+  d.querySelector('#dv-motivo').value = 'x';
+  d.querySelector('#dv-si').click();
+  await esperar(120);
+  chk('dice en claro que falta instalar la 032', /Falta instalar/.test(d.querySelector('#dv-error').textContent));
+}
+
+console.log('\n=== UNA AUXILIAR NO DEVUELVE ===');
+{
+  const estado = baseEstado();
+  estado.rpc.fn_pos_contexto = { data:{ ...CTX, usuario:{ ...CTX.usuario, nivel:1 } }, error:null };
+  estado.rpc.fn_venta_completa = { data:TICKET_DV, error:null };
+  const { d } = await montar(estado);
+  d.querySelector('.venta').click();
+  await esperar(90);
+  chk('no le aparece el botón de devolver', d.querySelector('#btn-devolver').classList.contains('oculto'));
+}
+
 console.log('\n=== SIN VENTAS Y SIN CONEXIÓN ===');
 {
   const estado = baseEstado();
