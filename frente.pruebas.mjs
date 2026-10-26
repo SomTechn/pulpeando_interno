@@ -644,6 +644,37 @@ console.log('\n=== CATÁLOGOS: productos, empaque y máximo ===');
       esc && Number(esc.datos.unidades_empaque) === 24 &&
              Number(esc.datos.stock_maximo) === 120);
 }
+{
+  /* La caja ya pintaba la foto del producto, pero no había dónde escribirla:
+     el mismo hueco que tenía unidades por caja. */
+  const estado = {
+    enLinea:true, alertas:[], llamadas:[],
+    tablas:{ productos:[], categorias:[], marcas:[], proveedores:[], impuestos:[],
+             precios:[], producto_codigos:[] },
+    rpc:{ fn_pos_contexto:{ data:{ ...CTX_BASE,
+      usuario:{ ...CTX_BASE.usuario, rol:'gerente', nivel:3 } }, error:null } }
+  };
+  const { d, caja } = await montar('catalogo.html', estado);
+  caja.S.entidad = 'productos';
+  d.querySelector('#btn-nuevo').click();
+  await new Promise(r => setTimeout(r, 40));
+
+  const foto = d.querySelector('[data-k="imagen_url"]');
+  chk('hay campo para la foto del producto', !!foto);
+  chk('y se explica dónde se ve',
+      /tarjeta de la caja/i.test(foto?.closest('.campo-g')?.nextElementSibling?.textContent || ''));
+
+  d.querySelector('[data-k="nombre"]').value = 'Arroz de primera 5 lb';
+  d.querySelector('[data-k="sku"]').value = 'ARR5LB';
+  d.querySelector('[data-k="precio"]').value = '98';
+  foto.value = 'https://ejemplo.hn/arroz.jpg';
+  d.querySelector('#form-guardar').click();
+  await new Promise(r => setTimeout(r, 120));
+
+  const esc2 = estado.escrituras.find(e => e.tabla === 'productos');
+  chk('la dirección de la foto se guarda',
+      esc2 && esc2.datos.imagen_url === 'https://ejemplo.hn/arroz.jpg');
+}
 
 console.log('\n=== CATÁLOGOS: departamentos, visitas y presentaciones ===');
 const estadoCat = extra => ({
