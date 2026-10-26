@@ -212,6 +212,24 @@ console.log('\n=== ESCANEAR Y SUMAR ===');
   chk('y no agrega nada', C.S.ticket.length === 0);
 }
 
+{
+  /* La miniatura del producto en la línea: a diferencia de la caja de Maxi,
+     que es puro texto. Confirma de un vistazo que entró lo que se creía. */
+  const estado = base();
+  estado.catalogo[0].imagen_url = 'https://ejemplo.hn/arroz.jpg';
+  const { w, d, C } = await montar(estado);
+  C.agregar('p1');   // con foto
+  C.agregar('p3');   // sin foto
+  await esperar();
+
+  const imgs = [...d.querySelectorAll('.linea-img')];
+  chk('cada línea del ticket lleva su miniatura', imgs.length === 2);
+  chk('la del producto con foto la pinta de fondo',
+      /ejemplo\.hn\/arroz\.jpg/.test(imgs[0].getAttribute('style') || ''));
+  chk('y sin foto queda la inicial, que al menos distingue',
+      !imgs[1].getAttribute('style') && imgs[1].textContent.trim() === 'R');
+}
+
 console.log('\n=== CANTIDAD ANTES DE ESCANEAR (3 y *) ===');
 {
   const { w, d, C } = await montar(base());

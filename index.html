@@ -108,20 +108,39 @@
 .aviso-caja.visible{opacity:1;transform:translate(-50%,0)}
 .lineas{flex:1;overflow-y:auto;padding:6px 16px}
 .lineas-enc{
-  display:grid;grid-template-columns:1fr 124px 84px;gap:8px;padding:10px 0 8px;
+  display:grid;grid-template-columns:40px 1fr 124px 84px;gap:8px;padding:10px 0 8px;
   font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
   color:#9AA8BC;border-bottom:1px solid var(--linea);
 }
 .lineas-enc span:nth-child(2){text-align:center}
 .lineas-enc span:last-child{text-align:right}
-.linea{display:grid;grid-template-columns:1fr 124px 84px;gap:8px;align-items:center;
-  padding:11px 0;border-bottom:1px solid var(--fondo)}
+/* Dos renglones SIEMPRE, no solo en celular: el panel del ticket mide lo
+   mismo en cualquier pantalla (~360px), y con la miniatura adentro el nombre
+   se partia en tres. Arriba el nombre, abajo la cantidad y el importe. */
+.linea{display:grid;grid-template-columns:40px 1fr auto;
+  grid-template-areas:'img nom nom' 'img qty imp';gap:4px 10px;
+  align-items:center;padding:11px 0;border-bottom:1px solid var(--fondo)}
+.linea-img{grid-area:img;align-self:start}
+.linea-nom{grid-area:nom}
+.qty{grid-area:qty;justify-content:flex-start}
+.linea-total{grid-area:imp;align-self:center}
+/* La miniatura del producto en la linea. La caja de Maxi es puro texto; aqui
+   la foto hace que la cajera confirme de un vistazo que paso lo que creia que
+   pasaba, sin leer el nombre. Sin foto queda la inicial, que al menos cambia
+   de letra entre un producto y otro. */
+.linea-img{width:40px;height:40px;border-radius:8px;background:var(--fondo);
+  background-size:cover;background-position:center;display:grid;place-items:center;
+  font-size:15px;font-weight:800;color:#A6B2C4;flex:0 0 auto;overflow:hidden}
+.linea.puesto .linea-img{box-shadow:0 0 0 2px var(--azul)}
 /* La linea en la que esta parado el teclado. En Maxi la ultima escaneada
    queda marcada: la cajera mira ahi para confirmar lo que acaba de pasar. */
 .linea.puesto{background:#EEF4FF;box-shadow:-13px 0 0 #EEF4FF, 13px 0 0 #EEF4FF;
   border-radius:3px}
 .linea.puesto .linea-nom{font-weight:700}
-.linea-nom{font-size:14px;font-weight:600;line-height:1.3}
+/* min-width:0 porque una celda de grid no baja de su contenido minimo por su
+   cuenta: "deslactosada" empujaba la fila 3px fuera del panel del ticket. */
+.linea-nom{font-size:14px;font-weight:600;line-height:1.3;min-width:0;
+  overflow-wrap:break-word}
 .linea-nom small{display:block;font-size:11px;color:var(--tenue);font-weight:500;margin-top:2px}
 .linea-nom em{font-style:normal;color:var(--azul);font-weight:700}
 
@@ -152,7 +171,7 @@
 /* La cantidad es un boton: tocarla abre el teclado de cantidad, que es como
    se pone "0.75" en una tablet donde no hay F2. nowrap para que "0.75 LB" no
    se parta en dos renglones. */
-.qty span{flex:1;min-width:34px;text-align:center;font-family:var(--num);
+.qty span{flex:0 0 auto;min-width:44px;text-align:center;font-family:var(--num);
   font-weight:700;font-size:14px;white-space:nowrap;cursor:pointer;
   padding:9px 2px;border-radius:7px}
 .qty span:hover{background:var(--fondo)}
@@ -161,13 +180,8 @@
    cantidad con el importe. En una sola fila el nombre quedaba en cuatro
    renglones y la cantidad sin sitio. */
 @media (max-width:560px){
-  .lineas-enc{display:none}
-  .linea{grid-template-columns:1fr auto;
-         grid-template-areas:'nom nom' 'qty imp';row-gap:8px;padding:13px 0}
-  .linea-nom{grid-area:nom}
-  .qty{grid-area:qty;justify-content:flex-start;flex:0 0 auto}
-  .qty span{flex:0 0 auto;min-width:46px}
-  .linea-total{grid-area:imp;align-self:center;font-size:15px}
+  .linea{row-gap:8px;padding:13px 0}
+  .linea-total{font-size:15px}
 }
 .linea-total{text-align:right;font-family:var(--num);font-weight:600;font-size:14px}
 .totales{padding:14px 16px;border-top:1px solid var(--linea);background:#FCFDFE}
@@ -1123,14 +1137,19 @@ function pintarTicket(){
     cont.innerHTML = `<div class="vacio"><div>🧺</div>
       <p>Escanee o toque un producto<br>para empezar la venta</p></div>`;
   } else {
-    cont.innerHTML = `<div class="lineas-enc"><span>Producto</span><span>Cant.</span><span>Importe</span></div>` +
+    /* Sin encabezado de columnas: con la fila en dos renglones, "Cant." e
+       "Importe" ya no caen encima de lo que nombran. */
+    cont.innerHTML =
       S.ticket.map(l => {
         const p = S.catalogo.find(x => x.producto_id === l.producto_id);
         const aqui = l.producto_id === S.puesto;
         // La unidad va con el precio, no junto a la cantidad: ahi hay sitio y
         // de paso explica de que es el precio ("L 60.00 por LB").
         const u = p.unidad_base && p.unidad_base !== 'UND' ? p.unidad_base : '';
+        const foto = p.imagen_url
+          ? `style="background-image:url('${escapar(p.imagen_url)}')"` : '';
         return `<div class="linea ${aqui ? 'puesto' : ''}" data-l="${p.producto_id}">
+          <div class="linea-img" ${foto}>${p.imagen_url ? '' : escapar(p.nombre[0] || '·')}</div>
           <div class="linea-nom">${escapar(p.nombre)}<small class="num">${money(p.precio)}
             ${u ? 'por ' + escapar(u) : 'c/u'}</small></div>
           <div class="qty">
