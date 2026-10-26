@@ -326,9 +326,14 @@ console.log('\n=== FILTROS ===');
 }
 {
   const { d, estado:e } = await montar(base());
-  const n = e.llamadas.filter(l => l.fn === 'fn_control_inventario').length;
+  /* El primer cambio deja un rango que TODAVÍA es válido (del 20 a hoy), así
+     que ese sí consulta. Lo que no debe consultar es el segundo, que es el que
+     deja las fechas al revés. Contar desde antes del primero pedía que la
+     pantalla adivinara el futuro. */
   d.querySelector('#f-desde').value = '2026-10-20';
   d.querySelector('#f-desde').dispatchEvent(new window.Event('change'));
+  await esperar();
+  const n = e.llamadas.filter(l => l.fn === 'fn_control_inventario').length;
   d.querySelector('#f-hasta').value = '2026-10-05';
   d.querySelector('#f-hasta').dispatchEvent(new window.Event('change'));
   await esperar();

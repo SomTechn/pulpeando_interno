@@ -8,7 +8,13 @@ let ok = 0, mal = 0;
 const chk = (n, c) => { if (c){ ok++; console.log('  ok   ' + n); }
                         else { mal++; console.log('  MAL  ' + n); } };
 
-const hoyISO = new Date().toISOString().slice(0,10);
+/* La fecha del DÍA DE AQUÍ, no la de UTC. La pantalla manda la local (así se
+   arregló lo de "días en hora de Honduras"), y toISOString devuelve la de UTC:
+   entre las 6 de la tarde y medianoche en Honduras son días distintos y estas
+   pruebas fallaban solo de noche, pareciendo intermitentes. */
+const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+                   .toISOString().slice(0,10);
+const hoyISO = iso(new Date());
 
 const VENTAS = [
   { venta_id:'v1', numero:'T-S01-00000003', numero_fiscal:null, documento:'ticket',
@@ -181,16 +187,16 @@ console.log('\n=== LOS FILTROS ===');
   await esperar();
   const ayer = new Date(); ayer.setDate(ayer.getDate()-1);
   chk('ayer pide solo ayer',
-      ultimo()?.args?.p_desde === ayer.toISOString().slice(0,10)
-      && ultimo()?.args?.p_hasta === ayer.toISOString().slice(0,10));
+      ultimo()?.args?.p_desde === iso(ayer)
+      && ultimo()?.args?.p_hasta === iso(ayer));
   chk('y mueve las cajas de fecha',
-      d.querySelector('#f-desde').value === ayer.toISOString().slice(0,10));
+      d.querySelector('#f-desde').value === iso(ayer));
 
   d.querySelector('[data-p="semana"]').click();
   await esperar();
   const sem = new Date(); sem.setDate(sem.getDate()-6);
   chk('7 días pide desde hace 6',
-      ultimo()?.args?.p_desde === sem.toISOString().slice(0,10));
+      ultimo()?.args?.p_desde === iso(sem));
   chk('hasta hoy', ultimo()?.args?.p_hasta === hoyISO);
 
   d.querySelector('[data-p="mes"]').click();

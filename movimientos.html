@@ -572,6 +572,11 @@ async function cargar(){
 
   if (!desde || !hasta) return;
   if (desde > hasta){
+    /* ++S.pedido antes de salir: al cambiar la fecha de inicio ya salió una
+       consulta, y si vuelve DESPUÉS de este aviso lo pisa con datos del rango
+       viejo. Quemando el turno, esa respuesta llega y se descarta. */
+    ++S.pedido;
+    S.cargando = false;
     S.datos = null;
     $('#cuerpo').innerHTML = `<div class="vacio"><b>Las fechas están al revés</b>
       <p>La fecha de inicio tiene que ser antes de la final.</p></div>`;
