@@ -948,21 +948,41 @@ $('#grid').addEventListener('click', e => {
 });
 $('#buscar').addEventListener('input', e => { S.busqueda = e.target.value; pintarGrid(); });
 
-/* lector de pistola: teclea rápido y termina en Enter */
+/* lector de pistola: teclea rápido y termina en Enter
+
+   Dos umbrales, porque sirven para cosas distintas:
+
+     RAFAGA  120 ms   corta el codigo acumulado. Mas corto es mas seguro: no
+                      pega dos cosas que la persona escribio por separado.
+     MANO     30 ms   separa a una persona de la pistola. Una pistola teclea
+                      entre 1 y 10 ms por caracter; una persona nunca baja de
+                      unos 50 ms entre dos teclas distintas. En el medio no
+                      cae nadie.
+
+   Antes el multiplicador usaba RAFAGA, y una cajera rapida escribiendo 6 y
+   luego * caia por debajo de 120 ms: el * se le iba como texto y lo que
+   escaneara despues entraba de a uno, sin avisar. Cantidad equivocada en
+   silencio, que es la peor clase. */
+const RAFAGA = 120, MANO = 30;
 let bufer = '', ultimoT = 0;
 $('#buscar').addEventListener('keydown', e => {
   const ahora = Date.now();
-  if (ahora - ultimoT > 120) bufer = '';
+  const brecha = ahora - ultimoT;
+  if (brecha > RAFAGA) bufer = '';
   ultimoT = ahora;
 
   /* Como en Maxi: se escribe la cantidad y se presiona * (o x). Lo que se
-     escanee despues entra con esa cantidad. Solo cuenta si lo escribio una
-     persona: la pistola nunca manda un asterisco suelto. */
-  if ((e.key === '*' || e.key === 'x' || e.key === 'X') && !bufer){
+     escanee despues entra con esa cantidad. */
+  if ((e.key === '*' || e.key === 'x' || e.key === 'X') && brecha > MANO){
     const n = Number(e.target.value.trim().replace(',', '.'));
     if (n > 0){
       e.preventDefault();
       S.multi = tres(n); pintarMulti();
+      /* Tambien se limpia el bufer: si no, los digitos de la cantidad quedan
+         pegados adelante del codigo que se escanee enseguida ("6" + "7501003")
+         y la pistola no encuentra nada. Y escanear enseguida es justo lo que
+         sigue: se marca la cantidad para eso. */
+      bufer = '';
       e.target.value = ''; S.busqueda = ''; pintarGrid();
       return;
     }

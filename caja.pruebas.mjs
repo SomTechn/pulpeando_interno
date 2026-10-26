@@ -242,6 +242,40 @@ console.log('\n=== CANTIDAD ANTES DE ESCANEAR (3 y *) ===');
   chk('un * dentro de la ráfaga de la pistola no es multiplicador',
       C.S.multi == null);
 }
+{
+  /* El caso que de verdad importa: una cajera rápida en el teclado numérico.
+     Escribe 6 y enseguida *, con unos 70 ms entre tecla y tecla. Eso es
+     claramente una persona (una pistola teclea en 1-10 ms), pero antes caía
+     por debajo del umbral de la ráfaga y el * se le iba como texto: lo que
+     escaneara después entraba de a uno sin avisar. */
+  const { w, d, C } = await montar(base());
+  const caja = d.querySelector('#buscar');
+  caja.focus();
+  caja.dispatchEvent(new w.KeyboardEvent('keydown', { key:'6', bubbles:true }));
+  caja.value = '6';
+  caja.dispatchEvent(new w.Event('input', { bubbles:true }));
+  await esperar(70);
+  caja.dispatchEvent(new w.KeyboardEvent('keydown', { key:'*', bubbles:true }));
+  await esperar();
+  chk('escribiendo rápido, 6 y * sí ponen la cantidad', C.S.multi === 6);
+  chk('y el campo queda limpio para escanear', caja.value === '');
+
+  teclear(w, d, '7501003', { pistola:true });
+  await esperar();
+  chk('lo escaneado entra de a 6', C.S.ticket[0]?.cantidad === 6);
+}
+{
+  // Pegado a la tecla anterior (menos de 30 ms) sigue siendo la pistola.
+  const { w, d, C } = await montar(base());
+  const caja = d.querySelector('#buscar');
+  caja.focus();
+  caja.dispatchEvent(new w.KeyboardEvent('keydown', { key:'6', bubbles:true }));
+  caja.value = '6';
+  caja.dispatchEvent(new w.KeyboardEvent('keydown', { key:'*', bubbles:true }));
+  await esperar();
+  chk('pegado a la tecla anterior no cuenta: eso es la pistola',
+      C.S.multi == null);
+}
 
 console.log('\n=== PRODUCTO POR PESO, DIGITADO ===');
 {
