@@ -61,6 +61,21 @@ supabase link --project-ref SU_PROJECT_REF
 supabase db push
 ```
 
+### 1b. Las funciones de borde
+
+Dos cosas no se pueden hacer desde el navegador y viven en
+`supabase/functions/`:
+
+```bash
+supabase functions deploy crear-usuario
+supabase functions deploy entrar-caja --no-verify-jwt
+```
+
+**`entrar-caja` va con `--no-verify-jwt` y es la única del sistema que va
+así**, porque quien la llama todavía no tiene sesión. Los candados están en
+la llave del aparato y en el conteo de intentos, no en el JWT. Si se
+despliega sin esa bandera, la cajera no puede entrar nunca.
+
 ### 2. Comprobar
 
 Ejecute `sql/verificar_instalacion.sql`. Las siete revisiones deben decir
@@ -92,10 +107,43 @@ Con GitHub Pages: Settings → Pages → Deploy from a branch → `main` / `root
 
 ## Cómo funciona la caja
 
-1. El cajero entra con su correo y contraseña
-2. Elige caja y abre turno con su PIN de 5 dígitos, declarando el fondo
-3. **La caja queda bloqueada.** Para cada venta hay que digitar el PIN
-4. Al terminar el cobro se bloquea sola otra vez
+La caja vive en su propia dirección, **`/caja`**, y ahí no hay nada más que
+caja. El resto del sistema está en `/`.
+
+1. El gerente **parea la tablet** una sola vez, desde *Configuración →
+   Aparatos de caja*
+2. La cajera entra con su **código y su PIN**. No hay correo ni contraseña:
+   nadie teclea eso con la fila esperando
+3. Elige caja y abre turno declarando el fondo
+4. **La caja queda bloqueada.** Para cada venta hay que digitar el PIN
+5. Al terminar el cobro se bloquea sola otra vez
+
+### Por qué hace falta parear la tablet
+
+`/caja` tiene que atender **sin sesión**, porque la cajera justamente está
+pidiendo una. Eso deja una puerta de cara a internet, y un PIN de cinco
+dígitos son cien mil combinaciones: un programa las prueba en un rato.
+
+El aparato pareado es el segundo candado. Guarda una llave de 24 bytes al
+azar que nadie teclea ni ve. Esa llave **no es una sesión y no lee nada**:
+lo único que da es el derecho a *intentar* un PIN en esa tienda. Si la
+tablet se pierde, el gerente la revoca y queda muerta al instante, sin
+tocarle el PIN a ninguna cajera.
+
+Los intentos fallidos se cuentan dos veces: contra el perfil (cinco y se
+enfría) y contra el aparato entero (diez y se enfría), para que quien se
+robe la tablet no pueda ir probando código por código ni dejar a todo el
+personal bloqueado.
+
+### La gaveta
+
+Durante el turno, un supervisor o el gerente abren la gaveta con **su**
+código y su PIN, sin sacar a la cajera de su turno: ingresar fondo, retiro
+parcial, arqueo sorpresivo y cierre de turno.
+
+El arqueo es **a ciegas**: no se enseña lo esperado antes de contar, o deja
+de ser arqueo. `fn_movimientos_turno` no devuelve la diferencia y la
+pantalla ignora el `en_gaveta` que sí viene en otras respuestas.
 
 La regla no está solo en la pantalla: `fn_registrar_venta` exige un
 desbloqueo válido y lo consume. Un desbloqueo sirve para **una** venta y
