@@ -133,7 +133,9 @@ console.log('\n=== QUIÉN ENTRA ===');
 {
   const { d } = await montar(base());
   chk('el gerente sí', !d.querySelector('#app').classList.contains('oculto'));
-  chk('con sus cuatro secciones', d.querySelectorAll('#menu-secciones [data-valor]').length === 4);
+  chk('con sus cinco secciones', d.querySelectorAll('#menu-secciones [data-valor]').length === 5);
+  chk('y una de ellas es la de los aparatos de caja',
+      !!d.querySelector('#menu-secciones [data-valor="aparatos"]'));
 }
 
 console.log('\n=== NEGOCIO Y TICKET ===');
@@ -352,6 +354,147 @@ console.log('\n=== IMPUESTOS ===');
   const ins = escrito(estado, 'impuestos', 'insert')[0];
   chk('la tasa se guarda como fracción', ins && ins.datos.tasa === 0.18 && ins.datos.incluido_en_precio === true);
 }
+
+/* ===================================================================
+   APARATOS DE CAJA
+
+   Lo que hace que el PIN de cinco digitos de la cajera alcance es que la
+   tablet esta pareada. Aqui el gerente reparte y revoca esas llaves.
+   =================================================================== */
+console.log('\n=== APARATOS DE CAJA ===');
+
+const APARATOS = () => [
+  { aparato_id:'ap1', nombre:'Tablet caja 1', sucursal:'Central', caja:'Caja 1',
+    activo:true, bloqueado_hasta:null, ultimo_uso:'2026-10-25T14:00:00Z',
+    creado_en:'2026-10-01T10:00:00Z' },
+  { aparato_id:'ap2', nombre:'Tablet vieja', sucursal:'Central', caja:null,
+    activo:false, bloqueado_hasta:null, ultimo_uso:null,
+    creado_en:'2026-09-01T10:00:00Z' }
+];
+
+const conAparatos = (extra = {}) => {
+  const e = base();
+  e.rpc.fn_aparatos_caja = { data:APARATOS(), error:null };
+  e.rpc.fn_parear_aparato = { data:{ aparato_id:'ap9', nombre:'Tablet caja 1',
+                                     llave:'b'.repeat(48) }, error:null };
+  e.rpc.fn_revocar_aparato = { data:{ aparato_id:'ap1', nombre:'Tablet caja 1' }, error:null };
+  Object.assign(e.rpc, extra);
+  return e;
+};
+
+{
+  const { d, w } = await montar(conAparatos());
+  await ir(d, 'aparatos');
+  const t = txt(d.querySelector('#cuerpo'));
+  chk('se ven los aparatos del negocio', /Tablet caja 1/.test(t) && /Tablet vieja/.test(t));
+  chk('dice cuando se uso cada uno', /último uso 25 oct 2026/.test(t));
+  chk('y el que nunca se uso lo dice', /nunca se ha usado/.test(t));
+  chk('el revocado se marca', /Tablet vieja.*revocado/s.test(t));
+  chk('solo el activo ofrece revocarse',
+      d.querySelectorAll('#cuerpo [data-rev]').length === 1);
+  chk('sin pareo, avisa que desde aqui no se puede vender',
+      /no está pareado/.test(t) && !!d.querySelector('#a-este'));
+}
+
+{
+  /* Parear este equipo: la llave tiene que quedar en el navegador, porque es
+     lo que /caja lee despues. */
+  const { d, w, estado:e } = await montar(conAparatos());
+  await ir(d, 'aparatos');
+  d.querySelector('#a-este').click();
+  await esperar(60);
+  chk('la hoja ofrece elegir sucursal y caja',
+      !!d.querySelector('#ap-suc') && !!d.querySelector('#ap-caja'));
+  chk('las cajas son las de la sucursal elegida',
+      [...d.querySelectorAll('#ap-caja option')].some(o => o.textContent === 'Caja 1'));
+  chk('y se puede dejar sin caja fija',
+      [...d.querySelectorAll('#ap-caja option')].some(o => o.value === ''));
+
+  d.querySelector('#ap-nombre').value = 'Tablet caja 1';
+  d.querySelector('#ap-si').click();
+  await esperar(140);
+
+  const ll = e.llamadas.find(l => l.fn === 'fn_parear_aparato');
+  chk('parea contra la sucursal elegida', ll && ll.args.p_sucursal_id === 's1');
+  chk('con el nombre que escribieron', ll && ll.args.p_nombre === 'Tablet caja 1');
+
+  const guardado = JSON.parse(w.localStorage.getItem('pulpeando.aparato'));
+  chk('la llave queda guardada en esta tablet',
+      guardado.id === 'ap9' && guardado.llave === 'b'.repeat(48));
+  chk('junto con el nombre del negocio, que /caja enseña',
+      /Esquina/.test(guardado.negocio));
+  chk('la hoja confirma y NO vuelve a enseñar la llave',
+      /ya puede abrir caja/.test(txt(d.querySelector('#hoja'))) &&
+      !d.querySelector('#ap-llave'));
+}
+
+{
+  /* Parear OTRO aparato: aqui si hay que enseñar la llave, una sola vez, y
+     no se guarda en este equipo. */
+  const { d, w, estado:e } = await montar(conAparatos());
+  await ir(d, 'aparatos');
+  d.querySelector('#a-nuevo').click();
+  await esperar(60);
+  d.querySelector('#ap-si').click();
+  await esperar(140);
+  chk('para otro aparato sí se enseña la llave', !!d.querySelector('#ap-llave'));
+  chk('y avisa que no se vuelve a mostrar',
+      /No se vuelve a mostrar/i.test(txt(d.querySelector('#hoja'))));
+  chk('pero NO se guarda en este equipo',
+      w.localStorage.getItem('pulpeando.aparato') === null);
+}
+
+{
+  const { d, estado:e } = await montar(conAparatos());
+  await ir(d, 'aparatos');
+  d.querySelector('[data-rev]').click();
+  await esperar(60);
+  chk('revocar pregunta antes', /Revocar el aparato/.test(txt(d.querySelector('#hoja'))));
+  d.querySelector('#c-si').click();
+  await esperar(140);
+  const ll = e.llamadas.find(l => l.fn === 'fn_revocar_aparato');
+  chk('y revoca el que se eligió', ll && ll.args.p_aparato_id === 'ap1');
+}
+
+{
+  /* Revocar la tablet donde uno esta parado tiene que borrar la llave: si no,
+     la cajera marcaria su PIN contra un aparato muerto. */
+  const { d, w, estado:e } = await montar(conAparatos());
+  w.localStorage.setItem('pulpeando.aparato',
+    JSON.stringify({ id:'ap1', llave:'c'.repeat(48), negocio:'X', caja:'Caja 1' }));
+  await ir(d, 'aparatos');
+  d.querySelector('[data-rev]').click();
+  await esperar(60);
+  d.querySelector('#c-si').click();
+  await esperar(140);
+  chk('revocar este mismo equipo le borra la llave',
+      w.localStorage.getItem('pulpeando.aparato') === null);
+}
+
+{
+  const { d, w } = await montar(conAparatos());
+  w.localStorage.setItem('pulpeando.aparato',
+    JSON.stringify({ id:'ap1', llave:'c'.repeat(48), negocio:'X', caja:'Caja 1' }));
+  await ir(d, 'aparatos');
+  chk('si este equipo ya esta pareado, lo dice',
+      /Pareado · Caja 1/.test(txt(d.querySelector('#cuerpo'))));
+  chk('y ofrece olvidarlo', !!d.querySelector('#a-olvidar'));
+  d.querySelector('#a-olvidar').click();
+  await esperar(60);
+  d.querySelector('#c-si').click();
+  await esperar(140);
+  chk('olvidar borra la llave de aqui',
+      w.localStorage.getItem('pulpeando.aparato') === null);
+}
+
+{
+  const { d } = await montar(conAparatos({
+    fn_aparatos_caja:{ data:null, error:{ message:'permission denied' } } }));
+  await ir(d, 'aparatos');
+  chk('si el servidor no deja, se dice en vez de quedar en blanco',
+      /permission denied/.test(txt(d.querySelector('#cuerpo'))));
+}
+
 
 console.log(`\n${ok} bien · ${mal} mal`);
 process.exit(mal ? 1 : 0);

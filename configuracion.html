@@ -162,7 +162,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
 });
 
 const S = { ctx:null, menu:null, vista:'negocio', org:null, sucursales:[], cajas:[],
-            impuestos:[], facturacion:null, moneda:'L' };
+            impuestos:[], aparatos:[], facturacion:null, moneda:'L' };
 
 const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
   { minimumFractionDigits:2, maximumFractionDigits:2 });
@@ -256,6 +256,7 @@ async function arrancar(){
       { valor:'negocio',     nombre:'Negocio y ticket', icono:'ajustes', activo:true },
       { valor:'facturacion', nombre:'Facturación (CAI)', icono:'reportes' },
       { valor:'sucursales',  nombre:'Sucursales y cajas', icono:'caja' },
+      { valor:'aparatos',    nombre:'Aparatos de caja', icono:'caja' },
       { valor:'impuestos',   nombre:'Impuestos', icono:'etiqueta' } ] }]
   });
   S.menu.alElegir(abrir);
@@ -284,14 +285,16 @@ async function cargarTodo(){
 }
 
 const TITULOS = { negocio:'Negocio y ticket', facturacion:'Facturación (CAI)',
-                  sucursales:'Sucursales y cajas', impuestos:'Impuestos' };
+                  sucursales:'Sucursales y cajas', aparatos:'Aparatos de caja',
+                  impuestos:'Impuestos' };
 
 function abrir(v){
   S.vista = v;
   S.menu?.marcar?.(v);
   $('#h-titulo').textContent = TITULOS[v];
   ({ negocio:pintarNegocio, facturacion:pintarFacturacion,
-     sucursales:pintarSucursales, impuestos:pintarImpuestos })[v]();
+     sucursales:pintarSucursales, aparatos:pintarAparatos,
+     impuestos:pintarImpuestos })[v]();
 }
 
 /* ================= negocio y ticket ================= */
@@ -719,6 +722,189 @@ function hojaCaja(c, sucursalId){
     cerrarHoja();
     await cargarTodo(); pintarSucursales();
   };
+}
+
+/* ================= aparatos de caja =================
+
+   Un aparato pareado es la tablet del mostrador. Guarda una llave larga que
+   el servidor verifica antes de dejar que alguien intente un PIN. Sin eso,
+   la puerta de /caja seria un PIN de cinco digitos de cara a internet.
+
+   La llave se enseña UNA sola vez. No se puede volver a ver porque en la
+   base solo queda su hash, igual que una contraseña. Si se pierde, se
+   revoca el aparato y se parea otra vez: no cuesta nada.
+   ================================================================== */
+const LLAVERO = 'pulpeando.aparato';
+
+function aparatoDeEsteEquipo(){
+  try { return JSON.parse(localStorage.getItem(LLAVERO) || 'null'); }
+  catch { return null; }
+}
+
+async function pintarAparatos(){
+  $('#cuerpo').innerHTML = `<div class="ficha"><p class="sub">Cargando…</p></div>`;
+  const { data, error } = await sb.rpc('fn_aparatos_caja');
+  if (error){
+    $('#cuerpo').innerHTML = `<div class="ficha">
+      <h3>Aparatos de caja</h3>
+      <div class="aviso malo">${escapar(limpiarError(error))}</div></div>`;
+    return;
+  }
+  S.aparatos = data || [];
+  const mio = aparatoDeEsteEquipo();
+
+  $('#cuerpo').innerHTML = `
+    <div class="ficha">
+      <h3>Este equipo</h3>
+      <p class="sub">La caja abre en <b>/caja</b> y ahí solo se pide el código y el PIN de la
+        cajera. Para que ese PIN tan corto alcance, el aparato tiene que estar pareado: guarda
+        una llave larga que nadie teclea y que usted puede revocar si se pierde la tablet.</p>
+      ${mio && mio.id
+        ? `<div class="fila">
+             <div class="fila-txt"><b>Pareado · ${escapar(mio.caja || 'sin caja')}</b>
+               <small>${escapar(mio.negocio || '')} · esta tablet ya puede abrir caja</small></div>
+             <button class="btn secundario" id="a-olvidar">Olvidar</button>
+           </div>
+           <button class="mas" id="a-nuevo" style="margin-top:14px">+ Parear otro aparato</button>`
+        : `<div class="aviso ojo">Este equipo todavía no está pareado. Mientras no lo esté,
+             <b>/caja</b> no deja vender desde aquí.</div>
+           <button class="mas" id="a-este" style="margin-top:14px">+ Parear este equipo</button>
+           <button class="mas" id="a-nuevo">+ Parear otro aparato</button>`}
+    </div>
+
+    <div class="ficha">
+      <h3>Aparatos del negocio</h3>
+      <p class="sub">Si una tablet se pierde o se cambia, revóquela: deja de poder abrir caja
+        al instante, sin tocar los PIN de nadie.</p>
+      ${S.aparatos.length ? S.aparatos.map(a => {
+        /* Se arma como lista y se une: concatenar a mano dejaba separadores
+           colgando cuando una parte salia vacia ("nunca se ha usado ·"). */
+        const partes = [escapar(a.sucursal)];
+        if (a.caja) partes.push(escapar(a.caja));
+        partes.push(a.ultimo_uso ? 'último uso ' + fecha(a.ultimo_uso) : 'nunca se ha usado');
+        if (!a.activo) partes.push('revocado');
+        if (a.activo && a.bloqueado_hasta && new Date(a.bloqueado_hasta) > new Date())
+          partes.push('<b style="color:var(--rojo)">enfriando por intentos fallidos</b>');
+        return `<div class="fila ${a.activo ? '' : 'inactivo'}">
+          <div class="fila-txt"><b>${escapar(a.nombre)}</b>
+            <small>${partes.join(' · ')}</small></div>
+          ${a.activo ? `<button class="btn secundario" data-rev="${escapar(a.aparato_id)}">Revocar</button>` : ''}
+        </div>`; }).join('')
+        : '<div class="aviso ojo">Todavía no hay ningún aparato pareado.</div>'}
+    </div>`;
+
+  $('#a-este')?.addEventListener('click', () => hojaParear(true));
+  $('#a-nuevo')?.addEventListener('click', () => hojaParear(false));
+  $('#a-olvidar')?.addEventListener('click', async () => {
+    if (!await confirmar('Olvidar el pareo',
+      'Esta tablet dejará de poder abrir caja. El aparato sigue existiendo en la lista: ' +
+      'si quiere matarlo de verdad, <b>revóquelo</b> abajo.', 'Olvidar')) return;
+    try { localStorage.removeItem(LLAVERO); } catch {}
+    pintarAparatos();
+  });
+  $('#cuerpo').querySelectorAll('[data-rev]').forEach(b => b.onclick = async () => {
+    const a = S.aparatos.find(x => x.aparato_id === b.dataset.rev);
+    if (!await confirmar('Revocar el aparato',
+      `<b>${escapar(a.nombre)}</b> dejará de poder abrir caja ahora mismo. ` +
+      'Si vuelve a usarlo, tendrá que parearlo otra vez.', 'Revocar')) return;
+    const { error } = await sb.rpc('fn_revocar_aparato', { p_aparato_id:a.aparato_id });
+    if (error) return aviso('No se pudo revocar', limpiarError(error));
+    /* Si el revocado era este mismo equipo, la llave guardada ya no sirve:
+       dejarla solo haria que la cajera marcara su PIN para nada. */
+    const mio2 = aparatoDeEsteEquipo();
+    if (mio2 && mio2.id === a.aparato_id){ try { localStorage.removeItem(LLAVERO); } catch {} }
+    pintarAparatos();
+  });
+}
+
+function hojaParear(esteEquipo){
+  const activas = S.sucursales.filter(s => s.activa);
+  $('#hoja').innerHTML = `
+    <h2>${esteEquipo ? 'Parear este equipo' : 'Parear otro aparato'}</h2>
+    <p class="sub">${esteEquipo
+      ? 'La llave queda guardada en esta tablet y la caja abre sola.'
+      : 'Se le va a enseñar una llave UNA sola vez. Cópiela y péguela en el otro aparato.'}</p>
+    <div class="campos">
+      <div class="campo-g ancho-total"><label for="ap-suc">Sucursal</label>
+        <select class="entrada" id="ap-suc">
+          ${activas.map(s => `<option value="${escapar(s.id)}">${escapar(s.nombre)}</option>`).join('')}
+        </select></div>
+      <div class="campo-g ancho-total"><label for="ap-caja">Caja</label>
+        <select class="entrada" id="ap-caja"></select></div>
+      <div class="campo-g ancho-total"><label for="ap-nombre">Nombre del aparato</label>
+        <input class="entrada" id="ap-nombre" maxlength="60" placeholder="Tablet de la caja 1">
+        <div class="ayuda" style="margin-top:6px">Para reconocerlo en la lista el día que haya
+          que revocarlo.</div></div>
+    </div>
+    <div class="aviso malo oculto" id="ap-error"></div>
+    <div class="acciones"><button class="btn secundario" id="ap-no">Volver</button>
+      <button class="btn principal-b" id="ap-si">Parear</button></div>`;
+  ver('#velo');
+
+  const pintarCajas = () => {
+    const suc = $('#ap-suc').value;
+    const cajas = S.cajas.filter(c => c.sucursal_id === suc && c.activa);
+    $('#ap-caja').innerHTML = '<option value="">Sin caja fija</option>' +
+      cajas.map(c => `<option value="${escapar(c.id)}">${escapar(c.nombre)}</option>`).join('');
+  };
+  pintarCajas();
+  $('#ap-suc').onchange = pintarCajas;
+  $('#ap-no').onclick = cerrarHoja;
+
+  $('#ap-si').onclick = async () => {
+    const b = $('#ap-si');
+    if (!activas.length){ return mostrarError('Primero cree una sucursal'); }
+    b.disabled = true; b.textContent = 'Pareando…';
+    const { data, error } = await sb.rpc('fn_parear_aparato', {
+      p_sucursal_id:$('#ap-suc').value,
+      p_caja_id:$('#ap-caja').value || null,
+      p_nombre:$('#ap-nombre').value.trim() || null });
+    b.disabled = false; b.textContent = 'Parear';
+    if (error) return mostrarError(limpiarError(error));
+
+    const suc  = activas.find(s => s.id === $('#ap-suc').value);
+    const caja = S.cajas.find(c => c.id === $('#ap-caja').value);
+    const guardado = { id:data.aparato_id, llave:data.llave,
+                       negocio:S.org?.nombre || S.ctx.organizacion.nombre,
+                       sucursal:suc?.nombre || '', caja:caja?.nombre || '' };
+
+    if (esteEquipo){
+      try { localStorage.setItem(LLAVERO, JSON.stringify(guardado)); }
+      catch { return mostrarError('Este navegador no deja guardar la llave. Pruebe fuera del modo privado.'); }
+    }
+    hojaLlave(data, esteEquipo);
+    await cargarTodo();
+    pintarAparatos();
+  };
+
+  function mostrarError(m){
+    const e = $('#ap-error'); e.textContent = m; e.classList.remove('oculto');
+  }
+}
+
+function hojaLlave(data, esteEquipo){
+  $('#hoja').innerHTML = `
+    <h2>Aparato pareado</h2>
+    <div class="aviso bueno" style="margin-top:12px">
+      <b>${escapar(data.nombre)}</b> ya puede abrir caja.</div>
+    ${esteEquipo ? `<p class="sub" style="margin-top:12px">La llave quedó guardada en esta
+      tablet. Abra <b>/caja</b> y pida a la cajera su código y su PIN.</p>` : `
+      <p class="sub" style="margin-top:12px">Copie esta llave y péguela en el otro aparato.
+        <b>No se vuelve a mostrar:</b> en la base solo queda su huella. Si la pierde, revoque
+        el aparato y paréelo otra vez.</p>
+      <textarea class="entrada num" id="ap-llave" rows="3" readonly
+        style="width:100%;word-break:break-all">${escapar(JSON.stringify({
+          id:data.aparato_id, llave:data.llave }))}</textarea>
+      <button class="btn secundario" id="ap-copiar" style="width:100%;margin-top:8px">Copiar</button>`}
+    <button class="btn principal-b" style="width:100%;margin-top:10px" id="ap-listo">Listo</button>`;
+  ver('#velo');
+  $('#ap-listo').onclick = cerrarHoja;
+  $('#ap-copiar')?.addEventListener('click', async () => {
+    const t = $('#ap-llave');
+    t.select();
+    try { await navigator.clipboard.writeText(t.value); $('#ap-copiar').textContent = 'Copiada'; }
+    catch { $('#ap-copiar').textContent = 'Cópiela a mano'; }
+  });
 }
 
 /* ================= impuestos ================= */
