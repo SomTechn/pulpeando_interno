@@ -109,6 +109,7 @@ async function montar(estado){
     ; C.retomar = retomar; C.guardadas = guardadas; C.mover = mover;
     ; C.abrirPOS = abrirPOS; C.resto = resto; C.cantTxt = cantTxt;
     ; C.DB = DB;
+    ; C.abrirGaveta = abrirGaveta; C.hojaGaveta = hojaGaveta;
   })()`);
   await new Promise(r => setTimeout(r, 140));
 
@@ -893,6 +894,181 @@ console.log('\n=== LA DEUDA DEL CLIENTE A LA VISTA ===');
   const { d } = await montar(estado);
   await elegirCliente(d, 'k2');
   chk('quien no debe no muestra deuda', d.querySelector('#cl-deuda').classList.contains('oculto'));
+}
+
+/* ===================================================================
+   LA GAVETA
+
+   Lo que de verdad importa aquí: que la pantalla NUNCA enseñe cuánto
+   debería haber en la gaveta. Un arqueo donde el que cuenta ya vio la
+   respuesta no mide nada, y la 033 se diseñó entera alrededor de eso.
+   =================================================================== */
+console.log('\n=== LA GAVETA ===');
+{
+  const estado = base();
+  estado.rpc.fn_movimientos_turno = { data:[
+    { movimiento_id:'m1', tipo:'fondo', monto:500, diferencia:null,
+      motivo:'Del fondo de la tienda', autorizo:'Somar Hernández',
+      cuando:new Date().toISOString() },
+    { movimiento_id:'m2', tipo:'retiro', monto:1200, diferencia:null,
+      motivo:'Se lleva al banco', autorizo:'Somar Hernández',
+      cuando:new Date().toISOString() },
+    { movimiento_id:'m3', tipo:'arqueo', monto:4380, diferencia:-120,
+      motivo:'Arqueo de media tarde', autorizo:'Somar Hernández',
+      cuando:new Date().toISOString() }
+  ], error:null };
+  const { d, C } = await montar(estado);
+  C.abrirGaveta();
+  await esperar(120);
+
+  const h = d.querySelector('#hoja-gaveta').textContent;
+  chk('la gaveta ofrece las cuatro cosas',
+      /Ingresar fondo/.test(h) && /Retiro parcial/.test(h) &&
+      /Arqueo sorpresivo/.test(h) && /Cerrar el turno/.test(h));
+  chk('dice que lo autoriza un supervisor o el gerente',
+      /supervisor o el gerente/.test(h));
+  chk('se ven los movimientos del turno',
+      d.querySelectorAll('.gav-mov').length === 3);
+  chk('la diferencia del arqueo lleva el signo delante de la moneda',
+      /−L\s*120\.00/.test(h) && !/L\s*-120/.test(h));
+  chk('el retiro se lee como salida y el fondo como entrada',
+      /−L\s*1,200\.00/.test(h) && /\+L\s*500\.00/.test(h));
+}
+{
+  const { d, C } = await montar(base());
+  C.hojaGaveta('arqueo');
+  await esperar();
+  const h = d.querySelector('#hoja-gaveta').textContent;
+  chk('el arqueo pide contar antes de escribir', /Cuente el efectivo/.test(h));
+  chk('y explica por qué no se enseña lo esperado',
+      /no se enseña cuánto debería haber/.test(h));
+  chk('en ninguna parte de la hoja aparece un esperado',
+      !/esperado/i.test(h));
+  chk('pide código y PIN de quien autoriza',
+      !!d.querySelector('#gv-codigo') && !!d.querySelector('#gv-pin'));
+}
+{
+  const { d, C, w, estado } = await montar(base());
+  C.hojaGaveta('fondo');
+  await esperar();
+  d.querySelector('#gv-si').click();
+  await esperar(120);
+  chk('sin monto no se manda nada',
+      /Escriba el monto/.test(d.querySelector('#gv-error').textContent) &&
+      !estado.llamadas.some(l => l.fn === 'fn_movimiento_caja'));
+
+  const m = d.querySelector('#gv-monto');
+  m.value = '500'; m.dispatchEvent(new w.Event('input', { bubbles:true }));
+  d.querySelector('#gv-si').click();
+  await esperar(120);
+  chk('con monto pero sin credencial tampoco',
+      /código y el PIN/.test(d.querySelector('#gv-error').textContent) &&
+      !estado.llamadas.some(l => l.fn === 'fn_movimiento_caja'));
+}
+{
+  const estado = base();
+  estado.rpc.fn_movimiento_caja = a => ({ data:{
+    ok:true, movimiento_id:'m9', tipo:a.p_tipo, monto:a.p_monto,
+    autorizo:'Somar Hernández', en_gaveta:4820 }, error:null });
+  const { d, C, w } = await montar(estado);
+  C.hojaGaveta('fondo');
+  await esperar();
+  const m = d.querySelector('#gv-monto');
+  m.value = '500'; m.dispatchEvent(new w.Event('input', { bubbles:true }));
+  d.querySelector('#gv-codigo').value = 'SOM';
+  d.querySelector('#gv-pin').value = '12345';
+  d.querySelector('#gv-si').click();
+  await esperar(180);
+
+  const lm = estado.llamadas.find(l => l.fn === 'fn_movimiento_caja');
+  chk('manda el turno, el tipo, el monto y la credencial',
+      lm && lm.args.p_turno_id === 't1' && lm.args.p_tipo === 'fondo' &&
+      lm.args.p_monto === 500 && lm.args.p_codigo === 'SOM' && lm.args.p_pin === '12345');
+  const h = d.querySelector('#hoja-gaveta').textContent;
+  chk('confirma el fondo y quién autorizó',
+      /Fondo ingresado/.test(h) && /Somar Hernández/.test(h));
+  chk('y NO enseña cuánto quedó en la gaveta: eso mataría el arqueo',
+      !/4,820/.test(h) && !/4820/.test(h));
+}
+{
+  /* El PIN malo no llega como error: la función termina bien y responde
+     {ok:false}, para que el intento fallido quede contado del otro lado. */
+  const estado = base();
+  estado.rpc.fn_movimiento_caja = { data:{ ok:false,
+    error:'Codigo o PIN incorrecto' }, error:null };
+  const { d, C, w } = await montar(estado);
+  C.hojaGaveta('retiro');
+  await esperar();
+  const m = d.querySelector('#gv-monto');
+  m.value = '300'; m.dispatchEvent(new w.Event('input', { bubbles:true }));
+  d.querySelector('#gv-codigo').value = 'XXX';
+  d.querySelector('#gv-pin').value = '00000';
+  d.querySelector('#gv-si').click();
+  await esperar(180);
+  chk('la credencial mala se dice en la hoja, no se traga',
+      /PIN incorrecto/i.test(d.querySelector('#gv-error').textContent));
+  chk('la hoja sigue abierta para reintentar', !!d.querySelector('#gv-monto'));
+  chk('y el PIN se borra', d.querySelector('#gv-pin').value === '');
+}
+{
+  const estado = base();
+  estado.rpc.fn_arqueo_caja = { data:{ ok:true, arqueo_id:'a1', contado:4700,
+    esperado:4820, diferencia:-120, autorizo:'Somar Hernández',
+    cuando:new Date().toISOString() }, error:null };
+  const { d, C, w } = await montar(estado);
+  C.hojaGaveta('arqueo');
+  await esperar();
+  const m = d.querySelector('#gv-monto');
+  m.value = '4700'; m.dispatchEvent(new w.Event('input', { bubbles:true }));
+  d.querySelector('#gv-codigo').value = 'SOM';
+  d.querySelector('#gv-pin').value = '12345';
+  d.querySelector('#gv-si').click();
+  await esperar(180);
+  const h = d.querySelector('#hoja-gaveta').textContent;
+  chk('el arqueo dice que no cuadra', /no cuadra/i.test(h));
+  chk('y de qué lado está la diferencia', /Falta en la gaveta/.test(h));
+  chk('con la diferencia en positivo, que es como se lee',
+      /L\s*120\.00/.test(h) && !/-120/.test(h));
+  chk('ahora SÍ se enseña lo esperado: ya se contó',
+      /4,820\.00/.test(h) && /4,700\.00/.test(h));
+}
+{
+  const estado = base();
+  estado.rpc.fn_arqueo_caja = { data:{ ok:true, arqueo_id:'a2', contado:4820,
+    esperado:4820, diferencia:0, autorizo:'Somar Hernández',
+    cuando:new Date().toISOString() }, error:null };
+  const { d, C, w } = await montar(estado);
+  C.hojaGaveta('arqueo');
+  await esperar();
+  const m = d.querySelector('#gv-monto');
+  m.value = '4820'; m.dispatchEvent(new w.Event('input', { bubbles:true }));
+  d.querySelector('#gv-codigo').value = 'SOM';
+  d.querySelector('#gv-pin').value = '12345';
+  d.querySelector('#gv-si').click();
+  await esperar(180);
+  chk('si cuadra, lo dice sin alarmar',
+      /La gaveta cuadra/.test(d.querySelector('#hoja-gaveta').textContent));
+}
+{
+  const estado = base();
+  estado.rpc.fn_cerrar_turno_con_arqueo = { data:{ ok:true, monto_inicial:500,
+    efectivo_ventas:4000, abonos_fiado:0, fondos:500, retiros:200,
+    devoluciones:0, esperado:4800, declarado:4800, diferencia:0,
+    cerro:'Somar Hernández' }, error:null };
+  const { d, C, w, estado:e } = await montar(estado);
+  C.hojaGaveta('cierre');
+  await esperar();
+  const m = d.querySelector('#gv-monto');
+  m.value = '4800'; m.dispatchEvent(new w.Event('input', { bubbles:true }));
+  d.querySelector('#gv-codigo').value = 'SOM';
+  d.querySelector('#gv-pin').value = '12345';
+  d.querySelector('#gv-si').click();
+  await esperar(180);
+  const lc = e.llamadas.find(l => l.fn === 'fn_cerrar_turno_con_arqueo');
+  chk('el cierre pasa por el que exige credencial',
+      lc && lc.args.p_monto_declarado === 4800 && lc.args.p_codigo === 'SOM');
+  chk('y lo confirma',
+      /Turno cerrado/.test(d.querySelector('#hoja-gaveta').textContent));
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);

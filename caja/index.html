@@ -238,6 +238,58 @@
    pantalla entera. */
 .pill.tinta{background:var(--tinta);color:#fff;min-height:40px;padding:0 15px}
 
+/* ---------- la gaveta ----------
+   La hoja va por ENCIMA de la pantalla de bloqueo (z-index 100 en ui.css):
+   cerrar el turno se hace justo con la caja bloqueada. */
+#velo-gaveta{z-index:110}
+.titulin{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--tenue);margin-bottom:10px}
+.gav-acciones{display:grid;gap:9px;grid-template-columns:repeat(2,1fr)}
+.gav-op{background:var(--fondo);border:1px solid var(--linea);border-radius:var(--r-sm);
+  padding:13px 14px;text-align:left;min-height:68px;transition:border-color .12s}
+.gav-op:hover{border-color:#C9D6E8}
+.gav-op b{display:block;font-size:14.5px;font-weight:700}
+.gav-op small{display:block;font-size:11.5px;color:var(--tenue);margin-top:3px;
+  line-height:1.35}
+.gav-aut{display:grid;grid-template-columns:1fr 118px;gap:10px}
+.gav-aut input{min-width:0}
+
+.gav-mov{display:flex;align-items:center;gap:11px;padding:9px 0;
+  border-bottom:1px solid var(--fondo)}
+.gav-mov:last-child{border-bottom:0}
+.gav-tipo{flex:0 0 auto;font-size:10.5px;font-weight:800;letter-spacing:.04em;
+  text-transform:uppercase;padding:4px 8px;border-radius:6px;
+  background:#E6EDF8;color:#4A5C77}
+.gav-tipo.fondo{background:#E3F6EC;color:#0F7A43}
+.gav-tipo.retiro{background:#FFF0DC;color:#8A5A12}
+.gav-txt{flex:1;min-width:0}
+.gav-txt b{display:block;font-size:13.5px;font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gav-txt small{display:block;font-size:11.5px;color:var(--tenue);margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gav-cifra{flex:0 0 auto;font-size:14.5px;font-weight:700;text-align:right}
+.gav-cifra .falta{color:var(--rojo)}
+.gav-cifra .sobra{color:var(--ambar)}
+.gav-cifra small{color:var(--claro);font-weight:600;font-size:11.5px}
+
+.gav-res{background:#E7F7EE;border-radius:var(--r-md);padding:16px;margin:4px 0 14px}
+.gav-res.falta{background:#FFEDF1}
+.gav-res.sobra{background:#FFF4E0}
+.gav-res small{display:block;font-size:12px;font-weight:800;color:var(--tenue);
+  text-transform:uppercase;letter-spacing:.05em}
+.gav-res b{display:block;font-size:clamp(30px,6vw,44px);font-weight:700;
+  letter-spacing:-.03em;line-height:1.1;margin-top:3px}
+.gav-res-de{display:flex;justify-content:space-between;gap:12px;margin-top:10px;
+  padding-top:9px;border-top:1px solid rgba(15,23,41,.12);
+  font-family:var(--num);font-size:12.5px;font-weight:600;color:var(--tenue)}
+@media (max-width:480px){
+  .gav-acciones{grid-template-columns:1fr}
+  .gav-aut{grid-template-columns:1fr}
+  /* En el telefono el motivo con puntos suspensivos perdia la mitad del
+     texto ("Del fondo de la tien..."): mejor que baje a dos renglones. */
+  .gav-txt small{white-space:normal;overflow:visible;line-height:1.3}
+}
+
 .movil{display:none}
 .cerrar-ticket{display:none}
 
@@ -601,6 +653,11 @@
   <div class="hoja" id="hoja"></div>
 </div>
 
+<!-- ================= GAVETA ================= -->
+<div class="velo oculto" id="velo-gaveta">
+  <div class="hoja" id="hoja-gaveta"></div>
+</div>
+
 <!-- ================= ELEGIR CLIENTE ================= -->
 <div class="velo oculto" id="velo-cliente">
   <div class="hoja">
@@ -640,7 +697,8 @@ const CFG = window.SUPABASE_CONFIG || {};
 const SUPABASE_URL = CFG.url || 'PEGUE_AQUI_LA_URL';
 const SUPABASE_KEY = CFG.key || 'PEGUE_AQUI_LA_LLAVE';
 
-const $ = s => document.querySelector(s);
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
 const ver = (id, si = true) => $(id).classList.toggle('oculto', !si);
 
 if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin configurar'); }
@@ -1553,6 +1611,18 @@ function retomar(id){
     'ya no está disponible y se quitó del ticket.');
 }
 
+/* "hoy 3:40 p. m." pesa menos que una fecha entera cuando lo que importa es
+   si fue hace rato. */
+function cuando(v){
+  if (!v) return '—';
+  const d = new Date(v);
+  const dias = Math.floor((Date.now() - d.getTime()) / 86400000);
+  const h = d.toLocaleTimeString('es-HN', { hour:'numeric', minute:'2-digit' });
+  if (dias <= 0) return h;
+  if (dias === 1) return 'ayer ' + h;
+  return d.toLocaleDateString('es-HN', { day:'numeric', month:'short' }) + ' ' + h;
+}
+
 function hora(iso){
   try{ return new Date(iso).toLocaleTimeString('es-HN',
     { hour:'numeric', minute:'2-digit' }); }catch(e){ return ''; }
@@ -1617,7 +1687,7 @@ $('#b-teclado').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   const a = b.dataset.accion;
   if (a === 'borrar'){ S.pin = S.pin.slice(0,-1); pintarPuntos(); }
-  else if (a === 'cerrar') cerrarTurno();
+  else if (a === 'cerrar') hojaGaveta('cierre');
   else digitar(b.textContent.trim());
 });
 document.addEventListener('keydown', e => {
@@ -1627,17 +1697,210 @@ document.addEventListener('keydown', e => {
 });
 $('#h-bloquear').addEventListener('click', bloquear);
 
-async function cerrarTurno(){
-  const declarado = prompt('¿Cuánto efectivo hay en la caja?');
-  if (declarado === null) return;
-  const { data, error } = await sb.rpc('fn_cerrar_turno', {
-    p_turno_id:S.turno, p_monto_declarado:parseFloat(declarado) || 0, p_notas:null });
-  if (error){ $('#b-error').textContent = limpiarError(error); return; }
-  alert('Turno cerrado\nEsperado: ' + money(data.esperado) +
-        '\nDeclarado: ' + money(data.declarado) +
-        '\nDiferencia: ' + money(data.diferencia));
-  location.reload();
+/* =================== la gaveta ===================
+
+   Las cuatro cosas que un supervisor o un gerente hace sobre la gaveta de
+   una cajera, sin sacarla del mostrador:
+
+     fondo    meter cambio al empezar o cuando se acaban los billetes chicos
+     retiro   sacar parte del efectivo cuando se junta mucho
+     arqueo   contar sin avisar, a media jornada
+     cierre   cerrar el turno de esa cajera
+
+   Las cuatro piden CÓDIGO y PIN de quien autoriza, encima de la sesión de
+   la cajera. Eso lo resuelve app.quien_autoriza en la 033: la cajera nunca
+   deja de ser la cajera, y queda registrado quién autorizó qué.
+
+   Regla que no se rompe: NUNCA se enseña en pantalla cuánto debería haber.
+   Ni antes de contar ni después de un fondo. Un arqueo donde el que cuenta
+   ya vio la respuesta no mide nada. Por eso fn_movimiento_caja devuelve
+   en_gaveta y aquí se ignora a propósito.
+   ================================================== */
+const GAVETA = {
+  fondo:  { t:'Ingresar fondo',    v:'Ingresar',
+            p:'¿Cuánto cambio entra a la gaveta?', motivo:'De dónde sale' },
+  retiro: { t:'Retiro parcial',    v:'Retirar',
+            p:'¿Cuánto efectivo se saca?',         motivo:'A dónde va' },
+  arqueo: { t:'Arqueo sorpresivo', v:'Comparar',
+            p:'¿Cuánto efectivo hay contado?',     motivo:'Nota (opcional)' },
+  cierre: { t:'Cerrar el turno',   v:'Cerrar turno',
+            p:'¿Cuánto efectivo hay contado?',     motivo:'Nota (opcional)' }
+};
+
+function abrirGaveta(){
+  if (!S.turno){ avisoCaja('Primero hay que abrir el turno.'); return; }
+  $('#hoja-gaveta').innerHTML = `
+    <h2>Gaveta</h2>
+    <p class="sub">Lo autoriza un supervisor o el gerente con su código y su
+      PIN. La cajera sigue siendo la cajera.</p>
+    <div class="gav-acciones">
+      ${Object.entries(GAVETA).map(([k, g]) =>
+        `<button class="gav-op" data-g="${k}"><b>${g.t}</b><small>${g.p}</small></button>`).join('')}
+    </div>
+    <div class="titulin" style="margin-top:20px">En este turno</div>
+    <div id="gav-movs"><div class="vacio" style="padding:18px">
+      <span class="girando"></span></div></div>
+    <div class="acciones" style="grid-template-columns:1fr">
+      <button class="btn secundario" id="gav-no">Cerrar</button>
+    </div>`;
+  ver('#velo-gaveta');
+  $('#gav-no').onclick = () => ver('#velo-gaveta', false);
+  $$('[data-g]').forEach(b => b.addEventListener('click', () => hojaGaveta(b.dataset.g)));
+  pintarMovimientos();
 }
+
+async function pintarMovimientos(){
+  const z = $('#gav-movs'); if (!z) return;
+  const { data, error } = await sb.rpc('fn_movimientos_turno', { p_turno_id:S.turno });
+  if (error){ z.innerHTML = `<div class="aviso malo">${escapar(limpiarError(error))}</div>`; return; }
+  if (!data || !data.length){
+    z.innerHTML = `<div class="vacio" style="padding:14px 0">
+      <p>Todavía no se ha movido nada de la gaveta.</p></div>`;
+    return;
+  }
+  const NOMBRE = { fondo:'Fondo', retiro:'Retiro', arqueo:'Arqueo' };
+  z.innerHTML = data.map(m => {
+    // En el arqueo lo que importa es la diferencia; en fondo y retiro, el monto.
+    const cifra = m.tipo === 'arqueo'
+      ? (m.diferencia === null || m.diferencia === undefined
+          ? '<small>sin ver</small>'
+          /* El signo va delante de la moneda, como en el retiro: money() de un
+             negativo da "L -120.00" y se lee torcido. */
+          : `<b class="${Number(m.diferencia) < 0 ? 'falta' : Number(m.diferencia) > 0 ? 'sobra' : ''}"
+             >${Number(m.diferencia) < 0 ? '−' : Number(m.diferencia) > 0 ? '+' : ''}${money(Math.abs(Number(m.diferencia)))}</b>`)
+      : `<b>${m.tipo === 'retiro' ? '−' : '+'}${money(m.monto)}</b>`;
+    return `<div class="gav-mov">
+      <span class="gav-tipo ${escapar(m.tipo)}">${NOMBRE[m.tipo] || escapar(m.tipo)}</span>
+      <div class="gav-txt">
+        <b>${escapar(m.autorizo || '—')}</b>
+        <small>${escapar(cuando(m.cuando))}${m.motivo ? ' · ' + escapar(m.motivo) : ''}</small>
+      </div>
+      <div class="gav-cifra num">${cifra}</div>
+    </div>`;
+  }).join('');
+}
+
+function hojaGaveta(tipo){
+  const g = GAVETA[tipo];
+  const esArqueo = tipo === 'arqueo' || tipo === 'cierre';
+
+  $('#hoja-gaveta').innerHTML = `
+    <h2>${g.t}</h2>
+    ${esArqueo
+      ? `<div class="aviso ojo">Cuente el efectivo <b>antes</b> de escribirlo. A
+           propósito no se enseña cuánto debería haber: un arqueo donde ya se vio
+           la respuesta no mide nada.</div>`
+      : `<p class="sub">Queda registrado con el nombre de quien autoriza.</p>`}
+    <div class="rotulo">${escapar(g.p)}</div>
+    <input class="recibido num" id="gv-monto" inputmode="decimal" placeholder="0.00">
+    <div class="campo-g" style="margin-top:14px">
+      <label for="gv-motivo">${escapar(g.motivo)}</label>
+      <input class="entrada" id="gv-motivo" autocomplete="off"
+             placeholder="${tipo === 'retiro' ? 'Se lleva al banco' :
+                            tipo === 'fondo' ? 'Del fondo de la tienda' : ''}">
+    </div>
+
+    <div class="titulin" style="margin-top:20px">Quien autoriza</div>
+    <div class="gav-aut">
+      <input class="entrada" id="gv-codigo" autocomplete="off" placeholder="Código"
+             style="text-transform:uppercase">
+      <input class="entrada num" id="gv-pin" type="password" inputmode="numeric"
+             autocomplete="off" placeholder="PIN">
+    </div>
+
+    <div class="aviso malo oculto" id="gv-error"></div>
+    <div class="acciones">
+      <button class="btn secundario" id="gv-no">Volver</button>
+      <button class="btn principal-b" id="gv-si">${escapar(g.v)}</button>
+    </div>`;
+  ver('#velo-gaveta');   // también se abre desde la pantalla de bloqueo
+  $('#gv-monto').focus();
+
+  $('#gv-monto').addEventListener('input', e => {
+    e.target.value = e.target.value.replace(/[^0-9.]/g, '');
+  });
+  $('#gv-pin').addEventListener('keydown', e => {
+    if (e.key === 'Enter') $('#gv-si').click();
+  });
+  $('#gv-no').onclick = abrirGaveta;
+  $('#gv-si').onclick = () => mandarGaveta(tipo);
+}
+
+async function mandarGaveta(tipo){
+  const monto  = Number($('#gv-monto').value);
+  const motivo = $('#gv-motivo').value.trim() || null;
+  const codigo = $('#gv-codigo').value.trim();
+  const pin    = $('#gv-pin').value.trim();
+  const err    = $('#gv-error');
+  const fallar = t => { err.textContent = t; err.classList.remove('oculto'); };
+  err.classList.add('oculto');
+
+  if (!(monto >= 0) || (tipo !== 'arqueo' && tipo !== 'cierre' && monto <= 0))
+    return fallar('Escriba el monto.');
+  if (!codigo || !pin) return fallar('Falta el código y el PIN de quien autoriza.');
+
+  const b = $('#gv-si'); const texto = b.textContent;
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+
+  let r;
+  if (tipo === 'fondo' || tipo === 'retiro')
+    r = await sb.rpc('fn_movimiento_caja', { p_turno_id:S.turno, p_tipo:tipo,
+          p_monto:monto, p_codigo:codigo, p_pin:pin, p_motivo:motivo });
+  else if (tipo === 'arqueo')
+    r = await sb.rpc('fn_arqueo_caja', { p_turno_id:S.turno, p_contado:monto,
+          p_codigo:codigo, p_pin:pin, p_motivo:motivo });
+  else
+    r = await sb.rpc('fn_cerrar_turno_con_arqueo', { p_turno_id:S.turno,
+          p_monto_declarado:monto, p_codigo:codigo, p_pin:pin, p_notas:motivo });
+
+  b.disabled = false; b.textContent = texto;
+  if (r.error) return fallar(limpiarError(r.error));
+
+  /* La credencial mala NO llega como error: la función termina bien y
+     responde {ok:false}, para que el intento fallido quede contado. */
+  if (r.data && r.data.ok === false){
+    $('#gv-pin').value = '';
+    return fallar(r.data.error || 'Código o PIN incorrecto');
+  }
+
+  resultadoGaveta(tipo, r.data);
+}
+
+function resultadoGaveta(tipo, d){
+  const dif = Number(d.diferencia);
+  const cuadra = Math.abs(dif) < 0.005;
+  const esArqueo = tipo === 'arqueo' || tipo === 'cierre';
+
+  $('#hoja-gaveta').innerHTML = `
+    <div class="listo">
+      <div class="marca-ok">${cuadra || !esArqueo ? '✓' : '!'}</div>
+      <h2>${tipo === 'cierre' ? 'Turno cerrado'
+           : tipo === 'arqueo' ? (cuadra ? 'La gaveta cuadra' : 'La gaveta no cuadra')
+           : tipo === 'fondo' ? 'Fondo ingresado' : 'Retiro registrado'}</h2>
+      ${esArqueo ? `
+        <div class="gav-res ${cuadra ? '' : dif < 0 ? 'falta' : 'sobra'}">
+          <small>${cuadra ? 'Sin diferencia'
+                  : dif < 0 ? 'Falta en la gaveta' : 'Sobra en la gaveta'}</small>
+          <b class="num">${money(Math.abs(dif))}</b>
+          <div class="gav-res-de">
+            <span>Contado ${money(d.contado ?? d.declarado)}</span>
+            <span>Esperado ${money(d.esperado)}</span>
+          </div>
+        </div>`
+      : `<p class="doc num">${money(d.monto)}</p>`}
+      <p class="sub">${tipo === 'cierre'
+        ? 'La caja queda libre para el siguiente turno.'
+        : 'Autorizó ' + escapar(d.autorizo || d.cerro || '') + '.'}</p>
+      <button class="btn principal-b" style="width:100%" id="gv-listo">Listo</button>
+    </div>`;
+
+  $('#gv-listo').onclick = () => {
+    if (tipo === 'cierre'){ location.reload(); return; }
+    abrirGaveta();
+  };
+}
+
+$('#h-gaveta').addEventListener('click', abrirGaveta);
 
 /* ================= cliente ================= */
 async function abrirClientes(){
