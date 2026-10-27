@@ -42,7 +42,8 @@ const svg = d => `<svg viewBox="0 0 24 24" width="19" height="19" fill="none"
 /* Los módulos del sistema y desde qué rol se ven.
    nivel: 0 repartidor · 1 auxiliar · 2 supervisor · 3 gerente · 4 admin */
 const MODULOS = [
-  { id:'caja',    nombre:'Caja',        url:'index.html',   icono:'caja',    nivel:1 },
+  { id:'panel',   nombre:'Panel',       url:'index.html',   icono:'todos',   nivel:1 },
+  { id:'caja',    nombre:'Caja',        url:'caja/',        icono:'caja',    nivel:1 },
   { id:'consultar', nombre:'Consultar', url:'consultar.html', icono:'lupa',  nivel:1 },
   { id:'pedidos', nombre:'Pedidos',     url:'pedidos.html', icono:'pedidos', nivel:1 },
   { id:'ventas',  nombre:'Ventas',      url:'ventas.html',  icono:'reportes', nivel:1 },

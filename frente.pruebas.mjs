@@ -92,9 +92,11 @@ async function montar(archivo, estado){
   const menu = await import(BASE + 'menu.js');
   const prep = cuerpo
     .replace(/^import .*?from 'https:\/\/esm\.sh\/@supabase\/supabase-js@2';$/m, '')
-    .replace(/^import \{([^}]*)\} from '\.\/menu\.js';$/m, '')
-    .replace(/^import \{([^}]*)\} from '\.\/escaner\.js';$/m, '')
-    .replace(/^import \{ imprimirTicket \} from '\.\/ticket\.js';$/m,
+    /* ./ o ../ : la caja se mudó a su propia carpeta y los patrones fijos
+       dejaban pasar el import crudo, que revienta fuera de un módulo. */
+    .replace(/^import \{([^}]*)\} from '\.{1,2}\/menu\.js';$/m, '')
+    .replace(/^import \{([^}]*)\} from '\.{1,2}\/escaner\.js';$/m, '')
+    .replace(/^import \{ imprimirTicket \} from '\.{1,2}\/ticket\.js';$/m,
              'const imprimirTicket = async (d, o) => { (window.__impresos = window.__impresos || []).push({ d, o }); };')
     .replace(/createClient\(SUPABASE_URL, SUPABASE_KEY, \{[\s\S]*?\}\)/, '__sb');
 
@@ -153,7 +155,7 @@ console.log('\n=== CAJA: puerta del fiado ===');
       fn_catalogo_pos:{ data:[], error:null }
     }
   };
-  const { w, d, caja } = await montar('index.html', estado);
+  const { w, d, caja } = await montar('caja/index.html', estado);
   const S = caja.S;
   chk('el módulo expone su estado', !!S);
   chk('pintarFiado existe', typeof caja.pintarFiado === 'function');

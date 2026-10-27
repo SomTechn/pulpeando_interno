@@ -43,7 +43,7 @@ const CATALOGO = [
 ];
 
 async function montar(estado){
-  const html = fs.readFileSync(BASE + 'index.html', 'utf8');
+  const html = fs.readFileSync(BASE + 'caja/index.html', 'utf8');
   const cuerpo = html.match(/<script type="module">([\s\S]*?)<\/script>/)[1];
   const css = fs.readFileSync(BASE + 'ui.css', 'utf8');
 
@@ -51,7 +51,7 @@ async function montar(estado){
     html.replace(/<script type="module">[\s\S]*?<\/script>/, '')
         .replace('<link rel="stylesheet" href="ui.css">', '<style>' + css + '</style>')
         .replace(/<script src="config\.js"><\/script>/, ''),
-    { runScripts:'outside-only', url:'https://x.test/', pretendToBeVisual:true });
+    { runScripts:'outside-only', url:'https://x.test/caja/', pretendToBeVisual:true });
 
   const w = dom.window;
   w.SUPABASE_CONFIG = { url:'https://x.supabase.co', key:'k' };
@@ -93,10 +93,10 @@ async function montar(estado){
 
   const prep = cuerpo
     .replace(/^import \{ createClient \} from 'https:\/\/esm\.sh\/@supabase\/supabase-js@2';$/m, '')
-    .replace(/^import \{ montarMenu, iniciales, escapar \} from '\.\/menu\.js';$/m, '')
-    .replace(/^import \{ escanear, hayCamara \} from '\.\/escaner\.js';$/m,
+    .replace(/^import \{ iniciales, escapar \} from '\.\.\/menu\.js';$/m, '')
+    .replace(/^import \{ escanear, hayCamara \} from '\.\.\/escaner\.js';$/m,
              'const escanear = async () => null; const hayCamara = async () => false;')
-    .replace(/^import \{ imprimirTicket \} from '\.\/ticket\.js';$/m,
+    .replace(/^import \{ imprimirTicket \} from '\.\.\/ticket\.js';$/m,
              'const imprimirTicket = async (d, o) => { (window.__impresos = window.__impresos || []).push({ d, o }); };')
     .replace(/createClient\(SUPABASE_URL, SUPABASE_KEY, \{[\s\S]*?\}\)/, '__sb');
 
