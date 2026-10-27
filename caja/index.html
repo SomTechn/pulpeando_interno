@@ -449,15 +449,43 @@
   </div>
 </div>
 
-<div class="oscura oculto" id="p-sesion">
+<!-- La tablet todavía no está pareada con ninguna caja. Aquí no se ofrece
+     entrar con correo: esta dirección es solo la caja. El gerente parea
+     desde Configuración, en el resto del sistema. -->
+<div class="oscura oculto" id="p-aparato">
   <div class="tarjeta-oscura">
     <div class="marca"><span>◧</span> Punto de venta</div>
-    <div class="titulo-o">Iniciar sesión</div>
-    <p class="sub-o">Use el correo con el que su gerente lo dio de alta</p>
-    <input class="campo-o" id="s-email" type="email" placeholder="correo@negocio.hn" autocomplete="username">
-    <input class="campo-o" id="s-clave" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <div class="titulo-o">Este aparato no está pareado</div>
+    <p class="sub-o">Pídale a su gerente que lo paree con una caja desde
+      <b>Configuración</b>. Mientras tanto no se puede vender aquí.</p>
+    <a class="btn-o" href="../">Ir al sistema</a>
+  </div>
+</div>
+
+<!-- La entrada de la cajera: su código y su PIN, nada más. No hay correo ni
+     contraseña, y el aparato NO queda conectado: al bloquear se sale. -->
+<div class="oscura oculto" id="p-sesion">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> <span id="s-caja">Caja</span></div>
+    <div class="titulo-o">Su código y su PIN</div>
+    <p class="sub-o" id="s-sub">Marque su código de cajera</p>
+    <input class="campo-o num" id="s-codigo" inputmode="text" maxlength="8"
+           placeholder="CÓDIGO" autocomplete="off" autocapitalize="characters"
+           style="text-align:center;letter-spacing:.12em;text-transform:uppercase">
+    <div class="puntos" id="s-puntos">
+      <div class="punto"></div><div class="punto"></div><div class="punto"></div>
+      <div class="punto"></div><div class="punto"></div>
+    </div>
     <div class="error-o" id="s-error"></div>
-    <button class="btn-o" id="s-entrar">Entrar</button>
+    <div class="teclado" id="s-teclado">
+      <button class="tecla">1</button><button class="tecla">2</button><button class="tecla">3</button>
+      <button class="tecla">4</button><button class="tecla">5</button><button class="tecla">6</button>
+      <button class="tecla">7</button><button class="tecla">8</button><button class="tecla">9</button>
+      <button class="tecla plana" data-accion="limpiar">Limpiar</button>
+      <button class="tecla">0</button>
+      <button class="tecla plana" data-accion="borrar">Borrar</button>
+    </div>
+    <div class="pie-o" id="s-pie">—</div>
   </div>
 </div>
 
@@ -500,6 +528,7 @@
       <button class="tecla">0</button>
       <button class="tecla plana" data-accion="borrar">Borrar</button>
     </div>
+    <button class="btn-o fantasma" id="b-otra" style="margin-top:10px">Entra otra cajera</button>
     <div class="pie-o">La caja se bloquea después de cada cobro.</div>
   </div>
 </div>
@@ -853,31 +882,145 @@ function refrescarCobro(){
   pintarCambio();
 }
 
-/* ================= sesión ================= */
-$('#s-entrar').addEventListener('click', async () => {
-  const b = $('#s-entrar');
+/* ================= sesión =================
+   En el mostrador no se escribe correo ni contraseña: la cajera marca su
+   código y su PIN. Lo que hace posible que el PIN sea tan corto es que el
+   aparato ya está pareado, y esa llave la reparte el gerente.
+
+   El aparato guarda la LLAVE, no la sesión. La llave sola no lee nada: solo
+   da derecho a intentar un PIN en esta tienda. */
+const LLAVERO = 'pulpeando.aparato';
+
+function aparato(){
+  /* En modo privado o con el almacenamiento apagado, leer revienta. Sin
+     llave la caja no entra, pero la pantalla tiene que decirlo, no caerse. */
+  try { return JSON.parse(localStorage.getItem(LLAVERO) || 'null'); }
+  catch { return null; }
+}
+
+let pinEntrada = '';
+
+/* pintarPuntosEntrada y no pintarPuntos: mas abajo hay otra pintarPuntos,
+   la de la pantalla bloqueada. Las declaraciones de funcion se izan, asi que
+   la de abajo ganaba y este teclado pintaba los puntos de la OTRA pantalla:
+   la cajera marcaba su PIN y no veia nada moverse. */
+function pintarPuntosEntrada(){
+  $$('#s-puntos .punto').forEach((p, i) => p.classList.toggle('on', i < pinEntrada.length));
+}
+
+function errorEntrada(msg){
+  $('#s-error').textContent = msg || '';
+  pinEntrada = ''; pintarPuntosEntrada();
+}
+
+$('#s-teclado').addEventListener('click', e => {
+  const t = e.target.closest('.tecla'); if (!t) return;
+  const a = t.dataset.accion;
+  if (a === 'borrar')       pinEntrada = pinEntrada.slice(0, -1);
+  else if (a === 'limpiar'){ pinEntrada = ''; $('#s-codigo').value = ''; $('#s-codigo').focus(); }
+  else if (pinEntrada.length < 5) pinEntrada += t.textContent.trim();
   $('#s-error').textContent = '';
-  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
-  const { error } = await sb.auth.signInWithPassword({
-    email:$('#s-email').value.trim(), password:$('#s-clave').value });
-  b.disabled = false; b.textContent = 'Entrar';
-  if (error){ $('#s-error').textContent = 'Correo o contraseña incorrectos'; return; }
-  await arrancar();
+  pintarPuntosEntrada();
+  if (pinEntrada.length === 5) entrarCaja();
 });
-$('#s-clave').addEventListener('keydown', e => { if (e.key === 'Enter') $('#s-entrar').click(); });
-$('#t-salir').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
+
+/* El escáner de código de barras y el teclado físico escriben igual que los
+   dedos: la cajera con lector no tiene por qué cambiar de costumbre. */
+$('#s-codigo').addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); $('#s-codigo').blur(); }
+});
+document.addEventListener('keydown', e => {
+  if ($('#p-sesion').classList.contains('oculto')) return;
+  if (document.activeElement === $('#s-codigo')) return;
+  if (/^[0-9]$/.test(e.key) && pinEntrada.length < 5){
+    pinEntrada += e.key; $('#s-error').textContent = ''; pintarPuntosEntrada();
+    if (pinEntrada.length === 5) entrarCaja();
+  } else if (e.key === 'Backspace'){
+    pinEntrada = pinEntrada.slice(0, -1); pintarPuntosEntrada();
+  }
+});
+
+async function entrarCaja(){
+  const ap = aparato();
+  if (!ap || !ap.id || !ap.llave){ ver('#p-sesion', false); ver('#p-aparato'); return; }
+
+  const codigo = $('#s-codigo').value.trim();
+  if (!codigo){ errorEntrada('Marque su código de cajera'); $('#s-codigo').focus(); return; }
+
+  $('#s-teclado').style.pointerEvents = 'none';
+  $('#s-pie').textContent = 'Entrando…';
+
+  let r;
+  try {
+    const res = await fetch(SUPABASE_URL + '/functions/v1/entrar-caja', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', apikey:SUPABASE_KEY },
+      body: JSON.stringify({ aparato:ap.id, llave:ap.llave, codigo, pin:pinEntrada })
+    });
+    r = await res.json();
+  } catch {
+    r = { ok:false, error:'red', mensaje:'Sin conexión. Revise la señal' };
+  }
+
+  $('#s-teclado').style.pointerEvents = '';
+  $('#s-pie').textContent = ap.caja ? ap.caja : '—';
+
+  if (!r || r.ok !== true){
+    /* Si el aparato perdió el permiso no tiene sentido seguir pidiendo PIN:
+       la cajera marcaría bien mil veces y no entraría nunca. */
+    if (r && (r.error === 'aparato' || r.error === 'config')){
+      ver('#p-sesion', false); ver('#p-aparato');
+      return;
+    }
+    return errorEntrada(r && r.mensaje ? r.mensaje : 'Código o PIN incorrecto');
+  }
+
+  pinEntrada = ''; pintarPuntosEntrada();
+  $('#s-codigo').value = '';
+  const { error } = await sb.auth.setSession(r.sesion);
+  if (error) return errorEntrada('No se pudo abrir la sesión');
+  await arrancar();
+}
+
+/* Salir de verdad: el aparato conserva su llave, pero la sesión se va. */
+async function salirDeCaja(){
+  pinEntrada = '';
+  await sb.auth.signOut();
+  location.reload();
+}
+$('#t-salir').addEventListener('click', salirDeCaja);
+
+/* El PIN de la pantalla bloqueada es el de QUIEN TIENE EL TURNO: sirve para
+   volver, no para relevar. La que entra a relevar sale y marca su código. */
+$('#b-otra').addEventListener('click', salirDeCaja);
 
 /* ================= arranque ================= */
+/* Pide la credencial, o avisa que la tablet no está pareada. Un aparato sin
+   llave no es un error de la cajera y no se arregla marcando más fuerte. */
+function pedirCredencial(msg){
+  const ap = aparato();
+  if (!ap || !ap.id || !ap.llave){ ver('#p-sesion', false); ver('#p-aparato'); return; }
+  ver('#p-aparato', false);
+  $('#s-caja').textContent = ap.negocio || 'Caja';
+  $('#s-pie').textContent  = ap.caja || '—';
+  ver('#p-sesion');
+  errorEntrada(msg);
+  /* Solo con teclado de verdad. En la tablet, enfocar levanta el teclado del
+     sistema encima del teclado numerico apenas se abre la pantalla. */
+  if (window.matchMedia && window.matchMedia('(pointer:fine)').matches)
+    $('#s-codigo').focus();
+}
+
 async function arrancar(){
   const { data:{ session } } = await sb.auth.getSession();
-  if (!session){ ver('#p-sesion'); return; }
+  if (!session){ pedirCredencial(); return; }
   ver('#p-sesion', false);
+  ver('#p-aparato', false);
 
   const { data, error } = await sb.rpc('fn_pos_contexto');
   if (error){
-    ver('#p-sesion');
-    $('#s-error').textContent = 'Su usuario no tiene perfil en ningún negocio';
     await sb.auth.signOut();
+    pedirCredencial('Su usuario no tiene perfil en ningún negocio');
     return;
   }
 

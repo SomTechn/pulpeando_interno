@@ -70,10 +70,26 @@ async function montar(estado){
   estado.llamadas = [];
   estado.encoladas = [];
 
+  // La tablet pareada: su llave vive en el almacenamiento, antes de que el
+  // guion corra, igual que en la vida real.
+  if (estado.aparato) w.localStorage.setItem('pulpeando.aparato',
+                                             JSON.stringify(estado.aparato));
+
+  estado.pedidos = [];
+  w.fetch = async (url, opc) => {
+    estado.pedidos.push({ url, cuerpo:JSON.parse(opc.body) });
+    if (estado.fetch === 'cae') throw new Error('sin red');
+    return { json: async () => estado.fetch };
+  };
+
+  estado.sesiones = [];
   w.__sb = {
-    auth:{ getSession: async () => ({ data:{ session:{ user:{id:'u1'} } } }),
-           signInWithPassword: async () => ({ error:null }),
-           signOut: async () => {}, onAuthStateChange(){} },
+    auth:{ getSession: async () => ({ data:{ session:
+             estado.sesion === undefined ? { user:{id:'u1'} } : estado.sesion } }),
+           setSession: async t => { estado.sesiones.push(t);
+                                    return { error:estado.setSessionFalla || null }; },
+           signOut: async () => { estado.salio = true; },
+           onAuthStateChange(){} },
     rpc: async (fn, args) => {
       estado.llamadas.push({ fn, args });
       const h = estado.rpc[fn];
@@ -110,8 +126,14 @@ async function montar(estado){
     ; C.abrirPOS = abrirPOS; C.resto = resto; C.cantTxt = cantTxt;
     ; C.DB = DB;
     ; C.abrirGaveta = abrirGaveta; C.hojaGaveta = hojaGaveta;
+    ; C.entrarCaja = entrarCaja; C.pedirCredencial = pedirCredencial;
+    ; C.aparato = aparato;
   })()`);
   await new Promise(r => setTimeout(r, 140));
+
+  // Para probar la entrada se para aqui: sin sesion y sin turno, que es como
+  // amanece la tablet.
+  if (estado.entrada) return { w, d:w.document, C:w.__c, estado };
 
   // La caja real arranca con PIN y turno; aqui se entra directo al mostrador.
   const C = w.__c;
@@ -1070,6 +1092,170 @@ console.log('\n=== LA GAVETA ===');
   chk('y lo confirma',
       /Turno cerrado/.test(d.querySelector('#hoja-gaveta').textContent));
 }
+
+/* ===================================================================
+   LA ENTRADA DE LA CAJERA
+
+   En el mostrador no se escribe correo ni contrasena. Se marca el codigo y
+   el PIN, y lo que hace que un PIN de cinco digitos alcance es que la tablet
+   ya esta pareada: la llave del aparato es el otro candado.
+   =================================================================== */
+console.log('\n=== LA ENTRADA DE LA CAJERA ===');
+
+const TABLET = { id:'aaaa0000-1111-4222-8333-444455556666', llave:'a'.repeat(48),
+                 negocio:'Pulpería Pulpeando', caja:'Caja 1' };
+
+/* OJO: base() extiende el mapa de rpc, no el estado. Aqui se arma el estado
+   completo, que es otra cosa: sin sesion y con la tablet pareada. */
+const entrada = (extra = {}) => ({ ...base(), entrada:true, sesion:null,
+                                   aparato:TABLET, ...extra });
+
+{
+  const { d } = await montar(entrada({ aparato:null }));
+  chk('sin parear no se pide PIN, se avisa que falta parear',
+      !d.querySelector('#p-aparato').classList.contains('oculto') &&
+      d.querySelector('#p-sesion').classList.contains('oculto'));
+  chk('y manda al resto del sistema, no ofrece entrar con correo',
+      d.querySelector('#p-aparato a').getAttribute('href') === '../' &&
+      !/contrase/i.test(d.querySelector('#p-aparato').textContent));
+}
+
+{
+  const { d } = await montar(entrada());
+  chk('pareada, pide codigo y PIN',
+      !d.querySelector('#p-sesion').classList.contains('oculto') &&
+      d.querySelector('#p-aparato').classList.contains('oculto'));
+  chk('y dice de que caja es', /Pulpería Pulpeando/.test(d.querySelector('#s-caja').textContent));
+  chk('en ningun lado se ofrece correo ni contrasena',
+      !d.querySelector('#s-email') && !d.querySelector('#s-clave'));
+}
+
+{
+  /* El teclado: cinco digitos y se va sola, sin boton de Entrar. */
+  const { d, C, w, estado:e } = await montar(entrada({
+    fetch:{ ok:true, sesion:{ access_token:'at', refresh_token:'rt' },
+            cajera:{ perfil_id:'u1', nombre:'Ana Maradiaga', rol:'auxiliar' },
+            caja:{ organizacion_id:'o1', sucursal_id:'s1', caja_id:'c1' } } }));
+
+  d.querySelector('#s-codigo').value = 'c7';
+  const teclas = [...d.querySelectorAll('#s-teclado .tecla')];
+  const marcar = n => teclas.find(t => t.textContent.trim() === n).click();
+  '4567'.split('').forEach(marcar);
+  chk('los puntos van marcando lo que lleva',
+      d.querySelectorAll('#s-puntos .punto.on').length === 4);
+  /* Hay dos teclados de PIN en la pagina. Que uno pinte los puntos del otro
+     deja a la cajera marcando a ciegas, y se ve igual que si no funcionara. */
+  chk('y no toca los puntos de la pantalla bloqueada',
+      d.querySelectorAll('#b-puntos .punto.on').length === 0);
+  chk('con cuatro digitos todavia no manda nada', e.pedidos.length === 0);
+
+  marcar('8');
+  await esperar(140);
+  chk('al quinto digito entra sola, sin boton', e.pedidos.length === 1);
+
+  const p = e.pedidos[0];
+  chk('toca la funcion de borde', /\/functions\/v1\/entrar-caja$/.test(p.url));
+  chk('manda la llave del aparato, no solo el PIN',
+      p.cuerpo.aparato === TABLET.id && p.cuerpo.llave === TABLET.llave);
+  chk('manda el codigo y el PIN marcados',
+      p.cuerpo.codigo === 'c7' && p.cuerpo.pin === '45678');
+  chk('NO manda el negocio ni la caja: esos salen del aparato en el servidor',
+      p.cuerpo.organizacion_id === undefined && p.cuerpo.caja_id === undefined);
+  chk('abre la sesion con lo que devolvio',
+      e.sesiones.length === 1 && e.sesiones[0].access_token === 'at');
+  chk('y limpia el PIN de la pantalla',
+      d.querySelectorAll('#s-puntos .punto.on').length === 0);
+}
+
+{
+  const { d, C, estado:e } = await montar(entrada({
+    fetch:{ ok:false, error:'credencial', mensaje:'Codigo o PIN incorrecto' } }));
+  d.querySelector('#s-codigo').value = 'C7';
+  const teclas = [...d.querySelectorAll('#s-teclado .tecla')];
+  '00000'.split('').forEach(n => teclas.find(t => t.textContent.trim() === n).click());
+  await esperar(140);
+  chk('el PIN malo lo dice', /incorrecto/i.test(d.querySelector('#s-error').textContent));
+  chk('borra el PIN para que vuelva a marcar',
+      d.querySelectorAll('#s-puntos .punto.on').length === 0);
+  chk('pero deja el codigo escrito: no fue culpa del codigo',
+      d.querySelector('#s-codigo').value === 'C7');
+  chk('y no abre ninguna sesion', e.sesiones.length === 0);
+  chk('sigue pidiendo credencial, no manda a parear',
+      d.querySelector('#p-aparato').classList.contains('oculto'));
+}
+
+{
+  /* Si al gerente le revocaron la tablet, seguir pidiendo PIN seria cruel:
+     marcaria bien mil veces y no entraria nunca. */
+  const { d } = await montar(entrada({
+    fetch:{ ok:false, error:'aparato',
+            mensaje:'Este aparato ya no tiene permiso para abrir caja' } }));
+  d.querySelector('#s-codigo').value = 'C7';
+  const teclas = [...d.querySelectorAll('#s-teclado .tecla')];
+  '45678'.split('').forEach(n => teclas.find(t => t.textContent.trim() === n).click());
+  await esperar(140);
+  chk('la tablet revocada deja de pedir PIN y manda a parear',
+      !d.querySelector('#p-aparato').classList.contains('oculto'));
+}
+
+{
+  const { d } = await montar(entrada({
+    fetch:{ ok:false, error:'aparato_bloqueado',
+            mensaje:'Demasiados intentos en este aparato. Espere unos minutos' } }));
+  d.querySelector('#s-codigo').value = 'C7';
+  const teclas = [...d.querySelectorAll('#s-teclado .tecla')];
+  '45678'.split('').forEach(n => teclas.find(t => t.textContent.trim() === n).click());
+  await esperar(140);
+  chk('el aparato enfriado lo dice con su mensaje',
+      /Espere unos minutos/.test(d.querySelector('#s-error').textContent));
+  chk('y no manda a parear: la llave sigue buena',
+      d.querySelector('#p-aparato').classList.contains('oculto'));
+}
+
+{
+  const { d } = await montar(entrada({ fetch:'cae' }));
+  d.querySelector('#s-codigo').value = 'C7';
+  const teclas = [...d.querySelectorAll('#s-teclado .tecla')];
+  '45678'.split('').forEach(n => teclas.find(t => t.textContent.trim() === n).click());
+  await esperar(140);
+  chk('sin senal lo dice en lugar de quedarse pensando',
+      /conexi/i.test(d.querySelector('#s-error').textContent));
+}
+
+{
+  const { d, estado:e } = await montar(entrada());
+  const teclas = [...d.querySelectorAll('#s-teclado .tecla')];
+  '45678'.split('').forEach(n => teclas.find(t => t.textContent.trim() === n).click());
+  await esperar(140);
+  chk('sin codigo no se molesta al servidor', e.pedidos.length === 0);
+  chk('y pide el codigo', /c[oó]digo/i.test(d.querySelector('#s-error').textContent));
+}
+
+{
+  const { d, estado:e } = await montar(entrada({
+    fetch:{ ok:true, sesion:{ access_token:'at', refresh_token:'rt' },
+            cajera:{}, caja:{} } }));
+  d.querySelector('#s-codigo').value = 'C7';
+  const teclas = [...d.querySelectorAll('#s-teclado .tecla')];
+  const borrar = teclas.find(t => t.dataset.accion === 'borrar');
+  '456'.split('').forEach(n => teclas.find(t => t.textContent.trim() === n).click());
+  borrar.click();
+  chk('borrar quita un digito', d.querySelectorAll('#s-puntos .punto.on').length === 2);
+  teclas.find(t => t.dataset.accion === 'limpiar').click();
+  chk('limpiar deja todo en blanco',
+      d.querySelectorAll('#s-puntos .punto.on').length === 0 &&
+      d.querySelector('#s-codigo').value === '');
+  chk('y no mando nada al servidor', e.pedidos.length === 0);
+}
+
+{
+  /* La cajera que llega a relevar no usa el PIN de la que esta adentro. */
+  const { d, estado:e } = await montar(base());
+  d.querySelector('#b-otra').click();
+  await esperar(60);
+  chk('"Entra otra cajera" cierra la sesion de verdad', e.salio === true);
+}
+
 
 console.log(`\n${ok} bien · ${mal} mal`);
 process.exit(mal ? 1 : 0);

@@ -245,8 +245,15 @@ select.entrada{cursor:pointer}
   display:inline-flex;align-items:center;gap:9px;font-weight:800;font-size:13px;
   letter-spacing:.14em;text-transform:uppercase;color:#7C8CA8;margin-bottom:26px;
 }
-.marca span{width:26px;height:26px;border-radius:8px;background:var(--verde);
-  display:grid;place-items:center;color:#fff;font-size:14px}
+/* Solo el PRIMER span es el cuadrito del logo. Sin el :first-child, un
+   segundo span —el nombre del negocio o de la caja— tambien se metia en
+   26 pixeles y salia aplastado en un cuadro verde. */
+.marca > span:first-child{width:26px;height:26px;border-radius:8px;
+  background:var(--verde);display:grid;place-items:center;color:#fff;font-size:14px}
+/* El nombre que va al lado puede ser largo: que se acorte con puntos antes
+   que desbordar la tarjeta. */
+.marca > span + span{min-width:0;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
 .avatar-o{
   width:60px;height:60px;border-radius:50%;margin:0 auto 14px;
   background:linear-gradient(160deg,#2E3D5C,#1B2436);border:1px solid #33415C;
