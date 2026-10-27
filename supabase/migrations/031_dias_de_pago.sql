@@ -17,11 +17,14 @@
 -- Lo fija un supervisor, como el limite: son las condiciones del credito.
 -- ===========================================================================
 
+-- Todas las funciones de este archivo llevan search_path fijo. Sin el, corren
+-- con el del que llama, y dias_pago_valido vive dentro de un CHECK de la tabla
+-- clientes: ahi no se quiere depender de lo que el llamante tenga puesto.
 alter table clientes add column if not exists dias_pago jsonb;
 
 -- Que siempre tenga una forma que las funciones entiendan
 create or replace function app.dias_pago_valido(d jsonb)
-returns boolean immutable language sql as $fn$
+returns boolean immutable language sql set search_path = public, app as $fn$
   select d is null or (
     jsonb_typeof(d) = 'object'
     and d->>'tipo' in ('semana', 'mes')
@@ -40,7 +43,7 @@ alter table clientes add constraint clientes_dias_pago_valido check (app.dias_pa
 
 -- Las fechas de pago entre dos dias, segun la regla del cliente
 create or replace function app.fechas_pago(d jsonb, p_desde date, p_hasta date)
-returns setof date stable language sql as $fn$
+returns setof date stable language sql set search_path = public, app as $fn$
   select g::date
   from generate_series(p_desde, p_hasta, interval '1 day') g
   where d is not null and (
@@ -54,18 +57,18 @@ returns setof date stable language sql as $fn$
 $fn$;
 
 create or replace function app.proximo_pago(d jsonb, p_hoy date)
-returns date stable language sql as $fn$
+returns date stable language sql set search_path = public, app as $fn$
   select min(f) from app.fechas_pago(d, p_hoy, p_hoy + 62) f
 $fn$;
 
 create or replace function app.ultimo_pago(d jsonb, p_hoy date)
-returns date stable language sql as $fn$
+returns date stable language sql set search_path = public, app as $fn$
   select max(f) from app.fechas_pago(d, p_hoy - 62, p_hoy) f
 $fn$;
 
 -- Texto para la pantalla: "los viernes", "los 15 y 30"
 create or replace function app.dias_pago_texto(d jsonb)
-returns text immutable language sql as $fn$
+returns text immutable language sql set search_path = public, app as $fn$
   select case
     when d is null then null
     when d->>'tipo' = 'semana' then 'los ' || regexp_replace((

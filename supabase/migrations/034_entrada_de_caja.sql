@@ -62,13 +62,24 @@ alter table aparatos_caja enable row level security;
 
 -- Solo de lectura, y solo para quien manda en el negocio. La columna de la
 -- llave no se lee nunca desde el navegador: para eso está la vista de abajo.
-drop policy if exists aparatos_sel on aparatos_caja;
-create policy aparatos_sel on aparatos_caja for select
-  to authenticated
-  using (organizacion_id = app.org_id() and app.tiene_nivel('gerente'));
+-- La politica se crea solo si falta, en vez de soltarla y rehacerla. Queda
+-- igual de idempotente y deja de ser una sentencia destructiva, que es lo que
+-- frena la herramienta de Supabase al aplicar migraciones.
+do $pol$ begin
+  if not exists (select 1 from pg_policies
+                  where schemaname = 'public' and tablename = 'aparatos_caja'
+                    and policyname = 'aparatos_sel') then
+    execute $crea$create policy aparatos_sel on aparatos_caja for select
+      to authenticated
+      using (organizacion_id = app.org_id() and app.tiene_nivel('gerente'))$crea$;
+  end if;
+end $pol$;
 
 -- Nadie escribe a mano: todo pasa por las funciones de abajo.
 revoke insert, update, delete on aparatos_caja from authenticated;
+-- Y anon no lee, aunque la politica ya sea solo para authenticated: Supabase
+-- concede el select por defecto a anon si no se revoca a mano.
+revoke select on aparatos_caja from anon;
 
 
 -- ---------------------------------------------------------------------------

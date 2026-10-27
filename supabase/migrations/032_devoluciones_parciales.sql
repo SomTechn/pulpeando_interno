@@ -65,15 +65,31 @@ create index if not exists ix_devdet_linea on devolucion_detalle (venta_detalle_
 alter table devoluciones_venta enable row level security;
 alter table devolucion_detalle enable row level security;
 
-drop policy if exists devoluciones_sel on devoluciones_venta;
-create policy devoluciones_sel on devoluciones_venta for select
-  using ((organizacion_id = app.org_id() and app.tiene_nivel('auxiliar')) or app.es_admin());
-drop policy if exists devdet_sel on devolucion_detalle;
-create policy devdet_sel on devolucion_detalle for select
-  using ((organizacion_id = app.org_id() and app.tiene_nivel('auxiliar')) or app.es_admin());
+-- La politica se crea solo si falta, en vez de soltarla y rehacerla. Queda
+-- igual de idempotente y deja de ser una sentencia destructiva, que es lo que
+-- frena la herramienta de Supabase al aplicar migraciones.
+do $pol$ begin
+  if not exists (select 1 from pg_policies
+                  where schemaname = 'public' and tablename = 'devoluciones_venta'
+                    and policyname = 'devoluciones_sel') then
+    execute $crea$create policy devoluciones_sel on devoluciones_venta for select
+      using ((organizacion_id = app.org_id() and app.tiene_nivel('auxiliar')) or app.es_admin())$crea$;
+  end if;
+end $pol$;
+do $pol$ begin
+  if not exists (select 1 from pg_policies
+                  where schemaname = 'public' and tablename = 'devolucion_detalle'
+                    and policyname = 'devdet_sel') then
+    execute $crea$create policy devdet_sel on devolucion_detalle for select
+      using ((organizacion_id = app.org_id() and app.tiene_nivel('auxiliar')) or app.es_admin())$crea$;
+  end if;
+end $pol$;
 
 -- Solo se escriben por fn_devolver_venta
 revoke insert, update, delete on devoluciones_venta, devolucion_detalle from authenticated, anon;
+-- anon no lee ni aunque RLS lo tape: es la regla de todas las tablas de dinero
+-- de este sistema, y Supabase concede el select por defecto si no se revoca.
+revoke select on devoluciones_venta, devolucion_detalle from anon;
 grant select on devoluciones_venta, devolucion_detalle to authenticated;
 
 

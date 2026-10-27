@@ -91,8 +91,10 @@ begin
   return new;
 end $fn$;
 
-drop trigger if exists tg_series_fiscales_candado on series_fiscales;
-create trigger tg_series_fiscales_candado
+-- create or replace (Postgres 14+) en vez de drop + create: hace lo mismo y
+-- no es una sentencia destructiva, que es lo que frena la herramienta de
+-- Supabase al aplicar migraciones.
+create or replace trigger tg_series_fiscales_candado
   before insert or update or delete on series_fiscales
   for each row execute function app.series_fiscales_candado();
 
@@ -118,8 +120,7 @@ begin
   return new;
 end $fn$;
 
-drop trigger if exists tg_organizaciones_candado on organizaciones;
-create trigger tg_organizaciones_candado
+create or replace trigger tg_organizaciones_candado
   before update on organizaciones
   for each row execute function app.organizaciones_candado();
 

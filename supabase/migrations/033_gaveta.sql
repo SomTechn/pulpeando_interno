@@ -141,11 +141,21 @@ create index if not exists ix_mov_caja_turno on movimientos_caja (turno_id, crea
 
 alter table movimientos_caja enable row level security;
 
-drop policy if exists mov_caja_ver on movimientos_caja;
-create policy mov_caja_ver on movimientos_caja for select
-  using (organizacion_id = app.org_id() and app.tiene_nivel('auxiliar'));
+-- La politica se crea solo si falta, en vez de soltarla y rehacerla. Queda
+-- igual de idempotente y deja de ser una sentencia destructiva, que es lo que
+-- frena la herramienta de Supabase al aplicar migraciones.
+do $pol$ begin
+  if not exists (select 1 from pg_policies
+                  where schemaname = 'public' and tablename = 'movimientos_caja'
+                    and policyname = 'mov_caja_ver') then
+    execute $crea$create policy mov_caja_ver on movimientos_caja for select
+      using (organizacion_id = app.org_id() and app.tiene_nivel('auxiliar'))$crea$;
+  end if;
+end $pol$;
 
 revoke insert, update, delete on movimientos_caja from authenticated;
+-- anon no lee, aunque RLS ya lo tape: Supabase concede el select por defecto.
+revoke select on movimientos_caja from anon;
 
 -- ---------------------------------------------------------------------------
 -- 4. El efectivo esperado, en un solo lugar
