@@ -157,6 +157,8 @@ console.log('\n=== NEGOCIO Y TICKET ===');
   d.querySelector('#n-razon').value = 'Inversiones Mejía S. de R.L.';
   d.querySelector('#n-dir').value = 'Choloma, Cortés';
   d.querySelector('#n-ancho [data-a="58"]').click();
+  d.querySelector('#n-logo').value = 'https://tienda.hn/logo.png';
+  d.querySelector('#n-promos').value = '2 x L 50 en refrescos\n\n  Pan a L 45 los viernes  \n';
   d.querySelector('#n-guardar').click();
   await esperar();
   const u = escrito(estado, 'organizaciones', 'update')[0];
@@ -164,6 +166,10 @@ console.log('\n=== NEGOCIO Y TICKET ===');
   chk('y lo del ticket en la configuración', u && u.datos.config.razon_social === 'Inversiones Mejía S. de R.L.' &&
       u.datos.config.direccion_fiscal === 'Choloma, Cortés' && u.datos.config.ancho_ticket === 58);
   chk('sin perder lo que ya había', u && u.datos.config.mensaje_ticket === 'Vuelva pronto');
+  chk('guarda el logo de la caja bloqueada', u && u.datos.config.logo_url === 'https://tienda.hn/logo.png');
+  chk('y las promociones, una por renglón y sin renglones vacíos',
+      u && JSON.stringify(u.datos.config.promociones_caja) ===
+           JSON.stringify(['2 x L 50 en refrescos', 'Pan a L 45 los viernes']));
   chk('no toca el plan ni la cuenta', u && !('plan' in u.datos) && !('activa' in u.datos));
 
   d.querySelector('#ok').click();

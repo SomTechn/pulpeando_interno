@@ -326,6 +326,24 @@ function pintarNegocio(){
     </div>
 
     <div class="ficha">
+      <h3>La caja bloqueada</h3>
+      <p class="sub">Lo que se ve en la caja entre un cliente y otro: el logo del negocio y
+        las promociones que quiera anunciar.</p>
+      <div class="campos">
+        <div class="campo-g ancho-total"><label for="n-logo">Logo (enlace a la imagen)</label>
+          <input class="entrada" id="n-logo" type="url" value="${escapar(c.logo_url || '')}"
+                 placeholder="https://…/logo.png">
+          <div class="ayuda" style="margin-top:6px">Sin logo se ve el nombre del negocio.</div></div>
+        <div class="campo-g ancho-total"><label for="n-promos">Promociones</label>
+          <textarea class="entrada" id="n-promos" rows="4" maxlength="600"
+            placeholder="2 x L 50 en refrescos de 600 ml&#10;Pan de molde a L 45 los viernes"
+            style="height:auto;padding-top:10px;line-height:1.5"
+            >${escapar((Array.isArray(c.promociones_caja) ? c.promociones_caja : []).join('\n'))}</textarea>
+          <div class="ayuda" style="margin-top:6px">Una por renglón, seis como mucho.</div></div>
+      </div>
+    </div>
+
+    <div class="ficha">
       <h3>El ticket</h3>
       <p class="sub">Cómo sale impreso en la caja y en Ventas.</p>
       <div class="campos">
@@ -367,7 +385,10 @@ function datosNegocioForm(){
       direccion_fiscal: $('#n-dir').value.trim() || null,
       correo: $('#n-correo').value.trim() || null,
       mensaje_ticket: $('#n-msj').value.trim() || null,
-      ancho_ticket: anchoElegido()
+      ancho_ticket: anchoElegido(),
+      logo_url: /^https?:\/\//i.test($('#n-logo').value.trim()) ? $('#n-logo').value.trim() : null,
+      promociones_caja: $('#n-promos').value.split('\n').map(x => x.trim())
+                          .filter(Boolean).slice(0, 6).map(x => x.slice(0, 120))
     }
   };
 }

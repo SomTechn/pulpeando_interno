@@ -127,7 +127,7 @@ async function montar(estado){
     ; C.DB = DB;
     ; C.abrirGaveta = abrirGaveta; C.hojaGaveta = hojaGaveta;
     ; C.entrarCaja = entrarCaja; C.pedirCredencial = pedirCredencial;
-    ; C.aparato = aparato;
+    ; C.aparato = aparato; C.bloquear = bloquear; C.abrirBuscador = abrirBuscador;
   })()`);
   await new Promise(r => setTimeout(r, 140));
 
@@ -147,6 +147,10 @@ async function montar(estado){
   C.DB.guardarCatalogo = async () => {};
   C.DB.leerCatalogo = async () => null;
   C.abrirPOS();
+  /* En la app, al abrir el turno se esconde "Elija su caja". Aquí se entra
+     directo, así que hay que esconderla a mano: si queda encima, la caja
+     (con razón) no escucha el teclado. */
+  w.document.querySelectorAll('.oscura').forEach(o => o.classList.add('oculto'));
   await new Promise(r => setTimeout(r, 60));
 
   return { w, d:w.document, C, estado };
@@ -430,7 +434,12 @@ console.log('\n=== MOVERSE Y QUITAR CON EL TECLADO ===');
   C.agregar('p1');
   await esperar();
   tecla(w, d, 'F3');
-  chk('F3 devuelve el foco al buscador',
+  chk('F3 abre la búsqueda de verdad, con el cursor listo',
+      !d.querySelector('#velo-buscar').classList.contains('oculto') &&
+      d.activeElement === d.querySelector('#bs-q'));
+  tecla(w, d, 'Escape', d.querySelector('#bs-q'));
+  chk('Esc la cierra y vuelve al buscador de la caja',
+      d.querySelector('#velo-buscar').classList.contains('oculto') &&
       d.activeElement === d.querySelector('#buscar'));
   teclear(w, d, 'queso');
   tecla(w, d, 'Escape');
@@ -1218,6 +1227,161 @@ console.log('\n=== EL CONTEO POR DENOMINACIÓN ===');
   await esperar(60);
   chk('y tocarlo otra vez lo esconde', !d.querySelector('.gav-desglose'));
 }
+
+/* ===================================================================
+   BUSCAR PRODUCTO (F3)
+   =================================================================== */
+console.log('\n=== BUSCAR PRODUCTO (F3) ===');
+{
+  const { w, d, C } = await montar(base());
+  d.querySelector('.atajo[data-k="F3"]').click();
+  await esperar();
+  chk('el botón Buscar también la abre',
+      !d.querySelector('#velo-buscar').classList.contains('oculto'));
+  const q = d.querySelector('#bs-q');
+  q.value = 'QUESO'; q.dispatchEvent(new w.Event('input', { bubbles:true }));
+  chk('encuentra sin importar mayúsculas',
+      d.querySelectorAll('.bs-fila').length === 1 && /Queso fresco/.test(d.querySelector('.bs-fila').textContent));
+  chk('y enseña el precio y lo que hay',
+      /L\s*60\.00/.test(d.querySelector('.bs-fila').textContent) &&
+      /hay 12/.test(d.querySelector('.bs-fila').textContent));
+  q.value = 'e'; q.dispatchEvent(new w.Event('input', { bubbles:true }));
+  const filas = d.querySelectorAll('.bs-fila').length;
+  tecla(w, d, 'ArrowDown', q);
+  chk('las flechas mueven la selección',
+      filas > 1 && d.querySelectorAll('.bs-fila')[1].classList.contains('sel'));
+  tecla(w, d, 'Enter', q);
+  await esperar();
+  chk('Enter agrega el elegido y cierra',
+      C.S.ticket.length === 1 && d.querySelector('#velo-buscar').classList.contains('oculto'));
+}
+{
+  const { w, d, C } = await montar(base());
+  C.abrirBuscador('vender', '7501003');
+  await esperar();
+  chk('un código exacto da ese producto y nada más',
+      d.querySelectorAll('.bs-fila').length === 1 && /Refresco/.test(d.querySelector('.bs-fila').textContent));
+  d.querySelector('.bs-fila').click();
+  await esperar();
+  chk('y tocarlo lo agrega', C.S.ticket.length === 1 && C.S.ticket[0].producto_id === 'p3');
+}
+
+/* ===================================================================
+   CANTIDAD ANTES DE ESCANEAR, Y + / - DE UNO EN UNO
+   =================================================================== */
+console.log('\n=== 12 Y ESCANEAR ===');
+{
+  const { w, d, C } = await montar(base());
+  const caja = d.querySelector('#buscar');
+  caja.value = '12';            // lo escrito a mano
+  teclear(w, d, '7501003', { pistola:true });
+  await esperar();
+  chk('digitar 12 y escanear agrega 12, sin asterisco',
+      C.S.ticket.length === 1 && C.S.ticket[0].cantidad === 12);
+  chk('y el buscador queda limpio', caja.value === '');
+
+  teclear(w, d, '7501003', { pistola:true });
+  await esperar();
+  chk('escanear otra vez sin número suma uno', C.S.ticket[0].cantidad === 13);
+
+  tecla(w, d, '+', caja);
+  chk('+ con el buscador vacío sube uno', C.S.ticket[0].cantidad === 14);
+  tecla(w, d, '-', caja);
+  tecla(w, d, '-', caja);
+  chk('- baja uno', C.S.ticket[0].cantidad === 12);
+
+  caja.value = '7';
+  tecla(w, d, '-', caja);
+  chk('con algo escrito, - es texto y no toca la línea', C.S.ticket[0].cantidad === 12);
+}
+{
+  const { w, d, C } = await montar(base());
+  const caja = d.querySelector('#buscar');
+  caja.value = '3';
+  teclear(w, d, '9999999', { pistola:true });
+  await esperar();
+  chk('si el código no existe, no agrega nada', C.S.ticket.length === 0);
+  chk('y deja la cantidad puesta para volver a escanear', caja.value === '3');
+}
+{
+  const { w, d, C } = await montar(base());
+  const caja = d.querySelector('#buscar');
+  caja.value = '7501002';       // escrito a mano, sin ráfaga
+  tecla(w, d, 'Enter', caja);
+  await esperar();
+  chk('un código escrito a mano completo también entra, de a uno',
+      C.S.ticket.length === 1 && C.S.ticket[0].producto_id === 'p2' && C.S.ticket[0].cantidad === 1);
+}
+
+/* ===================================================================
+   LA CAJA BLOQUEADA
+   =================================================================== */
+console.log('\n=== LA CAJA BLOQUEADA ===');
+{
+  const { w, d, C, estado } = await montar(base());
+  C.bloquear();
+  await esperar();
+  chk('enseña la hora', /\d{1,2}:\d{2}/.test(d.querySelector('#b-hora').textContent));
+  chk('el cajero', /Ana Maradiaga/.test(d.querySelector('#b-cajero').textContent));
+  chk('y el nombre del negocio si no hay logo',
+      /Pulpería Pulpeando/.test(d.querySelector('#b-logo').textContent));
+
+  /* La pistola teclea en ráfaga: eso es un producto, no el PIN. */
+  for (const ch of '7501001') tecla(w, d, ch);
+  tecla(w, d, 'Enter');
+  await esperar(120);
+  chk('escanear con la caja bloqueada enseña el precio',
+      /Arroz de primera/.test(d.querySelector('#b-precio-res').textContent) &&
+      /L\s*98\.00/.test(d.querySelector('#b-precio-res').textContent));
+  chk('y NO toca el PIN: escanear no gasta intentos',
+      C.S.pin === '' && !estado.llamadas.some(l => l.fn === 'fn_desbloquear_caja'));
+
+  /* A mano, una tecla a la vez, sí es el PIN. */
+  for (const ch of '12'){ tecla(w, d, ch); await esperar(90); }
+  chk('los dígitos a mano van al PIN', C.S.pin === '12' &&
+      d.querySelectorAll('#b-puntos .punto.on').length === 2);
+
+  tecla(w, d, 'q');
+  chk('una letra empieza a buscar el precio por nombre',
+      d.activeElement === d.querySelector('#b-precio') && d.querySelector('#b-precio').value === 'q');
+}
+{
+  const { w, d, C } = await montar(base());
+  C.bloquear();
+  await esperar();
+  tecla(w, d, 'F3');
+  chk('F3 lleva a la consulta de precio', d.activeElement === d.querySelector('#b-precio'));
+  const c = d.querySelector('#b-precio');
+  c.value = 'refresco';
+  tecla(w, d, 'Enter', c);
+  chk('buscar por nombre da el precio',
+      /Refresco 600 ml/.test(d.querySelector('#b-precio-res').textContent) &&
+      /L\s*20\.00/.test(d.querySelector('#b-precio-res').textContent));
+  c.value = 'zzz';
+  tecla(w, d, 'Enter', c);
+  chk('y si no hay nada lo dice', /No se encontró/.test(d.querySelector('#b-precio-res').textContent));
+}
+
+/* ===================================================================
+   ABRIR TURNO
+   =================================================================== */
+console.log('\n=== ABRIR TURNO ===');
+{
+  const { d } = await montar(base());
+  chk('el fondo arranca vacío, no con ceros', d.querySelector('#t-monto').value === '');
+  chk('el PIN no se ve mientras se escribe', d.querySelector('#t-pin').type === 'password');
+}
+{
+  /* Con "Elija su caja" encima, el teclado es de ese formulario: antes los
+     dígitos del fondo se iban al buscador de productos. */
+  const { w, d } = await montar(base());
+  d.querySelector('#p-turno').classList.remove('oculto');
+  const m = d.querySelector('#t-monto');
+  m.focus();
+  tecla(w, d, '5', m);
+  chk('escribir el fondo no se lo roba el buscador', d.activeElement === m);
+}
+
 /* ===================================================================
    LA ENTRADA DE LA CAJERA
 

@@ -291,6 +291,105 @@
 }
 
 /* ==========================================================================
+   LA CAJA BLOQUEADA
+   ========================================================================== */
+.bq-velo{place-items:stretch;padding:0}
+.bq{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,440px);
+  gap:32px;width:100%;max-width:1240px;margin:0 auto;padding:32px;color:#fff;
+  align-items:start;min-height:100%}
+.bq-marca{display:flex;flex-direction:column;gap:18px;min-width:0}
+.bq-logo{display:flex;align-items:center;min-height:72px}
+.bq-logo img{max-height:84px;max-width:min(320px,100%);object-fit:contain;
+  background:#fff;border-radius:var(--r-md);padding:10px 14px}
+.bq-nombre{font-size:clamp(26px,3.4vw,40px);font-weight:800;letter-spacing:-.02em;
+  line-height:1.05}
+.bq-hora{font-size:clamp(56px,8vw,96px);font-weight:700;line-height:1;letter-spacing:-.04em}
+.bq-hora small{font-size:.26em;font-weight:700;letter-spacing:0;margin-left:.35em;color:#9FB0CB}
+.bq-fecha{font-size:16px;color:#9FB0CB;margin-top:-8px}
+.bq-datos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.bq-datos div{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--r-md);padding:12px 14px;min-width:0}
+.bq-datos small{display:block;font-size:11px;font-weight:800;letter-spacing:.08em;
+  text-transform:uppercase;color:#7C8CA8}
+.bq-datos b{display:block;font-size:17px;font-weight:700;margin-top:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bq-tit{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;
+  letter-spacing:.08em;text-transform:uppercase;color:#7C8CA8;margin-bottom:10px}
+.bq-tit kbd{font-family:var(--num);font-size:10.5px;background:rgba(255,255,255,.1);
+  color:#B9C6DA;border-radius:5px;padding:2px 6px;letter-spacing:0}
+.bq-promos-lista{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.bq-promo{background:linear-gradient(150deg,#12A150,#0E7F40);border-radius:var(--r-md);
+  padding:14px 16px;font-size:15px;font-weight:700;line-height:1.35;min-width:0;
+  overflow-wrap:anywhere}
+.bq-promo:nth-child(3n+2){background:linear-gradient(150deg,#2F6FEB,#1F4FB8)}
+.bq-promo:nth-child(3n+3){background:linear-gradient(150deg,#E08A1E,#B86A0C)}
+.bq-pie{margin-top:auto;font-size:12px;font-weight:800;letter-spacing:.14em;
+  text-transform:uppercase;color:#4A5A76}
+.bq-lado{display:flex;flex-direction:column;gap:18px;min-width:0}
+.bq-precio{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--r-lg);padding:16px}
+.bq-precio .campo-o{margin:0}
+.bq-pin{max-width:none;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--r-lg);padding:22px 20px}
+.bq-pin .sub-o{margin-bottom:16px}
+
+/* lo que devuelve la consulta de precio */
+.pr-tarjeta{display:grid;grid-template-columns:56px minmax(0,1fr);gap:12px;align-items:center;
+  margin-top:12px;background:#fff;color:var(--tinta);border-radius:var(--r-md);padding:12px}
+.pr-tarjeta .linea-img{width:56px;height:56px;grid-area:auto}
+.pr-nombre{font-weight:700;font-size:15px;line-height:1.25}
+.pr-sub{font-size:12px;color:var(--tenue);margin-top:2px}
+.pr-precio{grid-column:1 / -1;display:flex;justify-content:space-between;align-items:baseline;
+  border-top:1px solid var(--linea);padding-top:10px}
+.pr-precio b{font-size:30px;font-weight:700;letter-spacing:-.03em}
+.pr-precio small{font-size:12.5px;color:var(--tenue)}
+.pr-lista{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.pr-op{display:flex;justify-content:space-between;gap:10px;align-items:center;text-align:left;
+  min-height:44px;padding:8px 12px;border-radius:var(--r-sm);background:rgba(255,255,255,.07);
+  color:#fff;font-size:14px;font-weight:600}
+.pr-op span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pr-op b{flex:0 0 auto;font-family:var(--num)}
+.pr-nada{margin-top:10px;font-size:13px;color:#FF8095;font-weight:600}
+
+@media (max-width:900px){
+  .bq{grid-template-columns:1fr;padding:20px 16px;gap:18px}
+  .bq-hora{font-size:56px}
+  .bq-lado{order:-1}
+  .bq-marca{order:0}
+}
+@media (max-width:520px){
+  .bq-datos{grid-template-columns:1fr 1fr}
+  .bq-promos-lista{grid-template-columns:1fr}
+}
+
+/* ==========================================================================
+   BUSCAR PRODUCTO (F3)
+   ========================================================================== */
+#velo-buscar{z-index:120;padding:0;display:block;background:var(--fondo);
+  backdrop-filter:none;overflow:hidden}
+#hoja-buscar{max-width:none;max-height:none;width:100%;height:100%;border-radius:0;
+  box-shadow:none;padding:0;animation:none;display:flex;flex-direction:column;
+  background:var(--fondo);overflow:hidden}
+.bs-campo{width:100%;height:58px;border:1.5px solid var(--linea);border-radius:var(--r-md);
+  padding:0 18px;font-size:20px;background:var(--panel);color:var(--tinta)}
+.bs-campo:focus{outline:none;border-color:var(--azul);box-shadow:0 0 0 3px var(--azul-suave)}
+.bs-lista{margin-top:14px;background:var(--panel);border:1px solid var(--linea);
+  border-radius:var(--r-md);overflow:hidden}
+.bs-fila{width:100%;display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:12px;
+  align-items:center;padding:10px 14px;text-align:left;border-bottom:1px solid var(--fondo);
+  background:transparent;color:var(--tinta);min-height:64px}
+.bs-fila:last-child{border-bottom:0}
+.bs-fila.sel{background:#EAF1FE;box-shadow:inset 3px 0 0 var(--azul)}
+.bs-fila .linea-img{width:48px;height:48px;grid-area:auto}
+.bs-fila b{display:block;font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+.bs-fila small{display:block;font-size:12px;color:var(--tenue);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bs-fila .bs-precio{font-family:var(--num);font-size:17px;font-weight:700;text-align:right}
+.bs-fila.agotado{opacity:.5}
+.bs-vacio{padding:28px;text-align:center;color:var(--tenue);font-size:14px}
+
+/* ==========================================================================
    LA GAVETA, A PANTALLA COMPLETA
    Contar billetes en un modal de 460 px no da: hay trece denominaciones, y
    quien cuenta necesita ver todas a la vez con el total al lado.
@@ -581,9 +680,11 @@
     <div class="lista-o" id="t-cajas"></div>
     <div id="t-apertura" class="oculto">
       <div class="rotulo" style="color:#7C8CA8;text-align:left;margin-bottom:6px">Fondo de caja</div>
-      <input class="campo-o num" id="t-monto" inputmode="decimal" value="0.00" style="text-align:right">
+      <input class="campo-o num" id="t-monto" inputmode="decimal" placeholder="0.00"
+             autocomplete="off" style="text-align:right">
       <div class="rotulo" style="color:#7C8CA8;text-align:left;margin:10px 0 6px">Su PIN de 5 dígitos</div>
-      <input class="campo-o num" id="t-pin" inputmode="numeric" maxlength="5" placeholder="•••••"
+      <input class="campo-o num" id="t-pin" type="password" inputmode="numeric" maxlength="5"
+             autocomplete="off" placeholder="•••••"
              style="text-align:center;letter-spacing:.5em">
     </div>
     <div class="error-o" id="t-error"></div>
@@ -592,28 +693,62 @@
   </div>
 </div>
 
-<div class="oscura oculto" id="p-bloqueo">
-  <div class="tarjeta-oscura">
-    <div class="marca"><span>◧</span> <span id="b-caja">Caja</span></div>
-    <div class="avatar-o" id="b-iniciales">··</div>
-    <div class="titulo-o">Caja bloqueada</div>
-    <p class="sub-o">Turno de <b id="b-cajero">—</b> · digite su PIN</p>
-    <div class="puntos" id="b-puntos">
-      <div class="punto"></div><div class="punto"></div><div class="punto"></div>
-      <div class="punto"></div><div class="punto"></div>
-    </div>
-    <div class="error-o" id="b-error"></div>
-    <div class="teclado" id="b-teclado">
-      <button class="tecla">1</button><button class="tecla">2</button><button class="tecla">3</button>
-      <button class="tecla">4</button><button class="tecla">5</button><button class="tecla">6</button>
-      <button class="tecla">7</button><button class="tecla">8</button><button class="tecla">9</button>
-      <button class="tecla plana" data-accion="cerrar">Cerrar turno</button>
-      <button class="tecla">0</button>
-      <button class="tecla plana" data-accion="borrar">Borrar</button>
-    </div>
-    <button class="btn-o fantasma" id="b-otra" style="margin-top:10px">Entra otra cajera</button>
-    <div class="pie-o">La caja se bloquea después de cada cobro.</div>
+<!-- La caja bloqueada. No es una pantalla de espera vacía: dice qué caja es,
+     de quién es el turno y qué hora es, enseña las promociones del negocio y
+     deja consultar un precio sin abrir la caja. -->
+<div class="oscura oculto bq-velo" id="p-bloqueo">
+  <div class="bq">
+    <section class="bq-marca">
+      <div class="bq-logo" id="b-logo"><span class="bq-nombre" id="b-negocio">Pulpeando</span></div>
+      <div class="bq-hora num" id="b-hora">--:--</div>
+      <div class="bq-fecha" id="b-fecha"></div>
+      <div class="bq-datos">
+        <div><small>Caja</small><b id="b-caja">Caja</b></div>
+        <div><small>Cajero</small><b id="b-cajero">—</b></div>
+        <div><small>Código</small><b class="num" id="b-codigo">—</b></div>
+      </div>
+      <div class="bq-promos oculto" id="b-promos-caja">
+        <div class="bq-tit">Promociones</div>
+        <div class="bq-promos-lista" id="b-promos"></div>
+      </div>
+      <div class="bq-pie">Pulpeando</div>
+    </section>
+
+    <section class="bq-lado">
+      <div class="bq-precio">
+        <label class="bq-tit" for="b-precio">Consultar precio <kbd>F3</kbd></label>
+        <input class="campo-o" id="b-precio" autocomplete="off"
+               placeholder="Escanee o escriba el nombre">
+        <div id="b-precio-res"></div>
+      </div>
+
+      <div class="tarjeta-oscura bq-pin">
+        <div class="avatar-o" id="b-iniciales">··</div>
+        <div class="titulo-o">Caja bloqueada</div>
+        <p class="sub-o">Digite su PIN para seguir vendiendo</p>
+        <div class="puntos" id="b-puntos">
+          <div class="punto"></div><div class="punto"></div><div class="punto"></div>
+          <div class="punto"></div><div class="punto"></div>
+        </div>
+        <div class="error-o" id="b-error"></div>
+        <div class="teclado" id="b-teclado">
+          <button class="tecla">1</button><button class="tecla">2</button><button class="tecla">3</button>
+          <button class="tecla">4</button><button class="tecla">5</button><button class="tecla">6</button>
+          <button class="tecla">7</button><button class="tecla">8</button><button class="tecla">9</button>
+          <button class="tecla plana" data-accion="cerrar">Cerrar turno</button>
+          <button class="tecla">0</button>
+          <button class="tecla plana" data-accion="borrar">Borrar</button>
+        </div>
+        <button class="btn-o fantasma" id="b-otra" style="margin-top:10px">Entra otra cajera</button>
+      </div>
+    </section>
   </div>
+</div>
+
+<!-- Buscar producto (F3). Con la caja abierta agrega; bloqueada, solo
+     enseña el precio. -->
+<div class="velo oculto" id="velo-buscar">
+  <div class="hoja" id="hoja-buscar"></div>
 </div>
 
 <!-- ================= CAJA ================= -->
@@ -1116,6 +1251,7 @@ async function arrancar(){
   $('#t-iniciales').textContent = iniciales(data.usuario.nombre);
   $('#b-iniciales').textContent = iniciales(data.usuario.nombre);
   $('#b-cajero').textContent = data.usuario.nombre;
+  cargarMarca();
   $('#h-cajero').textContent = data.usuario.nombre;
   ver('#caja-fiscal', data.organizacion.factura_fiscal);
 
@@ -1172,8 +1308,26 @@ $('#t-cajas').addEventListener('click', e => {
     o.querySelector('.marca-sel').classList.toggle('oculto', !sel);
   });
   ver('#t-apertura', !c.turno_id);
+  if (!c.turno_id) setTimeout(() => $('#t-monto').focus(), 30);
   $('#t-continuar').disabled = false;
   $('#t-continuar').textContent = c.turno_id ? 'Retomar turno' : 'Abrir turno';
+});
+
+/* Teclado físico: Enter en el fondo pasa al PIN, Enter en el PIN abre. Y el
+   aviso de error se va en cuanto se corrige, no se queda acusando. */
+$('#t-monto').addEventListener('input', e => {
+  e.target.value = e.target.value.replace(/[^0-9.,]/g, '');
+  $('#t-error').textContent = '';
+});
+$('#t-pin').addEventListener('input', e => {
+  e.target.value = e.target.value.replace(/\D/g, '').slice(0, 5);
+  $('#t-error').textContent = '';
+});
+$('#t-monto').addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); $('#t-pin').focus(); }
+});
+$('#t-pin').addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); $('#t-continuar').click(); }
 });
 
 $('#t-continuar').addEventListener('click', async () => {
@@ -1182,12 +1336,19 @@ $('#t-continuar').addEventListener('click', async () => {
   err.textContent = '';
 
   if (!cajaSel.turno_id){
-    const pin = $('#t-pin').value.trim();
-    if (!/^\d{5}$/.test(pin)){ err.textContent = 'El PIN son 5 dígitos'; return; }
+    /* Solo dígitos: un espacio pegado o un teclado que manda dígitos de otro
+       alfabeto dejaba un PIN "de cinco" que no pasaba la revisión. */
+    const pin = $('#t-pin').value.replace(/\D/g, '');
+    if (pin.length !== 5){ err.textContent = 'El PIN son 5 dígitos'; $('#t-pin').focus(); return; }
+    const fondo = $('#t-monto').value.trim();
+    if (fondo === '' || !(Number(fondo.replace(',', '.')) >= 0)){
+      err.textContent = 'Escriba con cuánto efectivo abre la gaveta (0 si no hay).';
+      $('#t-monto').focus(); return;
+    }
     b.disabled = true; b.innerHTML = '<span class="girando"></span>';
     const { data, error } = await sb.rpc('fn_abrir_turno', {
       p_caja_id: cajaSel.caja_id, p_cajero_id: S.cajero.id, p_pin: pin,
-      p_monto_inicial: parseFloat($('#t-monto').value) || 0 });
+      p_monto_inicial: Number(fondo.replace(',', '.')) || 0 });
     b.disabled = false; b.textContent = 'Abrir turno';
     if (error){ err.textContent = limpiarError(error); return; }
     S.turno = data;
@@ -1197,7 +1358,7 @@ $('#t-continuar').addEventListener('click', async () => {
   S.sucursal = cajaSel.sucursal_id;
   $('#h-caja').textContent = cajaSel.caja + ' · turno abierto';
   $('#b-caja').textContent = cajaSel.caja;
-  $('#t-pin').value = '';
+  $('#t-pin').value = ''; $('#t-monto').value = '';
   ver('#p-turno', false);
 
   ver('#btn-camara', hayCamara());
@@ -1331,12 +1492,35 @@ $('#buscar').addEventListener('keydown', e => {
     }
   }
 
+  /* + y - con el buscador vacío son para la línea, no texto: se escanea y
+     se ajusta de uno en uno sin soltar la pistola. Con algo escrito sí son
+     texto (alguien puede estar buscando "7-Up"). */
+  if ((e.key === '+' || e.key === '-') && !e.target.value.trim()) return;
+
   if (e.key === 'Enter'){
     e.preventDefault();
-    const cod = (bufer || e.target.value).trim();
+    const valor = e.target.value.trim();
+    /* Lo que llegó en ráfaga es de la pistola; lo escrito antes, a mano, es
+       la cantidad. "12" + escanear = doce, sin asterisco. Si la ráfaga es
+       muy corta no es pistola: es alguien que escribió el código a mano, y
+       entonces el código es todo lo escrito. */
+    let cod = valor, cuanto;
+    if (bufer.trim().length >= 4){
+      cod = bufer.trim();
+      const antes = (valor.endsWith(cod) ? valor.slice(0, valor.length - cod.length) : valor)
+                      .trim().replace(',', '.');
+      if (/^\d+(\.\d+)?$/.test(antes) && Number(antes) > 0) cuanto = tres(Number(antes));
+    }
     bufer = '';
     if (!cod) return;
-    if (porCodigo(cod)){ e.target.value = ''; S.busqueda = ''; pintarGrid(); return; }
+    if (porCodigo(cod, cuanto)){ e.target.value = ''; S.busqueda = ''; pintarGrid(); return; }
+    if (cuanto != null){
+      /* Se escribió cantidad y la pistola leyó algo que no existe: se dice,
+         y se deja la cantidad puesta para el siguiente intento. */
+      avisoCaja('Código no encontrado: ' + cod);
+      e.target.value = cantTxt(cuanto); S.busqueda = ''; pintarGrid();
+      return;
+    }
     // Sin código: si la búsqueda dejó un solo producto, ese es.
     const unico = visibles();
     if (unico.length === 1 && agregar(unico[0].producto_id)){
@@ -1347,9 +1531,9 @@ $('#buscar').addEventListener('keydown', e => {
   if (e.key.length === 1) bufer += e.key;
 });
 
-function porCodigo(cod){
+function porCodigo(cod, cuanto){
   const p = S.catalogo.find(x => (x.codigos||[]).includes(cod) || x.sku === cod);
-  if (p) return agregar(p.producto_id);
+  if (p) return agregar(p.producto_id, cuanto);
   return false;
 }
 
@@ -1540,7 +1724,10 @@ $('#lineas').addEventListener('click', e => {
    =============================================== */
 const ATAJOS = [
   { k:'F2',  t:'Cantidad',  fn:() => hojaCantidad(),  linea:true },
-  { k:'F3',  t:'Buscar',    fn:() => { $('#buscar').focus(); $('#buscar').select(); } },
+  /* Antes F3 solo ponía el foco en el buscador, donde casi siempre ya
+     estaba: parecía que no hacía nada. Ahora abre la búsqueda de verdad, con
+     precios y existencia, como la de Maxi. */
+  { k:'F3',  t:'Buscar',    fn:() => abrirBuscador('vender', $('#buscar').value.trim()) },
   { k:'F4',  t:'Quitar',    fn:() => { const l = lineaPuesto(); if (l) quitarLinea(l.producto_id); }, linea:true },
   { k:'F7',  t:'Suspender', fn:() => suspender(), linea:true },
   { k:'F8',  t:'Retomar',   fn:() => hojaSuspendidas() },
@@ -1576,6 +1763,13 @@ const hojaAbierta = () => [...document.querySelectorAll('.velo')]
 document.addEventListener('keydown', e => {
   // Con la caja bloqueada o una hoja encima, el teclado es de ellas.
   if ($('#app').classList.contains('oculto')) return;
+  /* Cualquier pantalla oscura encima (abrir turno, entrada, bloqueo) manda
+     sobre el teclado. Sin esto, escribir el fondo de caja mandaba los dígitos
+     al buscador de productos. */
+  if ($$('.oscura').some(o => !o.classList.contains('oculto'))) return;
+  // Un campo que no es el buscador está escribiendo lo suyo: no se le roba.
+  const t = e.target;
+  if (t && t !== $('#buscar') && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
   if (hojaAbierta()){
     if (e.key === 'Escape') cerrarLoQueEste();
     return;
@@ -1598,7 +1792,8 @@ document.addEventListener('keydown', e => {
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
     e.preventDefault(); mover(e.key === 'ArrowDown' ? 1 : -1); return;
   }
-  if ((e.key === '+' || e.key === '-') && S.ticket.length && e.target !== $('#buscar')){
+  if ((e.key === '+' || e.key === '-') && S.ticket.length &&
+      (e.target !== $('#buscar') || !$('#buscar').value.trim())){
     e.preventDefault();
     const l = lineaPuesto(); if (l) cambiarCant(l.producto_id, e.key === '+' ? 1 : -1);
     return;
@@ -1612,7 +1807,7 @@ document.addEventListener('keydown', e => {
 });
 
 function cerrarLoQueEste(){
-  ['#velo-cobro','#velo-cliente','#velo-hoja'].forEach(v => {
+  ['#velo-cobro','#velo-cliente','#velo-hoja','#velo-buscar'].forEach(v => {
     const z = $(v); if (z && !z.classList.contains('oculto')) ver(v, false);
   });
   $('#buscar')?.focus();
@@ -1720,7 +1915,11 @@ $('#cerrar-ticket').addEventListener('click', () => $('#ticket').classList.remov
    un ticket suspendido vive minutos, no dias. Sobrevive a que se recargue la
    pantalla, que es lo que de verdad importa.
    =================================================== */
-const LLAVE_SUSP = () => `pulp:susp:${S.sucursal || '-'}:${S.caja || '-'}`;
+/* S.caja es el objeto de la caja en la vida real y un id en las pruebas.
+   Con el objeto, la llave salía "[object Object]": todas las cajas de la
+   sucursal compartían las ventas en espera. */
+const cajaId = () => (S.caja && typeof S.caja === 'object') ? S.caja.caja_id : S.caja;
+const LLAVE_SUSP = () => `pulp:susp:${S.sucursal || '-'}:${cajaId() || '-'}`;
 
 function guardadas(){
   try{
@@ -1870,11 +2069,143 @@ function avisoCaja(texto){
 }
 
 /* ================= bloqueo ================= */
+/* =================== buscar producto ===================
+
+   Sirve para dos cosas con el mismo motor: con la caja abierta agrega a la
+   venta (F3), y con la caja bloqueada solo dice el precio. La búsqueda no
+   distingue tildes ni mayúsculas, y busca en el nombre, el SKU y los códigos.
+   ======================================================= */
+const sinTildes = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+function buscarProductos(q, max = 40){
+  const crudo = String(q || '').trim();
+  if (!crudo) return [];
+  const exacto = S.catalogo.filter(p => (p.codigos || []).includes(crudo) || p.sku === crudo);
+  if (exacto.length) return exacto;
+  const partes = sinTildes(crudo).split(/\s+/).filter(Boolean);
+  return S.catalogo.filter(p => {
+    const h = sinTildes(p.nombre + ' ' + (p.sku || '') + ' ' + (p.codigos || []).join(' '));
+    return partes.every(x => h.includes(x));
+  }).slice(0, max);
+}
+
+function miniatura(p){
+  const foto = p.imagen_url ? `style="background-image:url('${escapar(p.imagen_url)}')"` : '';
+  return `<div class="linea-img" ${foto}>${p.imagen_url ? '' : escapar((p.nombre || '·')[0])}</div>`;
+}
+/* "Hay 40" se entiende solo; "Hay 40 unidad" no es español. La unidad se dice
+   cuando cambia algo: "Hay 12 LB". */
+const unidad = p => p.unidad_base && p.unidad_base !== 'UND' ? p.unidad_base : '';
+const hay = p => ('hay ' + cantTxt(p.existencia) + ' ' + unidad(p)).trim();
+
+let bs = { modo:'vender', res:[], sel:0 };
+
+function abrirBuscador(modo = 'vender', inicial = ''){
+  bs = { modo, res:[], sel:0 };
+  const vende = modo === 'vender';
+  $('#hoja-buscar').innerHTML = `
+    <header class="pg-barra">
+      <div class="pg-titulo"><b>${vende ? 'Buscar producto' : 'Consultar precio'}</b>
+        <small>Escriba o escanee · ↑ ↓ para elegir · Enter ${vende ? 'agrega' : 'enseña el precio'} · Esc cierra</small></div>
+      <button class="pg-boton" id="bs-x">Cerrar</button>
+    </header>
+    <div class="pg-cuerpo"><div class="pg-ancho">
+      <input class="bs-campo" id="bs-q" autocomplete="off" placeholder="Nombre, código o SKU"
+             value="${escapar(inicial)}">
+      <div id="bs-detalle"></div>
+      <div class="bs-lista" id="bs-lista"></div>
+    </div></div>`;
+  ver('#velo-buscar');
+  const q = $('#bs-q');
+  q.focus(); q.select();
+  q.addEventListener('input', () => { bs.sel = 0; pintarBusqueda(); });
+  q.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+      e.preventDefault();
+      if (!bs.res.length) return;
+      bs.sel = (bs.sel + (e.key === 'ArrowDown' ? 1 : -1) + bs.res.length) % bs.res.length;
+      pintarBusqueda(false);
+    } else if (e.key === 'Enter'){
+      e.preventDefault(); elegirBusqueda(bs.sel);
+    } else if (e.key === 'Escape'){
+      e.preventDefault(); cerrarBuscador();
+    }
+  });
+  $('#bs-x').onclick = cerrarBuscador;
+  $('#bs-lista').addEventListener('click', e => {
+    const f = e.target.closest('[data-i]'); if (f) elegirBusqueda(Number(f.dataset.i));
+  });
+  pintarBusqueda();
+}
+
+function pintarBusqueda(buscar = true){
+  if (buscar) bs.res = buscarProductos($('#bs-q').value);
+  const z = $('#bs-lista');
+  if (!$('#bs-q').value.trim()){
+    z.innerHTML = `<div class="bs-vacio">Escriba parte del nombre, o escanee el producto.</div>`;
+    return;
+  }
+  if (!bs.res.length){
+    z.innerHTML = `<div class="bs-vacio">No hay ningún producto que diga «${escapar($('#bs-q').value.trim())}».</div>`;
+    return;
+  }
+  z.innerHTML = bs.res.map((p, i) => {
+    const agotado = !(Number(p.existencia) > 0);
+    return `<button class="bs-fila ${i === bs.sel ? 'sel' : ''} ${agotado ? 'agotado' : ''}" data-i="${i}">
+      ${miniatura(p)}
+      <div style="min-width:0"><b>${escapar(p.nombre)}</b>
+        <small>${escapar((p.codigos || [])[0] || p.sku || 'sin código')} ·
+          ${agotado ? 'agotado' : escapar(hay(p))}</small></div>
+      <div class="bs-precio">${p.precio ? money(p.precio) : '—'}</div>
+    </button>`;
+  }).join('');
+  z.querySelector('.sel')?.scrollIntoView?.({ block:'nearest' });
+}
+
+function elegirBusqueda(i){
+  const p = bs.res[i]; if (!p) return;
+  if (bs.modo !== 'vender'){
+    $('#bs-detalle').innerHTML = tarjetaPrecio(p, true);
+    return;
+  }
+  if (!agregar(p.producto_id)){
+    $('#bs-detalle').innerHTML = `<div class="aviso malo" style="margin-top:12px">${escapar(p.nombre)}
+      ${!(Number(p.existencia) > 0) ? 'está agotado.' : 'no tiene precio.'}</div>`;
+    return;
+  }
+  cerrarBuscador();
+}
+
+function cerrarBuscador(){
+  ver('#velo-buscar', false);
+  if (!$('#p-bloqueo').classList.contains('oculto')) $('#b-precio')?.focus();
+  else { $('#buscar').value = ''; S.busqueda = ''; pintarGrid(); $('#buscar').focus(); }
+}
+
+function tarjetaPrecio(p, clara){
+  return `<div class="pr-tarjeta" ${clara ? 'style="border:1px solid var(--linea);margin-top:14px"' : ''}>
+    ${miniatura(p)}
+    <div style="min-width:0"><div class="pr-nombre">${escapar(p.nombre)}</div>
+      <div class="pr-sub">${escapar((p.codigos || [])[0] || p.sku || '')}</div></div>
+    <div class="pr-precio">
+      <small>${!(Number(p.existencia) > 0) ? 'Agotado'
+              : escapar(hay(p).replace(/^h/, 'H'))}</small>
+      <b class="num">${p.precio ? money(p.precio) : 'Sin precio'}</b>
+    </div>
+  </div>`;
+}
+
+/* =================== la caja bloqueada =================== */
 function bloquear(){
   S.desbloqueo = null; S.pin = ''; pintarPuntos();
   $('#b-error').textContent = '';
+  $('#b-precio').value = ''; $('#b-precio-res').innerHTML = '';
+  lk.pend = ''; clearTimeout(lk.timer);
   $('#app').classList.add('oculto');
   ver('#p-bloqueo');
+  pintarReloj();
+  pintarMarca();
+  document.activeElement?.blur?.();
 }
 function pintarPuntos(){
   document.querySelectorAll('#b-puntos .punto')
@@ -1883,6 +2214,7 @@ function pintarPuntos(){
 function digitar(d){
   if (S.pin.length >= 5) return;
   S.pin += d; pintarPuntos();
+  $('#b-error').textContent = '';
   if (S.pin.length === 5) setTimeout(verificarPin, 140);
 }
 async function verificarPin(){
@@ -1909,6 +2241,91 @@ function abrirPOS(){
   $('#app').classList.remove('oculto');
   pintarRed(); pintar();
 }
+
+/* El reloj, la caja y quién: lo primero que se mira al acercarse. */
+function pintarReloj(){
+  const d = new Date();
+  const h = $('#b-hora'); if (!h) return;
+  /* La hora grande y el "a. m." chico al lado: a 96 px, el "a. m." era más
+     ancho que la hora misma. */
+  const hh = d.getHours(), mm = String(d.getMinutes()).padStart(2, '0');
+  h.innerHTML = `${((hh + 11) % 12) + 1}:${mm}<small>${hh < 12 ? 'a. m.' : 'p. m.'}</small>`;
+  const f = d.toLocaleDateString('es-HN', { weekday:'long', day:'numeric', month:'long' });
+  $('#b-fecha').textContent = f.charAt(0).toUpperCase() + f.slice(1);
+}
+setInterval(() => {
+  if (!$('#p-bloqueo').classList.contains('oculto')) pintarReloj();
+}, 10000);
+
+/* El logo y las promociones son del negocio (Configuración → Negocio y
+   ticket). El código del cajero sale de su perfil. Todo esto es adorno: si
+   falla, la caja se desbloquea igual. */
+let marca = null;
+async function cargarMarca(){
+  try{
+    const orgId = S.ctx?.organizacion?.id, yo = S.cajero?.id;
+    const [o, p] = await Promise.all([
+      orgId ? sb.from('organizaciones').select('nombre,config').eq('id', orgId).limit(1) : { data:null },
+      yo    ? sb.from('perfiles').select('codigo').eq('id', yo).limit(1)              : { data:null }
+    ]);
+    const org = Array.isArray(o.data) ? o.data[0] : null;
+    const per = Array.isArray(p.data) ? p.data[0] : null;
+    const cfg = (org && org.config) || {};
+    marca = {
+      nombre: S.ctx?.organizacion?.nombre || org?.nombre || 'Pulpeando',
+      logo:   typeof cfg.logo_url === 'string' ? cfg.logo_url : null,
+      promos: Array.isArray(cfg.promociones_caja)
+                ? cfg.promociones_caja.filter(x => typeof x === 'string' && x.trim()).slice(0, 6) : [],
+      codigo: per && typeof per.codigo === 'string' ? per.codigo : null
+    };
+  }catch(e){
+    marca = { nombre:S.ctx?.organizacion?.nombre || 'Pulpeando', logo:null, promos:[], codigo:null };
+  }
+  pintarMarca();
+}
+function pintarMarca(){
+  const m = marca || { nombre:S.ctx?.organizacion?.nombre || 'Pulpeando', logo:null, promos:[], codigo:null };
+  $('#b-logo').innerHTML = m.logo
+    ? `<img src="${escapar(m.logo)}" alt="${escapar(m.nombre)}">`
+    : `<span class="bq-nombre">${escapar(m.nombre)}</span>`;
+  const img = $('#b-logo img');
+  // Un logo roto no deja un cuadro vacío: vuelve al nombre.
+  if (img) img.onerror = () => { $('#b-logo').innerHTML = `<span class="bq-nombre">${escapar(m.nombre)}</span>`; };
+  $('#b-codigo').textContent = m.codigo || '—';
+  const caja = S.caja && typeof S.caja === 'object' ? S.caja.caja
+             : (S.ctx?.cajas || []).find(c => c.caja_id === cajaId())?.caja;
+  if (caja) $('#b-caja').textContent = caja;
+  ver('#b-promos-caja', m.promos.length > 0);
+  $('#b-promos').innerHTML = m.promos.map(t => `<div class="bq-promo">${escapar(t)}</div>`).join('');
+}
+
+/* ---------- consultar precio con la caja bloqueada ---------- */
+function consultarPrecio(q){
+  const z = $('#b-precio-res');
+  const res = buscarProductos(q, 6);
+  if (!String(q).trim()){ z.innerHTML = ''; return; }
+  if (!res.length){ z.innerHTML = `<div class="pr-nada">No se encontró «${escapar(String(q).trim())}».</div>`; return; }
+  if (res.length === 1){ z.innerHTML = tarjetaPrecio(res[0]); return; }
+  z.innerHTML = `<div class="pr-lista">${res.map((p, i) =>
+    `<button class="pr-op" data-i="${i}"><span>${escapar(p.nombre)}</span>
+       <b>${p.precio ? money(p.precio) : '—'}</b></button>`).join('')}</div>`;
+  z.querySelectorAll('[data-i]').forEach(b => b.onclick = () => {
+    z.innerHTML = tarjetaPrecio(res[Number(b.dataset.i)]);
+  });
+}
+$('#b-precio').addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); consultarPrecio(e.target.value); e.target.select(); }
+  else if (e.key === 'Escape'){
+    e.preventDefault(); e.target.value = ''; $('#b-precio-res').innerHTML = ''; e.target.blur();
+  }
+});
+$('#b-precio').addEventListener('input', e => {
+  // Mientras se escribe un nombre se van viendo los candidatos.
+  const v = e.target.value.trim();
+  if (v.length >= 3 && !/^\d+$/.test(v)) consultarPrecio(v);
+  else if (!v) $('#b-precio-res').innerHTML = '';
+});
+
 $('#b-teclado').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   const a = b.dataset.accion;
@@ -1916,10 +2333,57 @@ $('#b-teclado').addEventListener('click', e => {
   else if (a === 'cerrar') hojaGaveta('cierre');
   else digitar(b.textContent.trim());
 });
+
+/* ---------- el teclado con la caja bloqueada ----------
+
+   Los dígitos son el PIN... salvo que lleguen en ráfaga, que es la pistola:
+   entonces es un producto y se consulta su precio. Por eso cada tecla espera
+   60 ms antes de contar como PIN. Sin esa espera, los trece dígitos de un
+   código llenaban el PIN con los primeros cinco y se iba a verificar: un
+   intento fallido regalado por escanear.
+
+   Una letra suelta empieza a buscar por nombre. F3 lleva directo al campo
+   de consulta. */
+const lk = { pend:'', t:0, rafaga:true, timer:null };
+function lkSoltar(){
+  clearTimeout(lk.timer); lk.timer = null;
+  const txt = lk.pend, rafaga = lk.rafaga && txt.length >= 4;
+  lk.pend = ''; lk.rafaga = true;
+  if (!txt) return;
+  if (rafaga){ $('#b-precio').value = txt; consultarPrecio(txt); return; }
+  for (const ch of txt) if (/\d/.test(ch)) digitar(ch);
+}
 document.addEventListener('keydown', e => {
   if ($('#p-bloqueo').classList.contains('oculto')) return;
-  if (/^[0-9]$/.test(e.key)) digitar(e.key);
-  if (e.key === 'Backspace'){ S.pin = S.pin.slice(0,-1); pintarPuntos(); }
+  if (!$('#velo-buscar').classList.contains('oculto')) return;
+  if (!$('#velo-gaveta').classList.contains('oculto')) return;
+  if (document.activeElement === $('#b-precio')) return;
+
+  if (e.key === 'F3' || e.key === '/'){
+    e.preventDefault(); $('#b-precio').focus(); $('#b-precio').select(); return;
+  }
+  if (e.key === 'Backspace'){
+    e.preventDefault();
+    if (lk.pend) lk.pend = lk.pend.slice(0, -1);
+    else { S.pin = S.pin.slice(0,-1); pintarPuntos(); }
+    return;
+  }
+  if (e.key === 'Enter'){ if (lk.pend){ e.preventDefault(); lkSoltar(); } return; }
+  if (e.key.length !== 1 || e.ctrlKey || e.altKey || e.metaKey) return;
+
+  e.preventDefault();
+  const ahora = performance.now();
+  if (lk.pend && ahora - lk.t >= MANO) lk.rafaga = false;
+  lk.t = ahora;
+
+  // Una letra a mano no es PIN ni pistola: es alguien buscando un precio.
+  if (!/\d/.test(e.key) && !lk.pend){
+    $('#b-precio').focus(); $('#b-precio').value = e.key;
+    return;
+  }
+  lk.pend += e.key;
+  clearTimeout(lk.timer);
+  lk.timer = setTimeout(lkSoltar, 60);
 });
 $('#h-bloquear').addEventListener('click', bloquear);
 
@@ -2027,7 +2491,7 @@ function pintarTotal(){
 }
 
 function barraGaveta(titulo, atras){
-  const caja = (S.ctx?.cajas || []).find(c => c.caja_id === S.caja);
+  const caja = (S.ctx?.cajas || []).find(c => c.caja_id === cajaId());
   return `<header class="pg-barra">
     ${atras ? `<button class="pg-boton" id="gv-no" aria-label="Volver a la gaveta"
                  >←<span class="pg-largo"> Gaveta</span></button>` : ''}
