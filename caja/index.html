@@ -295,47 +295,50 @@
    ========================================================================== */
 .bq-velo{place-items:stretch;padding:0}
 .bq{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,440px);
-  gap:32px;width:100%;max-width:1240px;margin:0 auto;padding:32px;color:#fff;
+  gap:32px;width:100%;max-width:1240px;margin:0 auto;padding:32px;color:var(--tinta);
   align-items:start;min-height:100%}
 .bq-marca{display:flex;flex-direction:column;gap:18px;min-width:0}
 .bq-logo{display:flex;align-items:center;min-height:72px}
-.bq-logo img{max-height:84px;max-width:min(320px,100%);object-fit:contain;
-  background:#fff;border-radius:var(--r-md);padding:10px 14px}
+.bq-logo img{max-height:84px;max-width:min(320px,100%);object-fit:contain}
 .bq-nombre{font-size:clamp(26px,3.4vw,40px);font-weight:800;letter-spacing:-.02em;
   line-height:1.05}
 .bq-hora{font-size:clamp(56px,8vw,96px);font-weight:700;line-height:1;letter-spacing:-.04em}
-.bq-hora small{font-size:.26em;font-weight:700;letter-spacing:0;margin-left:.35em;color:#9FB0CB}
-.bq-fecha{font-size:16px;color:#9FB0CB;margin-top:-8px}
+.bq-hora small{font-size:.26em;font-weight:700;letter-spacing:0;margin-left:.35em;color:var(--tenue)}
+.bq-fecha{font-size:16px;color:var(--tenue);margin-top:-8px}
 .bq-datos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.bq-datos div{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);
+.bq-datos div{background:var(--panel);border:1px solid var(--linea);
   border-radius:var(--r-md);padding:12px 14px;min-width:0}
 .bq-datos small{display:block;font-size:11px;font-weight:800;letter-spacing:.08em;
-  text-transform:uppercase;color:#7C8CA8}
+  text-transform:uppercase;color:var(--tenue)}
 .bq-datos b{display:block;font-size:17px;font-weight:700;margin-top:3px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bq-tit{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;
-  letter-spacing:.08em;text-transform:uppercase;color:#7C8CA8;margin-bottom:10px}
-.bq-tit kbd{font-family:var(--num);font-size:10.5px;background:rgba(255,255,255,.1);
-  color:#B9C6DA;border-radius:5px;padding:2px 6px;letter-spacing:0}
-.bq-promos-lista{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.bq-promo{background:linear-gradient(150deg,#12A150,#0E7F40);border-radius:var(--r-md);
-  padding:14px 16px;font-size:15px;font-weight:700;line-height:1.35;min-width:0;
-  overflow-wrap:anywhere}
-.bq-promo:nth-child(3n+2){background:linear-gradient(150deg,#2F6FEB,#1F4FB8)}
-.bq-promo:nth-child(3n+3){background:linear-gradient(150deg,#E08A1E,#B86A0C)}
+  letter-spacing:.08em;text-transform:uppercase;color:var(--tenue);margin-bottom:10px}
+.bq-tit kbd{font-family:var(--num);font-size:10.5px;background:var(--fondo);
+  border:1px solid var(--linea);color:var(--tenue);border-radius:5px;padding:2px 6px;letter-spacing:0}
+.bq-promos-lista{position:relative;aspect-ratio:16/9;border-radius:var(--r-lg);overflow:hidden;
+  background:var(--fondo);border:1px solid var(--linea)}
+.bq-promo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
+  transition:opacity .6s}
+.bq-promo.activa{opacity:1}
+.bq-puntos{position:absolute;left:0;right:0;bottom:10px;display:flex;justify-content:center;gap:6px}
+.bq-puntos span{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.55);
+  box-shadow:0 0 0 1px rgba(15,23,41,.2)}
+.bq-puntos span.on{background:#fff;width:22px;border-radius:4px}
 .bq-pie{margin-top:auto;font-size:12px;font-weight:800;letter-spacing:.14em;
-  text-transform:uppercase;color:#4A5A76}
+  text-transform:uppercase;color:var(--claro)}
 .bq-lado{display:flex;flex-direction:column;gap:18px;min-width:0}
-.bq-precio{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+.bq-precio{background:var(--panel);border:1px solid var(--linea);
   border-radius:var(--r-lg);padding:16px}
 .bq-precio .campo-o{margin:0}
-.bq-pin{max-width:none;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+.bq-pin{max-width:none;background:var(--panel);border:1px solid var(--linea);
   border-radius:var(--r-lg);padding:22px 20px}
 .bq-pin .sub-o{margin-bottom:16px}
 
 /* lo que devuelve la consulta de precio */
 .pr-tarjeta{display:grid;grid-template-columns:56px minmax(0,1fr);gap:12px;align-items:center;
-  margin-top:12px;background:#fff;color:var(--tinta);border-radius:var(--r-md);padding:12px}
+  margin-top:12px;background:var(--fondo);color:var(--tinta);border-radius:var(--r-md);padding:12px;
+  border:1px solid var(--linea)}
 .pr-tarjeta .linea-img{width:56px;height:56px;grid-area:auto}
 .pr-nombre{font-weight:700;font-size:15px;line-height:1.25}
 .pr-sub{font-size:12px;color:var(--tenue);margin-top:2px}
@@ -345,11 +348,12 @@
 .pr-precio small{font-size:12.5px;color:var(--tenue)}
 .pr-lista{margin-top:10px;display:flex;flex-direction:column;gap:6px}
 .pr-op{display:flex;justify-content:space-between;gap:10px;align-items:center;text-align:left;
-  min-height:44px;padding:8px 12px;border-radius:var(--r-sm);background:rgba(255,255,255,.07);
-  color:#fff;font-size:14px;font-weight:600}
+  min-height:44px;padding:8px 12px;border-radius:var(--r-sm);background:var(--fondo);
+  border:1px solid var(--linea);color:var(--tinta);font-size:14px;font-weight:600}
+.pr-op:focus{outline:none;border-color:var(--azul);box-shadow:0 0 0 3px var(--azul-suave)}
 .pr-op span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pr-op b{flex:0 0 auto;font-family:var(--num)}
-.pr-nada{margin-top:10px;font-size:13px;color:#FF8095;font-weight:600}
+.pr-nada{margin-top:10px;font-size:13px;color:var(--rojo);font-weight:600}
 
 @media (max-width:900px){
   .bq{grid-template-columns:1fr;padding:20px 16px;gap:18px}
@@ -359,7 +363,6 @@
 }
 @media (max-width:520px){
   .bq-datos{grid-template-columns:1fr 1fr}
-  .bq-promos-lista{grid-template-columns:1fr}
 }
 
 /* ==========================================================================
@@ -415,6 +418,16 @@
 .pg-centro{max-width:460px;margin:24px auto;background:var(--panel);
   border:1px solid var(--linea);border-radius:var(--r-lg);padding:22px}
 .pg-ancho .gav-acciones{grid-template-columns:repeat(4,1fr)}
+/* La tecla que hace lo mismo que el botón, dicha en el botón */
+.metodo kbd,.partir kbd,.partes-cerrar kbd,.btn kbd,.btn-o kbd,.tecla kbd,.gav-op kbd,.fiscal kbd{
+  font-family:var(--num);font-size:10px;font-weight:800;padding:1px 5px;border-radius:5px;
+  background:rgba(15,23,41,.06);border:1px solid rgba(15,23,41,.1);color:inherit;opacity:.75;
+  margin-left:4px;vertical-align:1px}
+.btn.principal-b kbd{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.3)}
+@media (hover:none) and (pointer:coarse){
+  /* En la tablet sin teclado las teclas no dicen nada: se esconden. */
+  .metodo kbd,.partir kbd,.partes-cerrar kbd,.btn kbd,.btn-o kbd,.tecla kbd,.gav-op kbd,.fiscal kbd,.kbd-o{display:none}
+}
 .pg-ancho .gav-op{background:var(--panel)}
 .pg-lista{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);
   padding:4px 16px}
@@ -735,11 +748,11 @@
           <button class="tecla">1</button><button class="tecla">2</button><button class="tecla">3</button>
           <button class="tecla">4</button><button class="tecla">5</button><button class="tecla">6</button>
           <button class="tecla">7</button><button class="tecla">8</button><button class="tecla">9</button>
-          <button class="tecla plana" data-accion="cerrar">Cerrar turno</button>
+          <button class="tecla plana" data-accion="cerrar">Cerrar turno <kbd>F6</kbd></button>
           <button class="tecla">0</button>
           <button class="tecla plana" data-accion="borrar">Borrar</button>
         </div>
-        <button class="btn-o fantasma" id="b-otra" style="margin-top:10px">Entra otra cajera</button>
+        <button class="btn-o fantasma" id="b-otra" style="margin-top:10px">Entra otra cajera <kbd>F9</kbd></button>
       </div>
     </section>
   </div>
@@ -834,7 +847,7 @@
       <p class="sub" id="cobro-items">—</p>
       <div class="a-cobrar"><small>TOTAL A COBRAR</small><b class="num" id="cobro-total">—</b></div>
       <div class="fiscal oculto" id="caja-fiscal">
-        <span>Emitir factura fiscal</span>
+        <span>Emitir factura fiscal <kbd>X</kbd></span>
         <button class="switch" id="sw-fiscal" aria-label="Emitir factura fiscal"></button>
       </div>
       <div class="partes oculto" id="partes">
@@ -843,16 +856,16 @@
           <select id="p1-metodo"></select>
           <input id="p1-monto" inputmode="decimal" value="0.00">
         </div>
-        <button class="partes-cerrar" id="no-partir">Cobrar de una sola forma</button>
+        <button class="partes-cerrar" id="no-partir">Cobrar de una sola forma <kbd>D</kbd></button>
       </div>
       <div class="rotulo" id="rot-metodo">Forma de pago</div>
       <div class="metodos" id="metodos">
-        <button class="metodo activo" data-m="efectivo">Efectivo</button>
-        <button class="metodo" data-m="tarjeta">Tarjeta</button>
-        <button class="metodo" data-m="transferencia">Transfer.</button>
-        <button class="metodo" data-m="credito" id="metodo-fiado">Fiado</button>
+        <button class="metodo activo" data-m="efectivo">Efectivo <kbd>E</kbd></button>
+        <button class="metodo" data-m="tarjeta">Tarjeta <kbd>T</kbd></button>
+        <button class="metodo" data-m="transferencia">Transfer. <kbd>R</kbd></button>
+        <button class="metodo" data-m="credito" id="metodo-fiado">Fiado <kbd>F</kbd></button>
       </div>
-      <button class="partir" id="btn-partir">+ Dividir el pago en dos formas</button>
+      <button class="partir" id="btn-partir">+ Dividir el pago en dos formas <kbd>D</kbd></button>
       <div class="aviso ojo oculto" id="cobro-fiado"></div>
       <div class="abono-ahora oculto" id="bloque-abono">
         <label for="abono-ahora">¿Paga algo ahora? (efectivo)</label>
@@ -867,7 +880,7 @@
       <div class="cambio" id="cambio-caja"><span>Cambio</span><b class="num" id="cambio">—</b></div>
       <div class="aviso malo oculto" id="cobro-error"></div>
       <div class="acciones">
-        <button class="btn secundario" id="cancelar-cobro">Volver</button>
+        <button class="btn secundario" id="cancelar-cobro">Volver <kbd>Esc</kbd></button>
         <button class="btn principal-b" id="confirmar-cobro">Confirmar cobro</button>
       </div>
     </div>
@@ -886,7 +899,7 @@
         <p class="sub" id="listo-aviso"></p>
         <div class="aviso ojo oculto" id="listo-rango" style="text-align:left"></div>
         <button class="btn secundario oculto" style="width:100%;margin-bottom:10px" id="btn-imprimir">
-          🖨  Imprimir ticket</button>
+          🖨  Imprimir ticket <kbd>I</kbd></button>
         <label class="imprimir-auto oculto" id="lbl-imprimir-auto">
           <input type="checkbox" id="imprimir-auto"> Imprimir siempre al cobrar</label>
         <button class="btn principal-b" style="width:100%" id="btn-terminar">Listo</button>
@@ -917,8 +930,8 @@
     </label>
     <div class="cl-lista" id="cl-lista"></div>
     <div class="acciones" style="margin-top:14px">
-      <button class="btn secundario" id="cl-quitar">Sin cliente</button>
-      <button class="btn secundario" id="cl-cerrar">Cerrar</button>
+      <button class="btn secundario" id="cl-quitar">Sin cliente <kbd>F4</kbd></button>
+      <button class="btn secundario" id="cl-cerrar">Cerrar <kbd>Esc</kbd></button>
     </div>
   </div>
 </div>
@@ -930,7 +943,7 @@
     <div class="aviso malo oculto" id="sync-error"></div>
     <p class="sub">Cada venta guardada sin internet necesita su PIN al enviarse, igual que si la
       hubiera cobrado en línea. Digítelo una vez y se envían todas.</p>
-    <input class="recibido num" id="sync-pin" inputmode="numeric" maxlength="5"
+    <input class="recibido num" id="sync-pin" type="password" inputmode="numeric" maxlength="5" autocomplete="off"
            placeholder="•••••" style="text-align:center;letter-spacing:.4em">
     <div class="acciones" style="margin-top:16px">
       <button class="btn secundario" id="sync-luego">Después</button>
@@ -1195,6 +1208,11 @@ async function entrarCaja(){
 
   pinEntrada = ''; pintarPuntosEntrada();
   $('#s-codigo').value = '';
+  /* La caja de este aparato la dice el servidor, que es quien la sabe de
+     verdad (el gerente pudo cambiarla). Se guarda junto a la llave. */
+  if (r.caja && r.caja.caja_id && ap.caja_id !== r.caja.caja_id){
+    try { localStorage.setItem(LLAVERO, JSON.stringify({ ...ap, caja_id:r.caja.caja_id })); } catch {}
+  }
   const { error } = await sb.auth.setSession(r.sesion);
   if (error) return errorEntrada('No se pudo abrir la sesión');
   await arrancar();
@@ -1277,9 +1295,33 @@ async function arrancar(){
 
 let cajaSel = null;
 
+/* La caja la decide la PC, no la cajera: la tablet se pareó con una caja y
+   esa es la que abre. Si el aparato no tiene caja fija (pareos viejos), se
+   elige de la lista como antes. */
+function cajaDelAparato(){
+  const ap = aparato();
+  if (!ap || !ap.caja_id) return null;
+  return (S.ctx?.cajas || []).find(c => c.caja_id === ap.caja_id) || null;
+}
+
 function elegirCaja(){
   ver('#p-turno');
-  $('#t-cajas').innerHTML = S.ctx.cajas.map(c => `
+  const mia = cajaDelAparato();
+  /* Un cajero, una caja: si ya tiene turno en otra, no se le ofrece ninguna.
+     La base tampoco lo deja abrir, pero mejor decirlo antes de pedir el PIN. */
+  const otra = S.ctx.cajas.find(c => c.turno_id && c.cajero_id === S.cajero.id
+                                    && (!mia || c.caja_id !== mia.caja_id));
+  if (otra){
+    $('#t-titulo').textContent = 'Ya tiene un turno abierto';
+    $('#t-sub').innerHTML = `Su turno está en <b>${escapar(otra.caja)}</b>. Ciérrelo allá
+      antes de abrir otro.`;
+    $('#t-cajas').innerHTML = ''; ver('#t-apertura', false);
+    $('#t-continuar').disabled = true;
+    return;
+  }
+  const lista = mia ? [mia] : S.ctx.cajas;
+  $('#t-titulo').textContent = mia ? mia.caja : 'Elija su caja';
+  $('#t-cajas').innerHTML = lista.map((c, i) => `
     <button class="opcion-o" data-caja="${c.caja_id}">
       <div>
         <b>${escapar(c.caja)}</b>
@@ -1290,7 +1332,11 @@ function elegirCaja(){
           : 'Libre · sin turno abierto'}</small>
       </div>
       <span class="marca-sel oculto">✓</span>
+      ${lista.length > 1 ? `<kbd class="kbd-o">${i + 1}</kbd>` : ''}
     </button>`).join('');
+  // Con la caja fija, se elige sola: lo que queda es el fondo y el PIN.
+  if (mia) $('#t-cajas [data-caja]').click();
+  else $('#t-cajas [data-caja]')?.focus();
 }
 
 $('#t-cajas').addEventListener('click', e => {
@@ -1351,6 +1397,9 @@ $('#t-continuar').addEventListener('click', async () => {
       p_monto_inicial: Number(fondo.replace(',', '.')) || 0 });
     b.disabled = false; b.textContent = 'Abrir turno';
     if (error){ err.textContent = limpiarError(error); return; }
+    /* PIN malo: la base devuelve null en vez de lanzar, para que el intento
+       fallido quede contado (al lanzar se deshacía). */
+    if (!data){ err.textContent = 'PIN incorrecto'; $('#t-pin').value = ''; $('#t-pin').focus(); return; }
     S.turno = data;
   } else S.turno = cajaSel.turno_id;
 
@@ -1714,6 +1763,9 @@ $('#lineas').addEventListener('click', e => {
      F2                 cambiar la cantidad de la linea donde esta parado
      F3                 volver al buscador
      F4 / Supr          quitar esa linea
+     F5                 elegir el cliente
+     F6                 la gaveta (fondo, retiro, arqueo, cierre)
+     F9                 bloquear la caja
      F7 / F8            suspender la venta / retomar una suspendida
      F10                cobrar
      flechas            moverse por el ticket
@@ -1729,8 +1781,11 @@ const ATAJOS = [
      precios y existencia, como la de Maxi. */
   { k:'F3',  t:'Buscar',    fn:() => abrirBuscador('vender', $('#buscar').value.trim()) },
   { k:'F4',  t:'Quitar',    fn:() => { const l = lineaPuesto(); if (l) quitarLinea(l.producto_id); }, linea:true },
+  { k:'F5',  t:'Cliente',   fn:() => { S.fiarDespues = false; abrirClientes(); } },
+  { k:'F6',  t:'Gaveta',    fn:() => abrirGaveta() },
   { k:'F7',  t:'Suspender', fn:() => suspender(), linea:true },
   { k:'F8',  t:'Retomar',   fn:() => hojaSuspendidas() },
+  { k:'F9',  t:'Bloquear',  fn:() => bloquear() },
   { k:'F10', t:'Cobrar',    fn:() => $('#btn-cobrar').click(), linea:true }
 ];
 
@@ -1812,6 +1867,146 @@ function cerrarLoQueEste(){
   });
   $('#buscar')?.focus();
 }
+
+/* =============== el teclado en las hojas ===============
+
+   La caja se tiene que poder usar entera sin mouse. Cada hoja dice en sus
+   botones qué tecla hace lo mismo, y aquí está el único lugar donde se
+   atienden. Las letras no chocan con los montos: los campos de dinero
+   solo aceptan dígitos.
+
+     Cobro       E T R F  forma de pago · D dividir · X factura
+                 Enter cobra · Esc vuelve · ya cobrado: Enter listo, I imprime
+     Cliente     ↓ ↑ moverse · Enter elegir · F4 sin cliente · Esc cerrar
+     Listas      ↓ ↑ moverse · Enter elegir
+     Cantidad    M cambia entre por cantidad y por monto
+     Gaveta      1 2 3 4 elige · Esc vuelve
+     Bloqueada   F3 precio · F6 cerrar turno · F9 entra otra cajera
+     Elegir caja 1 a 9 o ↓ ↑ y Enter
+   ======================================================= */
+const visible = sel => { const v = $(sel); return !!v && !v.classList.contains('oculto'); };
+
+function moverEnLista(cont, paso){
+  const items = [...cont.querySelectorAll('button:not([disabled])')];
+  if (!items.length) return;
+  let i = items.indexOf(document.activeElement);
+  i = i < 0 ? (paso > 0 ? 0 : items.length - 1) : (i + paso + items.length) % items.length;
+  items[i].focus();
+}
+
+document.addEventListener('keydown', e => {
+  // Si un campo ya resolvió la tecla (Enter en "Recibe", por ejemplo), no se
+  // vuelve a resolver: dos Enter serían dos cobros.
+  if (e.defaultPrevented || e.ctrlKey || e.altKey || e.metaKey) return;
+  const k = e.key;
+  const t = e.target;
+  const enBoton = t && t.tagName === 'BUTTON';
+  const enLista = t && t.tagName === 'SELECT';
+  const letra = k.length === 1 ? k.toLowerCase() : '';
+
+  /* ----- cliente ----- */
+  if (visible('#velo-cliente')){
+    if (k === 'ArrowDown' || k === 'ArrowUp'){
+      e.preventDefault(); moverEnLista($('#cl-lista'), k === 'ArrowDown' ? 1 : -1); return;
+    }
+    if (k === 'Enter' && t === $('#cl-buscar')){
+      e.preventDefault(); $('#cl-lista .cl-fila')?.click(); return;
+    }
+    if (k === 'F4'){ e.preventDefault(); $('#cl-quitar').click(); $('#buscar').focus(); return; }
+    if (k === 'Escape'){ e.preventDefault(); ver('#velo-cliente', false); $('#buscar').focus(); }
+    // Una letra con el foco en la lista vuelve a buscar.
+    if (letra && t !== $('#cl-buscar')) $('#cl-buscar').focus();
+    return;
+  }
+
+  /* ----- hoja suelta: ventas en espera, cantidad, abono ----- */
+  if (visible('#velo-hoja')){
+    const lista = $('#hoja .cl-lista');
+    if (lista && (k === 'ArrowDown' || k === 'ArrowUp')){
+      e.preventDefault(); moverEnLista(lista, k === 'ArrowDown' ? 1 : -1); return;
+    }
+    if (letra === 'm' && $('#cn-modo')){
+      e.preventDefault();
+      $('#cn-modo .metodo:not(.activo)')?.click();
+      return;
+    }
+    return;
+  }
+
+  /* ----- la gaveta ----- */
+  if (visible('#velo-gaveta')){
+    if (/^[1-4]$/.test(k) && $('#hoja-gaveta .gav-acciones') && !$('#pg-conteo')){
+      e.preventDefault(); hojaGaveta(Object.keys(GAVETA)[Number(k) - 1]); return;
+    }
+    if (k === 'Enter' && $('#gv-listo') && !enBoton){ e.preventDefault(); $('#gv-listo').click(); return; }
+    if (k === 'Escape'){
+      e.preventDefault();
+      if ($('#gv-no')) $('#gv-no').click();          // de una operación vuelve al menú
+      else $('#gv-x')?.click();                      // del menú vuelve a la caja
+    }
+    return;
+  }
+
+  /* ----- cobro (después de las hojas que se le pueden abrir encima) ----- */
+  if (visible('#velo-cobro')){
+    if (!$('#paso-listo').classList.contains('oculto')){
+      if (letra === 'i' && visible('#btn-imprimir')){ e.preventDefault(); $('#btn-imprimir').click(); }
+      else if (k === 'Enter' && !enBoton){ e.preventDefault(); $('#btn-terminar').click(); }
+      return;
+    }
+    if (enLista) return;
+    const metodo = { e:'efectivo', t:'tarjeta', r:'transferencia', f:'credito' }[letra];
+    if (metodo){
+      e.preventDefault();
+      const b = $(`#metodos .metodo[data-m="${metodo}"]`);
+      if (b && !b.disabled){
+        b.click();
+        // El foco va adonde sigue: a "Recibe" en efectivo, a cobrar si no.
+        if (metodo === 'efectivo'){ $('#recibido').focus(); $('#recibido').select(); }
+        else if (metodo !== 'credito') $('#confirmar-cobro').focus();
+      }
+      return;
+    }
+    if (letra === 'd'){
+      e.preventDefault();
+      (visible('#partes') ? $('#no-partir') : visible('#btn-partir') ? $('#btn-partir') : null)?.click();
+      return;
+    }
+    if (letra === 'x' && visible('#caja-fiscal')){ e.preventDefault(); $('#sw-fiscal').click(); return; }
+    if (k === 'Enter' && !enBoton){
+      e.preventDefault();
+      const b = $('#confirmar-cobro'); if (!b.disabled) b.click();
+      return;
+    }
+    if (k === 'Escape'){ e.preventDefault(); $('#cancelar-cobro').click(); $('#buscar').focus(); }
+    return;
+  }
+
+  /* ----- elegir caja al abrir turno ----- */
+  if (visible('#p-turno') && !/^(INPUT|TEXTAREA)$/.test(t.tagName)){
+    const ops = $$('#t-cajas .opcion-o');
+    if (/^[1-9]$/.test(k) && ops[Number(k) - 1]){ e.preventDefault(); ops[Number(k) - 1].click(); return; }
+    if (k === 'ArrowDown' || k === 'ArrowUp'){
+      e.preventDefault(); moverEnLista($('#t-cajas'), k === 'ArrowDown' ? 1 : -1);
+    }
+    return;
+  }
+
+  /* ----- caja bloqueada: lo que no es PIN ni precio ----- */
+  if (visible('#p-bloqueo') && !visible('#velo-gaveta') && !visible('#velo-buscar')){
+    if (k === 'F6'){ e.preventDefault(); hojaGaveta('cierre'); return; }
+    if (k === 'F9'){ e.preventDefault(); $('#b-otra').click(); }
+  }
+});
+
+/* Elegir una caja la deja lista para escribir el fondo. */
+$('#t-cajas').addEventListener('click', () => {
+  if (visible('#t-apertura')) setTimeout(() => $('#t-monto').focus(), 0);
+});
+
+$('#sync-pin').addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); $('#sync-enviar').click(); }
+});
 
 /* =============== cantidad de la linea ===============
 
@@ -2271,11 +2466,14 @@ async function cargarMarca(){
     const org = Array.isArray(o.data) ? o.data[0] : null;
     const per = Array.isArray(p.data) ? p.data[0] : null;
     const cfg = (org && org.config) || {};
+    /* Las imágenes las sube el dueño a Storage (Configuración → Negocio y
+       ticket). Aquí solo se arma la dirección pública. */
+    const pub = r => `${SUPABASE_URL}/storage/v1/object/public/marca/${r}`;
     marca = {
       nombre: S.ctx?.organizacion?.nombre || org?.nombre || 'Pulpeando',
-      logo:   typeof cfg.logo_url === 'string' ? cfg.logo_url : null,
-      promos: Array.isArray(cfg.promociones_caja)
-                ? cfg.promociones_caja.filter(x => typeof x === 'string' && x.trim()).slice(0, 6) : [],
+      logo:   typeof cfg.logo_path === 'string' && cfg.logo_path ? pub(cfg.logo_path) : null,
+      promos: Array.isArray(cfg.promos_caja)
+                ? cfg.promos_caja.filter(x => typeof x === 'string' && x).slice(0, 8).map(pub) : [],
       codigo: per && typeof per.codigo === 'string' ? per.codigo : null
     };
   }catch(e){
@@ -2296,8 +2494,28 @@ function pintarMarca(){
              : (S.ctx?.cajas || []).find(c => c.caja_id === cajaId())?.caja;
   if (caja) $('#b-caja').textContent = caja;
   ver('#b-promos-caja', m.promos.length > 0);
-  $('#b-promos').innerHTML = m.promos.map(t => `<div class="bq-promo">${escapar(t)}</div>`).join('');
+  $('#b-promos').innerHTML = m.promos.map((u, i) =>
+    `<img class="bq-promo ${i === 0 ? 'activa' : ''}" src="${escapar(u)}" alt="Promoción ${i + 1}">`).join('')
+    + (m.promos.length > 1 ? `<div class="bq-puntos">${m.promos.map((_, i) =>
+        `<span class="${i === 0 ? 'on' : ''}"></span>`).join('')}</div>` : '');
+  promoActual = 0;
+  // Una imagen que no carga no deja un hueco: se esconde y siguen las demás.
+  $$('#b-promos img').forEach(img => img.onerror = () => img.remove());
 }
+
+/* Las promociones pasan solas, una cada 6 segundos, mientras la caja esté
+   bloqueada. Con las flechas también se pasan, para quien las quiera
+   enseñar a un cliente. */
+let promoActual = 0;
+function pasarPromo(paso = 1){
+  const imgs = $$('#b-promos .bq-promo'); if (imgs.length < 2) return;
+  promoActual = (promoActual + paso + imgs.length) % imgs.length;
+  imgs.forEach((im, i) => im.classList.toggle('activa', i === promoActual));
+  $$('#b-promos .bq-puntos span').forEach((p, i) => p.classList.toggle('on', i === promoActual));
+}
+setInterval(() => {
+  if (!$('#p-bloqueo').classList.contains('oculto')) pasarPromo(1);
+}, 6000);
 
 /* ---------- consultar precio con la caja bloqueada ---------- */
 function consultarPrecio(q){
@@ -2511,7 +2729,7 @@ function abrirGaveta(){
         código y su PIN. La cajera sigue siendo la cajera.</p>
       <div class="gav-acciones">
         ${Object.entries(GAVETA).map(([k, g]) =>
-          `<button class="gav-op" data-g="${k}"><b>${g.t}</b><small>${g.p}</small></button>`).join('')}
+          `<button class="gav-op" data-g="${k}"><b>${g.t} <kbd>${Object.keys(GAVETA).indexOf(k) + 1}</kbd></b><small>${g.p}</small></button>`).join('')}
       </div>
       <div class="titulin" style="margin-top:24px">En este turno</div>
       <div class="pg-lista" id="gav-movs"><div class="vacio" style="padding:18px">

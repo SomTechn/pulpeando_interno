@@ -21,6 +21,23 @@
 .ficha{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);
   padding:18px;margin-bottom:14px}
 .ficha h3{font-size:16px;font-weight:800;margin-bottom:4px}
+/* logo y promociones de la caja bloqueada */
+.img-fila{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.img-logo{width:200px;height:90px;border:1px dashed var(--linea);border-radius:var(--r-sm);
+  display:grid;place-items:center;background:var(--fondo);overflow:hidden;padding:8px;flex:0 0 auto}
+.img-logo img{max-width:100%;max-height:100%;object-fit:contain}
+.img-logo span{font-size:12px;color:var(--tenue);text-align:center}
+.img-botones{display:flex;gap:8px;flex-wrap:wrap}
+.img-subir{cursor:pointer}
+.img-promos{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.img-promo{position:relative;aspect-ratio:16/9;border-radius:var(--r-sm);overflow:hidden;
+  background:var(--fondo);border:1px solid var(--linea)}
+.img-promo img{width:100%;height:100%;object-fit:cover;display:block}
+.img-quitar{position:absolute;top:6px;right:6px;width:32px;height:32px;border-radius:50%;
+  background:rgba(15,23,41,.75);color:#fff;font-size:14px;font-weight:700}
+.img-agregar{display:grid;place-items:center;border-style:dashed;cursor:pointer;
+  font-size:13px;font-weight:700;color:var(--azul)}
+.img-agregar:focus-within,.img-subir:focus-within{outline:2px solid var(--azul);outline-offset:2px}
 .ficha .sub{font-size:13px;color:var(--tenue);line-height:1.5;margin-bottom:14px}
 .campos{display:grid;gap:13px;grid-template-columns:1fr 1fr}
 .ancho-total{grid-column:1/-1}
@@ -328,19 +345,11 @@ function pintarNegocio(){
     <div class="ficha">
       <h3>La caja bloqueada</h3>
       <p class="sub">Lo que se ve en la caja entre un cliente y otro: el logo del negocio y
-        las promociones que quiera anunciar.</p>
-      <div class="campos">
-        <div class="campo-g ancho-total"><label for="n-logo">Logo (enlace a la imagen)</label>
-          <input class="entrada" id="n-logo" type="url" value="${escapar(c.logo_url || '')}"
-                 placeholder="https://…/logo.png">
-          <div class="ayuda" style="margin-top:6px">Sin logo se ve el nombre del negocio.</div></div>
-        <div class="campo-g ancho-total"><label for="n-promos">Promociones</label>
-          <textarea class="entrada" id="n-promos" rows="4" maxlength="600"
-            placeholder="2 x L 50 en refrescos de 600 ml&#10;Pan de molde a L 45 los viernes"
-            style="height:auto;padding-top:10px;line-height:1.5"
-            >${escapar((Array.isArray(c.promociones_caja) ? c.promociones_caja : []).join('\n'))}</textarea>
-          <div class="ayuda" style="margin-top:6px">Una por renglón, seis como mucho.</div></div>
-      </div>
+        las imágenes de las promociones. PNG, JPG o WEBP, de 2 MB como mucho.</p>
+      <div class="campo-g ancho-total"><label>Logo</label>
+        <div id="n-logo-zona"></div></div>
+      <div class="campo-g ancho-total" style="margin-top:16px"><label>Promociones</label>
+        <div id="n-promos-zona"></div></div>
     </div>
 
     <div class="ficha">
@@ -369,6 +378,7 @@ function pintarNegocio(){
     $('#n-ancho').querySelectorAll('button').forEach(x => x.classList.toggle('activo', x === b));
   });
   $('#n-guardar').onclick = guardarNegocio;
+  pintarImagenes();
   $('#n-prueba').onclick = () => imprimirTicket(ticketDePrueba(), { ancho:anchoElegido() });
 }
 
@@ -385,12 +395,118 @@ function datosNegocioForm(){
       direccion_fiscal: $('#n-dir').value.trim() || null,
       correo: $('#n-correo').value.trim() || null,
       mensaje_ticket: $('#n-msj').value.trim() || null,
-      ancho_ticket: anchoElegido(),
-      logo_url: /^https?:\/\//i.test($('#n-logo').value.trim()) ? $('#n-logo').value.trim() : null,
-      promociones_caja: $('#n-promos').value.split('\n').map(x => x.trim())
-                          .filter(Boolean).slice(0, 6).map(x => x.slice(0, 120))
+      ancho_ticket: anchoElegido()
     }
   };
+}
+
+/* ================= logo y promociones =================
+
+   Se suben a Storage (bucket "marca", una carpeta por negocio) y en la
+   configuración queda solo la ruta. Cada subida se guarda en el momento: no
+   espera al botón Guardar, porque una imagen subida y no anotada es basura
+   que nadie va a encontrar para borrar. */
+const MAX_PROMOS = 8;
+const urlPublica = ruta => `${SUPABASE_URL}/storage/v1/object/public/marca/${ruta}`;
+const TIPOS_IMG = { 'image/png':'png', 'image/jpeg':'jpg', 'image/webp':'webp' };
+
+async function subirImagen(archivo, prefijo){
+  if (!TIPOS_IMG[archivo.type]) throw new Error('Use una imagen PNG, JPG o WEBP.');
+  if (archivo.size > 2 * 1024 * 1024)
+    throw new Error('La imagen pasa de 2 MB. Achíquela antes de subirla.');
+  const ruta = `${S.ctx.organizacion.id}/${prefijo}-${Date.now()}-` +
+               `${Math.random().toString(36).slice(2, 7)}.${TIPOS_IMG[archivo.type]}`;
+  const { error } = await sb.storage.from('marca').upload(ruta, archivo,
+    { contentType:archivo.type, upsert:false, cacheControl:'31536000' });
+  if (error) throw error;
+  return ruta;
+}
+
+async function anotarImagenes(cambios){
+  const config = { ...(S.org.config || {}), ...cambios };
+  const { error } = await sb.from('organizaciones').update({ config }).eq('id', S.ctx.organizacion.id);
+  if (error) throw error;
+  S.org.config = config;
+}
+
+// Borrar el archivo viejo es limpieza: si falla, la imagen ya no se usa igual.
+async function borrarArchivo(ruta){
+  if (!ruta) return;
+  try { await sb.storage.from('marca').remove([ruta]); } catch {}
+}
+
+function pintarImagenes(){
+  const c = S.org.config || {};
+  const logo = c.logo_path;
+  const promos = Array.isArray(c.promos_caja) ? c.promos_caja : [];
+
+  $('#n-logo-zona').innerHTML = `
+    <div class="img-fila">
+      <div class="img-logo">${logo
+        ? `<img src="${escapar(urlPublica(logo))}" alt="Logo">`
+        : '<span>Sin logo: se ve el nombre del negocio</span>'}</div>
+      <div class="img-botones">
+        <label class="btn secundario img-subir">${logo ? 'Cambiar logo' : 'Subir logo'}
+          <input type="file" id="n-logo-archivo" accept="image/png,image/jpeg,image/webp" hidden></label>
+        ${logo ? '<button class="btn secundario" id="n-logo-quitar">Quitar</button>' : ''}
+      </div>
+    </div>`;
+
+  $('#n-promos-zona').innerHTML = `
+    <div class="img-promos">
+      ${promos.map((r, i) => `
+        <div class="img-promo"><img src="${escapar(urlPublica(r))}" alt="Promoción ${i + 1}">
+          <button class="img-quitar" data-quitar="${i}" aria-label="Quitar la promoción ${i + 1}">✕</button></div>`).join('')}
+      ${promos.length < MAX_PROMOS ? `
+        <label class="img-promo img-agregar">+ Agregar imágenes
+          <input type="file" id="n-promos-archivo" accept="image/png,image/jpeg,image/webp" multiple hidden></label>` : ''}
+    </div>
+    <div class="ayuda" style="margin-top:6px">${promos.length} de ${MAX_PROMOS}. En la caja
+      pasan una tras otra.</div>`;
+
+  $('#n-logo-archivo').onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try{
+      const viejo = logo;
+      const ruta = await subirImagen(f, 'logo');
+      await anotarImagenes({ logo_path:ruta });
+      await borrarArchivo(viejo);
+      pintarImagenes();
+    }catch(err){ aviso('No se pudo subir el logo', limpiarError(err)); }
+  };
+  $('#n-logo-quitar')?.addEventListener('click', async () => {
+    if (!await confirmar('Quitar el logo', 'La caja bloqueada enseñará el nombre del negocio.', 'Quitar')) return;
+    try{ await anotarImagenes({ logo_path:null }); await borrarArchivo(logo); pintarImagenes(); }
+    catch(err){ aviso('No se pudo quitar', limpiarError(err)); }
+  });
+
+  $('#n-promos-archivo')?.addEventListener('change', async e => {
+    const archivos = [...e.target.files].slice(0, MAX_PROMOS - promos.length);
+    if (!archivos.length) return;
+    const nuevas = [];
+    try{
+      for (const f of archivos) nuevas.push(await subirImagen(f, 'promo'));
+      await anotarImagenes({ promos_caja:[...promos, ...nuevas] });
+      pintarImagenes();
+    }catch(err){
+      // Lo que alcanzó a subir antes del error se anota igual.
+      if (nuevas.length){
+        try{ await anotarImagenes({ promos_caja:[...promos, ...nuevas] }); }catch{}
+        pintarImagenes();
+      }
+      aviso('No se pudo subir una imagen', limpiarError(err));
+    }
+  });
+  $('#n-promos-zona').querySelectorAll('[data-quitar]').forEach(b => b.onclick = async () => {
+    const i = Number(b.dataset.quitar);
+    if (!await confirmar('Quitar la promoción', 'Deja de verse en la caja.', 'Quitar')) return;
+    const ruta = promos[i];
+    try{
+      await anotarImagenes({ promos_caja:promos.filter((_, j) => j !== i) });
+      await borrarArchivo(ruta);
+      pintarImagenes();
+    }catch(err){ aviso('No se pudo quitar', limpiarError(err)); }
+  });
 }
 
 async function guardarNegocio(){
@@ -865,8 +981,11 @@ function hojaParear(esteEquipo){
   const pintarCajas = () => {
     const suc = $('#ap-suc').value;
     const cajas = S.cajas.filter(c => c.sucursal_id === suc && c.activa);
-    $('#ap-caja').innerHTML = '<option value="">Sin caja fija</option>' +
-      cajas.map(c => `<option value="${escapar(c.id)}">${escapar(c.nombre)}</option>`).join('');
+    /* La caja es obligatoria: es lo que hace que la tablet sepa sola en qué
+       caja está, y que nadie tenga que elegirla al entrar. */
+    $('#ap-caja').innerHTML = cajas.length
+      ? cajas.map(c => `<option value="${escapar(c.id)}">${escapar(c.nombre)}</option>`).join('')
+      : '<option value="">Esta sucursal no tiene cajas</option>';
   };
   pintarCajas();
   $('#ap-suc').onchange = pintarCajas;
@@ -875,6 +994,7 @@ function hojaParear(esteEquipo){
   $('#ap-si').onclick = async () => {
     const b = $('#ap-si');
     if (!activas.length){ return mostrarError('Primero cree una sucursal'); }
+    if (!$('#ap-caja').value){ return mostrarError('Elija la caja de este aparato. Si no hay, créela en Sucursales y cajas.'); }
     b.disabled = true; b.textContent = 'Pareando…';
     const { data, error } = await sb.rpc('fn_parear_aparato', {
       p_sucursal_id:$('#ap-suc').value,
@@ -885,7 +1005,7 @@ function hojaParear(esteEquipo){
 
     const suc  = activas.find(s => s.id === $('#ap-suc').value);
     const caja = S.cajas.find(c => c.id === $('#ap-caja').value);
-    const guardado = { id:data.aparato_id, llave:data.llave,
+    const guardado = { id:data.aparato_id, llave:data.llave, caja_id:caja?.id || null,
                        negocio:S.org?.nombre || S.ctx.organizacion.nombre,
                        sucursal:suc?.nombre || '', caja:caja?.nombre || '' };
 

@@ -84,7 +84,12 @@ async function montar(estado){
 
   estado.escrituras = []; estado.llamadas = []; estado.impresos = [];
   w.__imprimir = async (d, o) => estado.impresos.push({ d, o });
+  estado.subidas = []; estado.borrados = [];
   w.__sb = {
+    storage:{ from: b => ({
+      upload: async (ruta, f, o) => { estado.subidas.push({ b, ruta, tipo:o.contentType });
+                                      return { error:estado.subidaFalla || null }; },
+      remove: async rutas => { estado.borrados.push(...rutas); return { error:null }; } }) },
     auth:{ getSession: async () => ({ data:{ session:{ user:{ id:'u1' } } } }),
            signInWithPassword: async () => ({ error:null }), signOut: async () => {} },
     from: t => desde(estado, t),
@@ -157,8 +162,6 @@ console.log('\n=== NEGOCIO Y TICKET ===');
   d.querySelector('#n-razon').value = 'Inversiones Mejía S. de R.L.';
   d.querySelector('#n-dir').value = 'Choloma, Cortés';
   d.querySelector('#n-ancho [data-a="58"]').click();
-  d.querySelector('#n-logo').value = 'https://tienda.hn/logo.png';
-  d.querySelector('#n-promos').value = '2 x L 50 en refrescos\n\n  Pan a L 45 los viernes  \n';
   d.querySelector('#n-guardar').click();
   await esperar();
   const u = escrito(estado, 'organizaciones', 'update')[0];
@@ -166,10 +169,7 @@ console.log('\n=== NEGOCIO Y TICKET ===');
   chk('y lo del ticket en la configuración', u && u.datos.config.razon_social === 'Inversiones Mejía S. de R.L.' &&
       u.datos.config.direccion_fiscal === 'Choloma, Cortés' && u.datos.config.ancho_ticket === 58);
   chk('sin perder lo que ya había', u && u.datos.config.mensaje_ticket === 'Vuelva pronto');
-  chk('guarda el logo de la caja bloqueada', u && u.datos.config.logo_url === 'https://tienda.hn/logo.png');
-  chk('y las promociones, una por renglón y sin renglones vacíos',
-      u && JSON.stringify(u.datos.config.promociones_caja) ===
-           JSON.stringify(['2 x L 50 en refrescos', 'Pan a L 45 los viernes']));
+
   chk('no toca el plan ni la cuenta', u && !('plan' in u.datos) && !('activa' in u.datos));
 
   d.querySelector('#ok').click();
@@ -413,8 +413,8 @@ const conAparatos = (extra = {}) => {
       !!d.querySelector('#ap-suc') && !!d.querySelector('#ap-caja'));
   chk('las cajas son las de la sucursal elegida',
       [...d.querySelectorAll('#ap-caja option')].some(o => o.textContent === 'Caja 1'));
-  chk('y se puede dejar sin caja fija',
-      [...d.querySelectorAll('#ap-caja option')].some(o => o.value === ''));
+  chk('y la caja es obligatoria: no hay opción "sin caja"',
+      ![...d.querySelectorAll('#ap-caja option')].some(o => o.value === ''));
 
   d.querySelector('#ap-nombre').value = 'Tablet caja 1';
   d.querySelector('#ap-si').click();
@@ -427,6 +427,7 @@ const conAparatos = (extra = {}) => {
   const guardado = JSON.parse(w.localStorage.getItem('pulpeando.aparato'));
   chk('la llave queda guardada en esta tablet',
       guardado.id === 'ap9' && guardado.llave === 'b'.repeat(48));
+  chk('con la caja, para que la tablet sepa sola dónde está', guardado.caja_id === 'c1');
   chk('junto con el nombre del negocio, que /caja enseña',
       /Esquina/.test(guardado.negocio));
   chk('la hoja confirma y NO vuelve a enseñar la llave',
@@ -501,6 +502,76 @@ const conAparatos = (extra = {}) => {
       /permission denied/.test(txt(d.querySelector('#cuerpo'))));
 }
 
+
+/* ===================================================================
+   LOGO Y PROMOCIONES (imágenes que sube el dueño)
+   =================================================================== */
+console.log('\n=== LOGO Y PROMOCIONES ===');
+const archivo = (w, nombre, tipo, tam = 1000) => {
+  const f = new w.File([new Uint8Array(Math.min(tam, 10))], nombre, { type:tipo });
+  Object.defineProperty(f, 'size', { value:tam });
+  return f;
+};
+const elegirArchivos = (w, input, archivos) => {
+  Object.defineProperty(input, 'files', { value:archivos, configurable:true });
+  input.dispatchEvent(new w.Event('change', { bubbles:true }));
+};
+{
+  const estado = base();
+  const { w, d } = await montar(estado);
+  chk('sin logo dice que se verá el nombre',
+      /Sin logo/.test(d.querySelector('#n-logo-zona').textContent));
+  elegirArchivos(w, d.querySelector('#n-logo-archivo'), [archivo(w, 'logo.png', 'image/png')]);
+  await esperar(150);
+  const sub = estado.subidas[0];
+  chk('sube el logo al bucket del negocio, en la carpeta del negocio',
+      sub && sub.b === 'marca' && /^o1\/logo-.*\.png$/.test(sub.ruta) && sub.tipo === 'image/png');
+  const u = escrito(estado, 'organizaciones', 'update').at(-1);
+  chk('y anota la ruta en la configuración en el momento',
+      u && u.datos.config.logo_path === sub.ruta);
+  chk('sin perder lo demás de la configuración', u && u.datos.config.mensaje_ticket === 'Vuelva pronto');
+  chk('y la enseña', !!d.querySelector('#n-logo-zona img'));
+
+  // cambiar el logo borra el viejo
+  elegirArchivos(w, d.querySelector('#n-logo-archivo'), [archivo(w, 'otro.jpg', 'image/jpeg')]);
+  await esperar(150);
+  chk('cambiar el logo borra el archivo viejo', estado.borrados.includes(sub.ruta));
+}
+{
+  const estado = base();
+  const { w, d } = await montar(estado);
+  elegirArchivos(w, d.querySelector('#n-logo-archivo'), [archivo(w, 'foto.gif', 'image/gif')]);
+  await esperar(100);
+  chk('un GIF no se sube', estado.subidas.length === 0 &&
+      /PNG, JPG o WEBP/.test(d.querySelector('#hoja').textContent));
+  d.querySelector('#ok').click();
+  elegirArchivos(w, d.querySelector('#n-logo-archivo'), [archivo(w, 'enorme.png', 'image/png', 5e6)]);
+  await esperar(100);
+  chk('una imagen de más de 2 MB tampoco', estado.subidas.length === 0 &&
+      /2 MB/.test(d.querySelector('#hoja').textContent));
+}
+{
+  const estado = base();
+  const { w, d } = await montar(estado);
+  elegirArchivos(w, d.querySelector('#n-promos-archivo'),
+    [archivo(w, 'a.jpg', 'image/jpeg'), archivo(w, 'b.webp', 'image/webp')]);
+  await esperar(200);
+  const u = escrito(estado, 'organizaciones', 'update').at(-1);
+  chk('varias promociones de una vez',
+      estado.subidas.length === 2 && u && u.datos.config.promos_caja.length === 2 &&
+      u.datos.config.promos_caja.every(r => /^o1\/promo-/.test(r)));
+  chk('y se ven', d.querySelectorAll('#n-promos-zona .img-promo img').length === 2);
+
+  const primera = u.datos.config.promos_caja[0];
+  d.querySelector('[data-quitar="0"]').click();
+  await esperar(60);
+  d.querySelector('#c-si').click();
+  await esperar(150);
+  const u2 = escrito(estado, 'organizaciones', 'update').at(-1);
+  chk('quitar una la saca de la lista y borra su archivo',
+      u2.datos.config.promos_caja.length === 1 && !u2.datos.config.promos_caja.includes(primera) &&
+      estado.borrados.includes(primera));
+}
 
 console.log(`\n${ok} bien · ${mal} mal`);
 process.exit(mal ? 1 : 0);

@@ -233,17 +233,21 @@ select.entrada{cursor:pointer}
 @keyframes girar{to{transform:rotate(360deg)}}
 
 /* ==========================================================================
-   PANTALLAS OSCURAS (sesión, turno, bloqueo)
+   PANTALLAS DE ENTRADA (sesión, turno, bloqueo)
+
+   Claras, como el resto del sistema. Se siguen llamando .oscura porque las
+   usan setenta pantallas y el nombre no le hace daño a nadie; lo que cambió
+   es el color.
    ========================================================================== */
 .oscura{
-  position:fixed;inset:0;z-index:100;background:var(--tinta);display:grid;
-  place-items:center;padding:24px;overflow-y:auto;
-  background-image:radial-gradient(circle at 50% 0%,#1E2B45 0%,var(--tinta) 60%);
+  position:fixed;inset:0;z-index:100;background:var(--fondo);display:grid;
+  place-items:center;padding:24px;overflow-y:auto;color:var(--tinta);
+  background-image:radial-gradient(circle at 50% 0%,#FFFFFF 0%,var(--fondo) 62%);
 }
-.tarjeta-oscura{width:100%;max-width:360px;text-align:center;color:#fff}
+.tarjeta-oscura{width:100%;max-width:360px;text-align:center;color:var(--tinta)}
 .marca{
   display:inline-flex;align-items:center;gap:9px;font-weight:800;font-size:13px;
-  letter-spacing:.14em;text-transform:uppercase;color:#7C8CA8;margin-bottom:26px;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--tenue);margin-bottom:26px;
 }
 /* Solo el PRIMER span es el cuadrito del logo. Sin el :first-child, un
    segundo span —el nombre del negocio o de la caja— tambien se metia en
@@ -256,40 +260,46 @@ select.entrada{cursor:pointer}
   white-space:nowrap}
 .avatar-o{
   width:60px;height:60px;border-radius:50%;margin:0 auto 14px;
-  background:linear-gradient(160deg,#2E3D5C,#1B2436);border:1px solid #33415C;
-  display:grid;place-items:center;font-weight:700;font-size:20px;color:#C7D3E6;
+  background:var(--azul-suave);border:1px solid #D3E0F8;
+  display:grid;place-items:center;font-weight:700;font-size:20px;color:var(--azul);
 }
 .titulo-o{font-size:20px;font-weight:700;margin-bottom:4px}
-.sub-o{font-size:14px;color:var(--claro);margin-bottom:26px;line-height:1.5}
-.sub-o b{color:#D6E0EF;font-weight:600}
+.sub-o{font-size:14px;color:var(--tenue);margin-bottom:26px;line-height:1.5}
+.sub-o b{color:var(--tinta);font-weight:600}
 .campo-o{
-  width:100%;height:52px;border-radius:14px;background:rgba(255,255,255,.07);
-  border:1px solid rgba(255,255,255,.12);color:#fff;padding:0 16px;margin-bottom:10px;
+  width:100%;height:52px;border-radius:14px;background:var(--panel);
+  border:1px solid var(--linea);color:var(--tinta);padding:0 16px;margin-bottom:10px;
   font-size:15px;outline:none;
 }
-.campo-o::placeholder{color:#6B7A96}
-.campo-o:focus{border-color:var(--azul);background:rgba(255,255,255,.1)}
+.campo-o::placeholder{color:var(--claro)}
+.campo-o:focus{border-color:var(--azul);box-shadow:0 0 0 3px var(--azul-suave)}
 .btn-o{
   width:100%;height:52px;border-radius:14px;background:var(--verde);color:#fff;
   font-weight:700;font-size:15px;margin-top:6px;
 }
-.btn-o:disabled{background:#3B4A66;color:var(--claro)}
-.btn-o.fantasma{background:transparent;border:1px solid rgba(255,255,255,.15);color:#B9C6DA}
-.error-o{min-height:20px;font-size:13px;color:#FF8095;font-weight:600;margin:8px 0}
-.pie-o{margin-top:22px;font-size:12px;color:#5E6E88;line-height:1.6}
+.btn-o:disabled{background:var(--linea);color:var(--tenue)}
+.btn-o.fantasma{background:var(--panel);border:1px solid var(--linea);color:var(--tinta)}
+.error-o{min-height:20px;font-size:13px;color:var(--rojo);font-weight:600;margin:8px 0}
+.pie-o{margin-top:22px;font-size:12px;color:var(--tenue);line-height:1.6}
 .lista-o{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;text-align:left}
 .opcion-o{
   display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;
-  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;
+  background:var(--panel);border:1px solid var(--linea);color:var(--tinta);
 }
-.opcion-o.sel{border-color:var(--verde);background:rgba(18,161,80,.16)}
+.opcion-o:focus{outline:none;border-color:var(--azul);box-shadow:0 0 0 3px var(--azul-suave)}
+.opcion-o.sel{border-color:var(--verde);background:#EAF8F0}
 .opcion-o b{font-size:14px;font-weight:700;display:block}
-.opcion-o small{font-size:12px;color:var(--claro)}
+.opcion-o small{font-size:12px;color:var(--tenue)}
 .opcion-o .marca-sel{margin-left:auto;color:var(--verde);font-size:18px}
+/* la tecla que elige esa opción, para quien no usa el mouse */
+.kbd-o{margin-left:auto;font-family:var(--num);font-size:11px;font-weight:800;
+  background:var(--fondo);border:1px solid var(--linea);border-radius:6px;padding:2px 7px;
+  color:var(--tenue)}
+.opcion-o .marca-sel:not(.oculto) + .kbd-o{margin-left:8px}
 
 .puntos{display:flex;gap:14px;justify-content:center;margin-bottom:8px}
-.punto{width:14px;height:14px;border-radius:50%;border:2px solid #3B4A66;transition:all .18s}
-.punto.on{background:#fff;border-color:#fff;transform:scale(1.12)}
+.punto{width:14px;height:14px;border-radius:50%;border:2px solid #C3CEDF;transition:all .18s}
+.punto.on{background:var(--tinta);border-color:var(--tinta);transform:scale(1.12)}
 .sacudir{animation:sacudir .4s}
 @keyframes sacudir{
   0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}
@@ -297,13 +307,15 @@ select.entrada{cursor:pointer}
 }
 .teclado{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .tecla{
-  height:66px;border-radius:18px;background:rgba(255,255,255,.07);
-  border:1px solid rgba(255,255,255,.09);color:#fff;font-size:24px;font-weight:600;
+  height:66px;border-radius:18px;background:var(--panel);
+  border:1px solid var(--linea);color:var(--tinta);font-size:24px;font-weight:600;
   font-family:var(--num);transition:transform .08s,background .15s;
+  box-shadow:0 1px 0 rgba(15,23,41,.04);
 }
-.tecla:active{transform:scale(.94);background:rgba(255,255,255,.16)}
+.tecla:active{transform:scale(.94);background:var(--azul-suave)}
+.tecla:focus-visible{outline:none;border-color:var(--azul);box-shadow:0 0 0 3px var(--azul-suave)}
 .tecla.plana{background:transparent;border-color:transparent;font-size:14px;
-  font-family:var(--ui);color:var(--claro)}
+  font-family:var(--ui);color:var(--tenue);box-shadow:none}
 
 /* ==========================================================================
    MODALES

@@ -1382,6 +1382,158 @@ console.log('\n=== ABRIR TURNO ===');
   chk('escribir el fondo no se lo roba el buscador', d.activeElement === m);
 }
 
+
+/* ===================================================================
+   TODO CON EL TECLADO
+   =================================================================== */
+console.log('\n=== TODO CON EL TECLADO ===');
+{
+  const { w, d, C } = await montar(conClientes());
+  tecla(w, d, 'F5');
+  await esperar(100);
+  chk('F5 abre los clientes con el cursor en la búsqueda',
+      !d.querySelector('#velo-cliente').classList.contains('oculto') &&
+      d.activeElement === d.querySelector('#cl-buscar'));
+  tecla(w, d, 'ArrowDown', d.querySelector('#cl-buscar'));
+  tecla(w, d, 'ArrowDown', d.activeElement);
+  chk('las flechas recorren la lista', d.activeElement?.dataset?.id === 'k2');
+  const q = d.querySelector('#cl-buscar');
+  q.focus(); q.value = 'rosa'; q.dispatchEvent(new w.Event('input', { bubbles:true }));
+  tecla(w, d, 'Enter', q);
+  await esperar(80);
+  chk('Enter en la búsqueda elige al primero', C.S.cliente?.id === 'k1' &&
+      d.querySelector('#velo-cliente').classList.contains('oculto'));
+  tecla(w, d, 'F5');
+  await esperar(60);
+  tecla(w, d, 'F4', d.querySelector('#cl-buscar'));
+  chk('F4 deja la venta sin cliente', C.S.cliente === null);
+}
+{
+  const { w, d, C } = await montar(base());
+  tecla(w, d, 'F6');
+  await esperar(80);
+  chk('F6 abre la gaveta', !d.querySelector('#velo-gaveta').classList.contains('oculto'));
+  tecla(w, d, '2');
+  await esperar(60);
+  chk('2 elige el retiro', /Retiro parcial/.test(d.querySelector('#hoja-gaveta .pg-titulo').textContent));
+  tecla(w, d, 'Escape', d.querySelector('.den-c'));
+  await esperar(60);
+  chk('Esc vuelve al menú de la gaveta', !!d.querySelector('#hoja-gaveta .gav-acciones'));
+  tecla(w, d, 'Escape');
+  chk('y otro Esc vuelve a la caja', d.querySelector('#velo-gaveta').classList.contains('oculto'));
+  tecla(w, d, 'F9');
+  chk('F9 bloquea la caja', !d.querySelector('#p-bloqueo').classList.contains('oculto'));
+  tecla(w, d, 'F6');
+  await esperar(60);
+  chk('con la caja bloqueada, F6 va a cerrar el turno',
+      /Cerrar el turno/.test(d.querySelector('#hoja-gaveta').textContent));
+}
+{
+  const estado = base();
+  const { w, d, C } = await montar(estado);
+  C.agregar('p1');
+  tecla(w, d, 'F10');
+  await esperar(80);
+  tecla(w, d, 't', d.querySelector('#recibido'));
+  chk('en el cobro, T elige tarjeta',
+      d.querySelector('#metodos .metodo.activo')?.dataset.m === 'tarjeta');
+  tecla(w, d, 'Enter', d.body);
+  await esperar(200);
+  chk('Enter cobra una sola vez',
+      estado.llamadas.filter(l => l.fn === 'fn_registrar_venta').length === 1);
+  chk('y queda el paso de listo', !d.querySelector('#paso-listo').classList.contains('oculto'));
+  tecla(w, d, 'Enter', d.body);
+  await esperar(80);
+  chk('Enter en "listo" termina', d.querySelector('#velo-cobro').classList.contains('oculto'));
+}
+{
+  const estado = base();
+  const { w, d, C } = await montar(estado);
+  C.agregar('p1');
+  tecla(w, d, 'F10');
+  await esperar(80);
+  const r = d.querySelector('#recibido');
+  r.focus(); r.value = '100'; r.dispatchEvent(new w.Event('input', { bubbles:true }));
+  tecla(w, d, 'Enter', r);
+  await esperar(200);
+  chk('Enter en "Recibe" tampoco cobra dos veces',
+      estado.llamadas.filter(l => l.fn === 'fn_registrar_venta').length === 1);
+}
+{
+  const { w, d, C } = await montar(base());
+  C.agregar('p1');
+  tecla(w, d, 'F10');
+  await esperar(80);
+  tecla(w, d, 'd', d.querySelector('#recibido'));
+  chk('D divide el pago', !d.querySelector('#partes').classList.contains('oculto'));
+  tecla(w, d, 'd', d.querySelector('#recibido'));
+  chk('y D otra vez lo junta', d.querySelector('#partes').classList.contains('oculto'));
+  tecla(w, d, 'Escape', d.querySelector('#recibido'));
+  chk('Esc vuelve a la venta', d.querySelector('#velo-cobro').classList.contains('oculto'));
+}
+{
+  const { w, d, C } = await montar(base());
+  C.agregar('p2');
+  C.hojaCantidad();
+  await esperar(40);
+  tecla(w, d, 'm', d.querySelector('#cn-valor'));
+  chk('M cambia la cantidad a "por monto"',
+      d.querySelector('#cn-modo .metodo.activo')?.dataset.m === 'monto');
+}
+
+/* ===================================================================
+   LA CAJA LA DICE LA PC; UN CAJERO, UNA CAJA
+   =================================================================== */
+console.log('\n=== LA CAJA DE ESTA PC ===');
+{
+  const ctx2 = JSON.parse(JSON.stringify(CTX));
+  ctx2.cajas = [
+    { caja_id:'c1', caja:'Caja 1', turno_id:null, cajero_id:null, cajero:null, ventas_turno:0 },
+    { caja_id:'c2', caja:'Caja 2', turno_id:null, cajero_id:null, cajero:null, ventas_turno:0 } ];
+  const estado = base({ fn_pos_contexto:{ data:ctx2, error:null } });
+  estado.entrada = true;
+  estado.aparato = { id:'aaaa0000-1111-4222-8333-444455556666', llave:'a'.repeat(48),
+                     negocio:'X', caja:'Caja 2', caja_id:'c2' };
+  const { d } = await montar(estado);
+  await esperar(150);
+  chk('la tablet de la Caja 2 abre en la Caja 2, sin preguntar',
+      d.querySelectorAll('#t-cajas .opcion-o').length === 1 &&
+      /Caja 2/.test(d.querySelector('#t-titulo').textContent));
+  chk('y ya queda lista para el fondo',
+      !d.querySelector('#t-apertura').classList.contains('oculto'));
+}
+{
+  const ctx2 = JSON.parse(JSON.stringify(CTX));
+  ctx2.cajas = [
+    { caja_id:'c1', caja:'Caja 1', turno_id:'t9', cajero_id:'u1', cajero:'Ana', ventas_turno:3 },
+    { caja_id:'c2', caja:'Caja 2', turno_id:null, cajero_id:null, cajero:null, ventas_turno:0 } ];
+  const estado = base({ fn_pos_contexto:{ data:ctx2, error:null } });
+  estado.entrada = true;
+  estado.aparato = { id:'aaaa0000-1111-4222-8333-444455556666', llave:'a'.repeat(48),
+                     negocio:'X', caja:'Caja 2', caja_id:'c2' };
+  const { d } = await montar(estado);
+  await esperar(150);
+  chk('con turno abierto en otra caja, no ofrece abrir aquí',
+      /Ya tiene un turno abierto/.test(d.querySelector('#t-titulo').textContent) &&
+      /Caja 1/.test(d.querySelector('#t-sub').textContent) &&
+      d.querySelector('#t-continuar').disabled);
+}
+{
+  /* PIN malo al abrir turno: la base devuelve null para no deshacer el
+     contador de intentos. */
+  const estado = base({ fn_abrir_turno:{ data:null, error:null } });
+  estado.entrada = true;
+  const { w, d } = await montar(estado);
+  await esperar(150);
+  d.querySelector('#t-cajas [data-caja]').click();
+  d.querySelector('#t-monto').value = '500';
+  d.querySelector('#t-pin').value = '99999';
+  d.querySelector('#t-continuar').click();
+  await esperar(120);
+  chk('el PIN malo al abrir turno se dice', /PIN incorrecto/.test(d.querySelector('#t-error').textContent));
+  chk('y el PIN se borra para volver a marcar', d.querySelector('#t-pin').value === '');
+}
+
 /* ===================================================================
    LA ENTRADA DE LA CAJERA
 
