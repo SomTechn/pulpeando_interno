@@ -154,6 +154,16 @@ async function montar(estado){
 
 const esperar = (ms = 60) => new Promise(r => setTimeout(r, ms));
 
+/* Contar la gaveta como lo hace una persona: cuántos de cada billete. */
+function contar(w, d, cuantos){
+  for (const [den, n] of Object.entries(cuantos)){
+    const i = d.querySelector(`.den-c[data-d="${den}"]`);
+    if (!i) throw new Error('no hay casilla para ' + den);
+    i.value = String(n);
+    i.dispatchEvent(new w.Event('input', { bubbles:true }));
+  }
+}
+
 const base = (extra = {}) => ({
   enLinea:true,
   catalogo:JSON.parse(JSON.stringify(CATALOGO)),
@@ -975,12 +985,11 @@ console.log('\n=== LA GAVETA ===');
   await esperar();
   d.querySelector('#gv-si').click();
   await esperar(120);
-  chk('sin monto no se manda nada',
-      /Escriba el monto/.test(d.querySelector('#gv-error').textContent) &&
+  chk('sin contar nada no se manda nada',
+      /Escriba cuántos billetes/.test(d.querySelector('#gv-error').textContent) &&
       !estado.llamadas.some(l => l.fn === 'fn_movimiento_caja'));
 
-  const m = d.querySelector('#gv-monto');
-  m.value = '500'; m.dispatchEvent(new w.Event('input', { bubbles:true }));
+  contar(w, d, { 500:1 });
   d.querySelector('#gv-si').click();
   await esperar(120);
   chk('con monto pero sin credencial tampoco',
@@ -995,8 +1004,7 @@ console.log('\n=== LA GAVETA ===');
   const { d, C, w } = await montar(estado);
   C.hojaGaveta('fondo');
   await esperar();
-  const m = d.querySelector('#gv-monto');
-  m.value = '500'; m.dispatchEvent(new w.Event('input', { bubbles:true }));
+  contar(w, d, { 100:4, 50:2 });
   d.querySelector('#gv-codigo').value = 'SOM';
   d.querySelector('#gv-pin').value = '12345';
   d.querySelector('#gv-si').click();
@@ -1006,6 +1014,8 @@ console.log('\n=== LA GAVETA ===');
   chk('manda el turno, el tipo, el monto y la credencial',
       lm && lm.args.p_turno_id === 't1' && lm.args.p_tipo === 'fondo' &&
       lm.args.p_monto === 500 && lm.args.p_codigo === 'SOM' && lm.args.p_pin === '12345');
+  chk('y el desglose con lo que se contó',
+      lm && JSON.stringify(lm.args.p_detalle) === JSON.stringify({ '100':4, '50':2 }));
   const h = d.querySelector('#hoja-gaveta').textContent;
   chk('confirma el fondo y quién autorizó',
       /Fondo ingresado/.test(h) && /Somar Hernández/.test(h));
@@ -1021,15 +1031,16 @@ console.log('\n=== LA GAVETA ===');
   const { d, C, w } = await montar(estado);
   C.hojaGaveta('retiro');
   await esperar();
-  const m = d.querySelector('#gv-monto');
-  m.value = '300'; m.dispatchEvent(new w.Event('input', { bubbles:true }));
+  contar(w, d, { 100:3 });
   d.querySelector('#gv-codigo').value = 'XXX';
   d.querySelector('#gv-pin').value = '00000';
   d.querySelector('#gv-si').click();
   await esperar(180);
   chk('la credencial mala se dice en la hoja, no se traga',
       /PIN incorrecto/i.test(d.querySelector('#gv-error').textContent));
-  chk('la hoja sigue abierta para reintentar', !!d.querySelector('#gv-monto'));
+  chk('la pantalla sigue abierta para reintentar', !!d.querySelector('#gv-si'));
+  chk('y el conteo NO se borra: contar otra vez por un PIN mal puesto es cruel',
+      d.querySelector('.den-c[data-d="100"]').value === '3');
   chk('y el PIN se borra', d.querySelector('#gv-pin').value === '');
 }
 {
@@ -1040,8 +1051,7 @@ console.log('\n=== LA GAVETA ===');
   const { d, C, w } = await montar(estado);
   C.hojaGaveta('arqueo');
   await esperar();
-  const m = d.querySelector('#gv-monto');
-  m.value = '4700'; m.dispatchEvent(new w.Event('input', { bubbles:true }));
+  contar(w, d, { 500:9, 100:2 });
   d.querySelector('#gv-codigo').value = 'SOM';
   d.querySelector('#gv-pin').value = '12345';
   d.querySelector('#gv-si').click();
@@ -1062,8 +1072,7 @@ console.log('\n=== LA GAVETA ===');
   const { d, C, w } = await montar(estado);
   C.hojaGaveta('arqueo');
   await esperar();
-  const m = d.querySelector('#gv-monto');
-  m.value = '4820'; m.dispatchEvent(new w.Event('input', { bubbles:true }));
+  contar(w, d, { 500:9, 100:3, 20:1 });
   d.querySelector('#gv-codigo').value = 'SOM';
   d.querySelector('#gv-pin').value = '12345';
   d.querySelector('#gv-si').click();
@@ -1080,8 +1089,7 @@ console.log('\n=== LA GAVETA ===');
   const { d, C, w, estado:e } = await montar(estado);
   C.hojaGaveta('cierre');
   await esperar();
-  const m = d.querySelector('#gv-monto');
-  m.value = '4800'; m.dispatchEvent(new w.Event('input', { bubbles:true }));
+  contar(w, d, { 500:9, 100:3 });
   d.querySelector('#gv-codigo').value = 'SOM';
   d.querySelector('#gv-pin').value = '12345';
   d.querySelector('#gv-si').click();
@@ -1089,10 +1097,127 @@ console.log('\n=== LA GAVETA ===');
   const lc = e.llamadas.find(l => l.fn === 'fn_cerrar_turno_con_arqueo');
   chk('el cierre pasa por el que exige credencial',
       lc && lc.args.p_monto_declarado === 4800 && lc.args.p_codigo === 'SOM');
+  chk('con su desglose', lc && lc.args.p_detalle['500'] === 9 && lc.args.p_detalle['100'] === 3);
   chk('y lo confirma',
       /Turno cerrado/.test(d.querySelector('#hoja-gaveta').textContent));
 }
 
+
+/* ===================================================================
+   EL CONTEO POR DENOMINACIÓN
+   =================================================================== */
+console.log('\n=== EL CONTEO POR DENOMINACIÓN ===');
+{
+  const { d, C, w } = await montar(base());
+  C.hojaGaveta('arqueo');
+  await esperar();
+  const casillas = [...d.querySelectorAll('.den-c')];
+  chk('sin configurar salen las trece de Honduras', casillas.length === 13);
+  chk('de mayor a menor, empezando por 500',
+      casillas[0].dataset.d === '500' && casillas[12].dataset.d === '0.05');
+  const grupos = [...d.querySelectorAll('.pg-grupo')].map(g => g.textContent);
+  chk('billetes y monedas van separados',
+      grupos.length === 2 && /Billetes/.test(grupos[0]) && /Monedas/.test(grupos[1]));
+  chk('los centavos se leen como centavos', /50 ¢/.test(grupos[1]) && /5 ¢/.test(grupos[1]));
+
+  contar(w, d, { 500:3, 20:2 });
+  const fila = d.querySelector('.den[data-d="500"]');
+  chk('cada fila dice su subtotal', /L\s*1,500\.00/.test(fila.textContent));
+  chk('y queda marcada como contada', fila.classList.contains('lleno'));
+  chk('el total suma todo', /L\s*1,540\.00/.test(d.querySelector('#pg-total').textContent));
+  chk('y cuenta las piezas', /5 billetes · 0 monedas/.test(d.querySelector('#pg-piezas').textContent));
+
+  /* 0.1 + 0.2 en coma flotante da 0.30000000000000004. Un arqueo que no
+     cuadra por eso sería el peor aviso posible. */
+  contar(w, d, { 500:0, 20:0, 0.1:3 });
+  chk('los centavos se suman sin error de redondeo',
+      /L\s*0\.30/.test(d.querySelector('#pg-total').textContent));
+
+  contar(w, d, { 100:'1a2' });
+  chk('una cantidad solo acepta dígitos',
+      d.querySelector('.den-c[data-d="100"]').value === '12');
+}
+{
+  const { d, C, w } = await montar(base());
+  C.hojaGaveta('fondo');
+  await esperar();
+  const c = [...d.querySelectorAll('.den-c')];
+  c[0].focus();
+  c[0].dispatchEvent(new w.KeyboardEvent('keydown', { key:'Enter', bubbles:true }));
+  chk('Enter baja a la siguiente denominación', d.activeElement === c[1]);
+  c[12].focus();
+  c[12].dispatchEvent(new w.KeyboardEvent('keydown', { key:'Enter', bubbles:true }));
+  chk('y de la última pasa al código de quien autoriza',
+      d.activeElement === d.querySelector('#gv-codigo'));
+}
+{
+  const { d, C } = await montar(base());
+  C.abrirGaveta();
+  await esperar(120);
+  chk('la gaveta ocupa la pantalla: tiene su barra y su salida a la caja',
+      !!d.querySelector('#hoja-gaveta .pg-barra') &&
+      /Volver a la caja/.test(d.querySelector('#gv-x').textContent));
+  d.querySelector('#gv-x').click();
+  chk('y "Volver a la caja" la cierra',
+      d.querySelector('#velo-gaveta').classList.contains('oculto'));
+}
+{
+  /* La lista es del negocio: si el gerente la cambió, se cuenta con esa. */
+  const estado = base();
+  estado.rpc.fn_denominaciones = { data:{ denominaciones:[1000, 500, 100, 0.5],
+                                          por_defecto:false }, error:null };
+  const { d, C } = await montar(estado);
+  C.abrirGaveta();
+  await esperar(120);
+  C.hojaGaveta('arqueo');
+  await esperar(120);
+  const den = [...d.querySelectorAll('.den-c')].map(i => i.dataset.d);
+  chk('se cuenta con las denominaciones del negocio',
+      den.join(',') === '1000,500,100,0.5');
+}
+{
+  /* Gaveta vacía en un arqueo: posible pero rara. Se pide confirmar tocando
+     otra vez, no con un diálogo del navegador. */
+  const estado = base();
+  estado.rpc.fn_arqueo_caja = { data:{ ok:true, arqueo_id:'a0', contado:0,
+    esperado:0, diferencia:0, autorizo:'Somar Hernández' }, error:null };
+  const { d, C } = await montar(estado);
+  C.hojaGaveta('arqueo');
+  await esperar();
+  d.querySelector('#gv-codigo').value = 'SOM';
+  d.querySelector('#gv-pin').value = '12345';
+  d.querySelector('#gv-si').click();
+  await esperar(120);
+  chk('el arqueo sin nada contado pide confirmar',
+      /toque Comparar otra vez/.test(d.querySelector('#gv-error').textContent) &&
+      !estado.llamadas.some(l => l.fn === 'fn_arqueo_caja'));
+  d.querySelector('#gv-si').click();
+  await esperar(160);
+  const la = estado.llamadas.find(l => l.fn === 'fn_arqueo_caja');
+  chk('y al segundo toque sí va, con el desglose en null',
+      la && la.args.p_contado === 0 && la.args.p_detalle === null);
+}
+{
+  /* Tocar un movimiento enseña de qué billetes estaba hecho. */
+  const estado = base();
+  estado.rpc.fn_movimientos_turno = { data:[
+    { movimiento_id:'m1', tipo:'arqueo', monto:980, diferencia:-20,
+      motivo:null, autorizo:'Somar Hernández', cuando:new Date().toISOString() }
+  ], error:null };
+  estado.rpc.fn_detalle_movimiento = { data:{ movimiento_id:'m1',
+    detalle:{ '100':4, '500':1, '0.5':2 } }, error:null };
+  const { d, C } = await montar(estado);
+  C.abrirGaveta();
+  await esperar(120);
+  d.querySelector('.gav-mov[data-id="m1"]').click();
+  await esperar(120);
+  const t = d.querySelector('.gav-desglose')?.textContent || '';
+  chk('tocar un movimiento enseña su desglose, de mayor a menor',
+      /1 × L 500 · 4 × L 100 · 2 × 50 ¢/.test(t));
+  d.querySelector('.gav-mov[data-id="m1"]').click();
+  await esperar(60);
+  chk('y tocarlo otra vez lo esconde', !d.querySelector('.gav-desglose'));
+}
 /* ===================================================================
    LA ENTRADA DE LA CAJERA
 
