@@ -80,7 +80,7 @@
 
 <div id="inicio">
   <h2>Auditoría de bodega con cámara</h2>
-  <p>Pase la cámara por las viñetas de las cajas. Cada viñeta se cuenta una sola vez, y encima se pinta el estado del piso de ventas: <b style="color:#ff5a4f">rojo</b> surtir ya, <b style="color:#ffc93c">amarillo</b> surtir pronto, <b style="color:#3fd47a">verde</b> bien.</p>
+  <p>Pase la cámara por las viñetas de las cajas. Cada viñeta se cuenta una sola vez, y encima se pinta el estado del piso de ventas: <b style="color:#ff5a4f">rojo</b> surtir ya, <b style="color:#ffc93c">amarillo</b> surtir pronto, <b style="color:#3fd47a">verde</b> bien. Un aro <b style="color:#c084fc">morado punteado</b> avisa que la caja vence en 30 días o menos, o que ya venció.</p>
   <p>Toque una viñeta en pantalla para marcar esa caja como <b>abierta</b> (bajó al piso).</p>
   <button class="prim" id="btnEmpezar">Abrir cámara</button>
   <label class="btn">O probar con una foto<input type="file" accept="image/*" id="archivo2" hidden></label>
@@ -109,13 +109,49 @@ const PRODUCTOS = {
   frijol:  { nombre: "Frijoles rojos 400 g",  porCaja: 24, piso: 40, ventaDia: 6  },
   arroz:   { nombre: "Arroz 5 lb",            porCaja: 10, piso: 0,  ventaDia: 5  },
 };
+// Cada caja tiene su propio vencimiento y lote: en la base, no en el código.
 const VINETAS = {
-  "PB-0001": "leche", "PB-0002": "leche",
-  "PB-0003": "aceite",
-  "PB-0004": "frijol", "PB-0005": "frijol",
-  "PB-0006": "arroz",
+  "PB-0001": { prod: "leche",  vence: "2026-11-04", lote: "L-2610A" },
+  "PB-0002": { prod: "leche",  vence: "2026-12-10", lote: "L-2611B" },
+  "PB-0003": { prod: "aceite", vence: "2027-05-20", lote: "AC-0526" },
+  "PB-0004": { prod: "frijol", vence: "2026-10-27", lote: "FR-1026" },
+  "PB-0005": { prod: "frijol", vence: "2027-08-15", lote: "FR-0827" },
+  "PB-0006": { prod: "arroz",  vence: "2026-11-20", lote: "AR-1126" },
 };
-const COLORES = { rojo: "#ff5a4f", amarillo: "#ffc93c", verde: "#3fd47a", gris: "#9aa0a6" };
+const DIAS_AVISO = 30; // «vence pronto» si faltan 30 días o menos
+const COLORES = { rojo: "#ff5a4f", amarillo: "#ffc93c", verde: "#3fd47a", gris: "#9aa0a6", vencida: "#c084fc", abierta: "#5aa9ff" };
+
+const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+function diasParaVencer(f) {
+  const h = new Date(); const hoy = new Date(h.getFullYear(), h.getMonth(), h.getDate());
+  const [a, m, d] = f.split("-").map(Number);
+  return Math.round((new Date(a, m - 1, d) - hoy) / 864e5);
+}
+function fechaCorta(f) { const [a, m, d] = f.split("-").map(Number); return `${d} ${MESES[m - 1]} ${a}`; }
+function cuandoVence(f) {
+  const n = diasParaVencer(f);
+  if (n < 0) return `venció hace ${-n} d`;
+  if (n === 0) return "vence hoy";
+  return `vence en ${n} d`;
+}
+// La caja que hay que bajar primero (FEFO): la que vence antes, entre las vistas, cerradas y no vencidas.
+function primeraEnSalir(prod) {
+  let mejor = null;
+  for (const serie of vistas.keys()) {
+    const v = VINETAS[serie];
+    if (!v || v.prod !== prod || abiertas.has(serie) || diasParaVencer(v.vence) < 0) continue;
+    if (!mejor || v.vence < VINETAS[mejor].vence) mejor = serie;
+  }
+  return mejor;
+}
+function cajasElegibles(prod) {
+  let n = 0;
+  for (const serie of vistas.keys()) {
+    const v = VINETAS[serie];
+    if (v && v.prod === prod && !abiertas.has(serie) && diasParaVencer(v.vence) >= 0) n++;
+  }
+  return n;
+}
 
 // Regla del color: cuánto aguanta el piso con lo que se vende al día.
 function estadoPiso(p) {
@@ -300,12 +336,21 @@ function transformacion() {
 }
 
 function datosDeSerie(serie) {
-  const clave = VINETAS[serie];
-  if (!clave) return { color: COLORES.gris, titulo: "Viñeta no registrada", estado: "¿?" };
-  const p = PRODUCTOS[clave];
-  if (abiertas.has(serie)) return { color: "#5aa9ff", titulo: p.nombre, estado: "ABIERTA" };
+  const v = VINETAS[serie];
+  if (!v) return { color: COLORES.gris, titulo: "Viñeta no registrada", estado: "¿?", corto: "¿?" };
+  const p = PRODUCTOS[v.prod];
+  const titulo = `${p.nombre} · ${serie} · vence ${fechaCorta(v.vence)}`;
+  if (abiertas.has(serie)) return { color: COLORES.abierta, titulo, estado: "ABIERTA", corto: "ABIERTA" };
+  const dias = diasParaVencer(v.vence);
+  if (dias < 0) return { color: COLORES.vencida, titulo, estado: `VENCIDA · NO SURTIR`, corto: "VENCIDA", aro: true };
   const e = estadoPiso(p);
-  return { color: COLORES[e.color], titulo: p.nombre, estado: e.txt };
+  const partes = [e.txt];
+  const cortos = { rojo: "SURTIR", amarillo: "PRONTO", verde: "OK" };
+  let corto = cortos[e.color];
+  if (e.color !== "verde" && cajasElegibles(v.prod) > 1 && primeraEnSalir(v.prod) === serie) { partes.push("ÉSTA PRIMERO"); corto = "ÉSTA PRIMERO"; }
+  const pronto = dias <= DIAS_AVISO;
+  if (pronto) { partes.push(dias === 0 ? "VENCE HOY" : `VENCE EN ${dias} D`); corto += " ⏳"; }
+  return { color: COLORES[e.color], titulo, estado: partes.join(" · "), corto, aro: pronto };
 }
 
 function dibujar() {
@@ -334,6 +379,17 @@ function dibujar() {
       ctx.fillStyle = info.color + (anchoPant < 60 ? "bb" : "55");
       ctx.fill();
       ctx.lineWidth = 4; ctx.strokeStyle = info.color; ctx.stroke();
+      if (info.aro) { // aro morado punteado: vencida o por vencer
+        const c = { x: pts.reduce((a, p) => a + p.x, 0) / 4, y: pts.reduce((a, p) => a + p.y, 0) / 4 };
+        ctx.beginPath();
+        pts.forEach((p, i) => {
+          const dx = p.x - c.x, dy = p.y - c.y, k = 1 + 9 / Math.max(1, Math.hypot(dx, dy));
+          const q = { x: c.x + dx * k, y: c.y + dy * k };
+          i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y);
+        });
+        ctx.closePath();
+        ctx.setLineDash([8, 6]); ctx.lineWidth = 4; ctx.strokeStyle = COLORES.vencida; ctx.stroke(); ctx.setLineDash([]);
+      }
     }
     // después las etiquetas, las más grandes (más cerca) primero, sin encimarse
     activos.sort((a, b) => b.ancho - a.ancho);
@@ -342,7 +398,7 @@ function dibujar() {
       const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
       const caja = { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
       const cx = (caja.x0 + caja.x1) / 2, cy = (caja.y0 + caja.y1) / 2;
-      const linea1 = info.estado, linea2 = info.titulo + " · " + d.serie;
+      const linea1 = info.estado, linea2 = info.titulo;
       ctx.font = "700 14px system-ui,sans-serif";
       const w1 = ctx.measureText(linea1).width;
       ctx.font = "500 12px system-ui,sans-serif";
@@ -358,7 +414,7 @@ function dibujar() {
       let r = lugares.find((l) => l.y >= 50 && l.y + l.h <= ch && !ocupados.some((o) => choca(o, l)));
       if (!r) {
         ctx.font = "800 12px system-ui,sans-serif";
-        const w = ctx.measureText(linea1).width + 12;
+        const w = ctx.measureText(info.corto).width + 12;
         r = { x: cx - w / 2, y: cy - 11, w, h: 22, largo: false };
         if (ocupados.some((o) => choca(o, r))) continue; // no hay lugar: queda solo el marco
       }
@@ -375,7 +431,7 @@ function dibujar() {
         ctx.font = "700 14px system-ui,sans-serif"; ctx.fillText(linea1, r.x + 8, r.y + 17);
         ctx.font = "500 12px system-ui,sans-serif"; ctx.fillText(linea2, r.x + 8, r.y + 33);
       } else {
-        ctx.font = "800 12px system-ui,sans-serif"; ctx.fillText(linea1, r.x + 6, r.y + 15);
+        ctx.font = "800 12px system-ui,sans-serif"; ctx.fillText(info.corto, r.x + 6, r.y + 15);
       }
     }
   }
@@ -413,16 +469,23 @@ function dentro(x, y, pts, margen) {
          y >= Math.min(...ys) - margen && y <= Math.max(...ys) + margen;
 }
 function abrirHoja(serie) {
-  const clave = VINETAS[serie];
-  if (!clave) return avisar("La viñeta " + serie + " no está registrada.");
-  const p = PRODUCTOS[clave];
+  const v = VINETAS[serie];
+  if (!v) return avisar("La viñeta " + serie + " no está registrada.");
+  const p = PRODUCTOS[v.prod];
   serieTocada = serie;
   $("hojaTitulo").textContent = p.nombre + " · " + serie;
+  const datos = `Lote ${v.lote} · vence ${fechaCorta(v.vence)} (${cuandoVence(v.vence)}).`;
   if (abiertas.has(serie)) {
-    $("hojaTexto").textContent = "Esta caja ya se marcó como abierta.";
+    $("hojaTexto").textContent = datos + " Esta caja ya se marcó como abierta.";
+    $("hojaAbrir").style.display = "none";
+  } else if (diasParaVencer(v.vence) < 0) {
+    $("hojaTexto").textContent = datos + " Está vencida: no se baja al piso. Hay que sacarla como merma.";
     $("hojaAbrir").style.display = "none";
   } else {
-    $("hojaTexto").textContent = `Caja de ${p.porCaja} unidades. Al abrirla, sus ${p.porCaja} unidades pasan al piso (hoy hay ${p.piso}) y la viñeta deja de contar en bodega.`;
+    let t = `${datos} Caja de ${p.porCaja} unidades. Al abrirla, pasan al piso (hoy hay ${p.piso}) y la viñeta deja de contar en bodega.`;
+    const primera = primeraEnSalir(v.prod);
+    if (primera && primera !== serie) t += ` Ojo: la ${primera} vence antes (${fechaCorta(VINETAS[primera].vence)}). Conviene bajar esa primero.`;
+    $("hojaTexto").textContent = t;
     $("hojaAbrir").style.display = "";
   }
   $("hoja").style.display = "flex";
@@ -430,7 +493,7 @@ function abrirHoja(serie) {
 $("hojaCerrar").onclick = () => ($("hoja").style.display = "none");
 $("hoja").addEventListener("click", (e) => { if (e.target.id === "hoja") $("hoja").style.display = "none"; });
 $("hojaAbrir").onclick = () => {
-  const p = PRODUCTOS[VINETAS[serieTocada]];
+  const p = PRODUCTOS[VINETAS[serieTocada].prod];
   abiertas.add(serieTocada);
   p.piso += p.porCaja;
   $("hoja").style.display = "none";
@@ -440,28 +503,36 @@ $("hojaAbrir").onclick = () => {
 
 // ── Lista de productos ───────────────────────────────────────
 function pintarLista() {
-  const porProd = new Map();
+  const porProd = new Map(); // prod -> { n, vencidas, proxima }
   let cajas = 0, sinRegistro = 0;
   for (const serie of vistas.keys()) {
-    const clave = VINETAS[serie];
-    if (!clave) { sinRegistro++; continue; }
+    const v = VINETAS[serie];
+    if (!v) { sinRegistro++; continue; }
     if (abiertas.has(serie)) continue;
     cajas++;
-    porProd.set(clave, (porProd.get(clave) || 0) + 1);
+    const r = porProd.get(v.prod) || { n: 0, vencidas: 0, proxima: null };
+    if (diasParaVencer(v.vence) < 0) r.vencidas++;
+    else { r.n++; if (!r.proxima || v.vence < r.proxima) r.proxima = v.vence; }
+    porProd.set(v.prod, r);
   }
   $("nCajas").textContent = cajas + (sinRegistro ? ` (+${sinRegistro} sin registrar)` : "");
   $("nProd").textContent = porProd.size;
   const orden = { rojo: 0, amarillo: 1, verde: 2 };
   const filas = [...porProd.entries()]
-    .map(([k, n]) => ({ k, n, p: PRODUCTOS[k], e: estadoPiso(PRODUCTOS[k]) }))
-    .sort((a, b) => orden[a.e.color] - orden[b.e.color]);
-  $("lista").innerHTML = filas.map(({ n, p, e }) => `
+    .map(([k, r]) => ({ k, ...r, p: PRODUCTOS[k], e: estadoPiso(PRODUCTOS[k]) }))
+    .sort((a, b) => (b.vencidas > 0) - (a.vencidas > 0) || orden[a.e.color] - orden[b.e.color]);
+  $("lista").innerHTML = filas.map(({ n, vencidas, proxima, p, e }) => {
+    const prox = proxima ? diasParaVencer(proxima) : null;
+    const vence = proxima
+      ? `<div class="det" style="${prox <= DIAS_AVISO ? "color:" + COLORES.vencida + ";font-weight:600" : ""}">Próximo vencimiento: ${fechaCorta(proxima)} (${cuandoVence(proxima)})</div>` : "";
+    const venc = vencidas ? `<div class="det" style="color:${COLORES.vencida};font-weight:700">${vencidas} caja${vencidas > 1 ? "s" : ""} vencida${vencidas > 1 ? "s" : ""}: sacar como merma</div>` : "";
+    return `
     <div class="prod">
       <span class="pto" style="background:${COLORES[e.color]}"></span>
       <div><div class="nom">${p.nombre}</div>
-        <div class="det">Bodega: ${n} caja${n > 1 ? "s" : ""} = ${n * p.porCaja} u · Piso: ${p.piso} u · Vende ~${p.ventaDia}/día</div></div>
+        <div class="det">Bodega: ${n} caja${n === 1 ? "" : "s"} = ${n * p.porCaja} u · Piso: ${p.piso} u · Vende ~${p.ventaDia}/día</div>${vence}${venc}</div>
       <span class="est" style="background:${COLORES[e.color]}">${e.txt}</span>
-    </div>`).join("") || `<div class="det" style="color:#888;font-size:13px">Todavía no se ha visto ninguna viñeta.</div>`;
+    </div>`; }).join("") || `<div class="det" style="color:#888;font-size:13px">Todavía no se ha visto ninguna viñeta.</div>`;
 }
 
 $("btnLista").onclick = () => {
