@@ -444,7 +444,8 @@ console.log('\n=== CATÁLOGOS: alta de usuario ===');
     enLinea:true, alertas:[], llamadas:[], fetches:[],
     tablas:{ perfiles:[], categorias:[], marcas:[], proveedores:[], impuestos:[] },
     rpc:{ fn_pos_contexto:{ data:ctxGerente, error:null },
-          fn_establecer_pin:{ data:null, error:null } },
+          fn_establecer_pin:{ data:null, error:null },
+          fn_fijar_codigo_perfil:{ data:{ codigo:'BETO' }, error:null } },
     http:{ '/functions/v1/crear-usuario':
       { estado:201, datos:{ perfil_id:'nuevo-1', nombre:'Beto', rol:'auxiliar',
                             falta_pin:true } } }
@@ -467,6 +468,7 @@ console.log('\n=== CATÁLOGOS: alta de usuario ===');
   chk('las sucursales vienen marcadas por omisión',
       [...d.querySelectorAll('[data-sucursal]')].every(x => x.checked));
   chk('pide PIN', !!d.querySelector('#pin-nuevo'));
+  chk('y el código con que entra a la caja', !!d.querySelector('#codigo-caja'));
 
   // llenar y guardar
   const poner = (k, v) => { d.querySelector(`[data-k="${k}"]`).value = v; };
@@ -478,6 +480,7 @@ console.log('\n=== CATÁLOGOS: alta de usuario ===');
   // desmarcar la segunda sucursal
   d.querySelectorAll('[data-sucursal]')[1].checked = false;
   d.querySelector('#pin-nuevo').value = '24680';
+  d.querySelector('#codigo-caja').value = 'beto';
 
   d.querySelector('#form-guardar').click();
   await new Promise(r => setTimeout(r, 80));
@@ -503,6 +506,10 @@ console.log('\n=== CATÁLOGOS: alta de usuario ===');
   chk('el PIN se pone aparte, con la sesión del gerente', pin.length === 1);
   chk('y sobre el usuario que devolvió la función',
       pin[0]?.args?.p_perfil_id === 'nuevo-1' && pin[0]?.args?.p_pin === '24680');
+  const cod = estado.llamadas.filter(l => l.fn === 'fn_fijar_codigo_perfil');
+  chk('el código se pone aparte, en mayúscula, sobre el usuario nuevo',
+      cod.length === 1 && cod[0].args.p_perfil_id === 'nuevo-1' &&
+      cod[0].args.p_codigo === 'BETO');
   chk('el cajón se cerró al terminar',
       d.querySelector('#form-velo').classList.contains('oculto'));
 }

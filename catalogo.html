@@ -398,10 +398,11 @@ const ENTIDADES = {
   usuarios: {
     nombre:'Usuarios', singular:'Usuario', icono:'ajustes',
     tabla:'perfiles', nivel:3, orden:'nombre',
-    columnas:'id,nombre,email,telefono,rol,activo,pin_pos',
+    columnas:'id,nombre,email,telefono,rol,activo,pin_pos,codigo',
     buscaEn:['nombre','email'],
     fila: r => ({ ini:iniciales(r.nombre), titulo:r.nombre,
-                  sub:[r.rol, r.pin_pos ? 'con PIN' : 'sin PIN'].join(' · '),
+                  sub:[r.rol, r.codigo ? 'código ' + r.codigo : 'sin código',
+                       r.pin_pos ? 'con PIN' : 'sin PIN'].join(' · '),
                   inactivo:!r.activo }),
     campos:[
       { k:'nombre', e:'Nombre', tipo:'texto', req:true, ancho:true },
@@ -419,7 +420,7 @@ const ENTIDADES = {
       { k:'password', e:'Contraseña inicial', tipo:'clave', req:true, soloNuevo:true,
         ancho:true, ayuda:'Mínimo 8 caracteres. Désela y que la cambie él.' },
       { k:'__sucursales', e:'Sucursales', tipo:'sucursales', soloNuevo:true, ancho:true },
-      { s:'PIN de caja' },
+      { s:'Código y PIN de caja' },
       { k:'__pin', tipo:'pin', ancho:true }
     ]
   }
@@ -719,7 +720,17 @@ function abrirForm(fila){
     }
 
     if (c.tipo === 'pin'){
-      html += `<div class="ancho-total">
+      /* El código es lo que la cajera marca en /caja antes del PIN. Corto y
+         único dentro del negocio: "C7", "ANA", "01". Sin código no entra. */
+      html += `<div class="ancho-total" style="margin-bottom:14px">
+        <label for="codigo-caja">Código</label>
+        <input class="entrada" id="codigo-caja" maxlength="8" autocomplete="off"
+               value="${escapar(fila?.codigo || '')}" data-original="${escapar(fila?.codigo || '')}"
+               placeholder="Ej. ANA o 07" style="text-transform:uppercase;letter-spacing:.12em">
+        <div class="ayuda" style="margin-top:6px">Lo que marca para entrar a la caja, antes
+          del PIN. Letras y números, 8 como mucho, y que nadie más del negocio lo tenga.</div>
+      </div>
+      <div class="ancho-total">
         <div class="ayuda" style="margin-bottom:8px">
           ${fila?.pin_pos ? 'Ya tiene PIN. Escriba uno nuevo solo si lo quiere cambiar.'
                           : 'Sin PIN no puede abrir caja.'}
@@ -1069,6 +1080,16 @@ $('#form-guardar').addEventListener('click', async () => {
         // Crear. Pasa por la Edge Function porque crear una cuenta de acceso
         // exige la llave service_role, que no puede andar en el navegador.
         id = await crearUsuario(datos);
+      }
+
+      const cod = $('#codigo-caja');
+      if (cod){
+        const nuevo = cod.value.trim().toUpperCase();
+        if (nuevo !== (cod.dataset.original || '')){
+          const { error:e3 } = await sb.rpc('fn_fijar_codigo_perfil',
+            { p_perfil_id:id, p_codigo:nuevo || null });
+          if (e3) throw e3;
+        }
       }
 
       const pin = $('#pin-nuevo')?.value.trim();
