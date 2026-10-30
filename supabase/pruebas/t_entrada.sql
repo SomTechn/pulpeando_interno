@@ -94,6 +94,17 @@ select jsonb_pretty(app.entrada_de_caja(:'aparato', :'llave', 'c7', '45678')) as
 \echo '--- (el codigo va en minuscula a proposito: no debe importar) ---'
 
 \echo ''
+\echo '=== E5c: un perfil sin correo en perfiles igual entra, con el de su cuenta ==='
+set role postgres;
+update perfiles set email = null where id = 'cccc0000-0000-0000-0000-000000000001';
+set role service_role;
+select fn_entrar_caja(:'aparato', :'llave', 'C7', '45678') ->> 'email' as correo;
+\echo '--- esperado: cajera@t.hn, sacado de auth.users ---'
+set role postgres;
+update perfiles set email = 'cajera@t.hn' where id = 'cccc0000-0000-0000-0000-000000000001';
+set role service_role;
+
+\echo ''
 \echo '=== E5b: lo mismo por la envoltura publica, que es por donde entra ==='
 \echo '--- la funcion de borde (PostgREST no publica el esquema app) ---'
 select fn_entrar_caja(:'aparato', :'llave', 'C7', '45678') ->> 'nombre' as por_la_envoltura;

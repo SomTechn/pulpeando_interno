@@ -219,8 +219,9 @@ create or replace function app.entrada_de_caja(
 ) returns jsonb
 language plpgsql security definer set search_path = public, app, extensions as $fn$
 declare
-  ap aparatos_caja;
-  p  perfiles;
+  ap      aparatos_caja;
+  p       perfiles;
+  v_email text;
 begin
   if p_aparato is null or coalesce(btrim(p_llave), '') = '' then
     return jsonb_build_object('ok', false, 'error', 'aparato',
@@ -291,7 +292,11 @@ begin
       'mensaje', p.nombre || ' no atiende caja');
   end if;
 
-  if p.email is null then
+  -- El correo sale de la cuenta de acceso, no de perfiles.email: un perfil
+  -- hecho a mano puede tener esa columna vacia aunque la cuenta tenga correo,
+  -- y entonces nadie con ese perfil entraria nunca a la caja.
+  select u.email into v_email from auth.users u where u.id = p.id;
+  if v_email is null then
     return jsonb_build_object('ok', false, 'error', 'sin_correo',
       'mensaje', p.nombre || ' no tiene correo y no puede abrir sesion');
   end if;
@@ -307,7 +312,7 @@ begin
   return jsonb_build_object(
     'ok', true,
     'perfil_id', p.id,
-    'email', p.email,
+    'email', v_email,
     'nombre', p.nombre,
     'rol', p.rol,
     'organizacion_id', ap.organizacion_id,
