@@ -44,6 +44,7 @@ const svg = d => `<svg viewBox="0 0 24 24" width="19" height="19" fill="none"
 const MODULOS = [
   { id:'panel',   nombre:'Panel',       url:'index.html',   icono:'todos',   nivel:1 },
   { id:'caja',    nombre:'Caja',        url:'caja/',        icono:'caja',    nivel:1 },
+  { id:'tablero', nombre:'Tablero',     url:'tablero.html', icono:'reportes', nivel:3 },
   { id:'consultar', nombre:'Consultar', url:'consultar.html', icono:'lupa',  nivel:1 },
   { id:'pedidos', nombre:'Pedidos',     url:'pedidos.html', icono:'pedidos', nivel:1 },
   { id:'ventas',  nombre:'Ventas',      url:'ventas.html',  icono:'reportes', nivel:1 },

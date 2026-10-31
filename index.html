@@ -135,6 +135,8 @@ const S = { ctx:null, nivel:0, menu:null };
 /* Los mismos módulos del menú lateral, para no tener dos listas que se
    desincronizan. La caja no entra aquí: ya tiene su propio botón arriba. */
 const MODULOS = [
+  { id:'tablero', nombre:'Tablero', url:'tablero.html', nivel:3,
+    d:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>' },
   { id:'consultar', nombre:'Consultar', url:'consultar.html', nivel:1,
     d:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>' },
   { id:'pedidos', nombre:'Pedidos', url:'pedidos.html', nivel:1,
