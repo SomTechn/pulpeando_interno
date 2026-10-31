@@ -291,11 +291,11 @@
           <label class="fa-campo"><span>Cliente</span>
             <input data-fa="cliente" placeholder="Nombre, teléfono o número" autocomplete="off"></label>
           <label class="fa-campo"><span>Caja</span>
-            <select data-fa="caja_id"><option value="">Todas</option></select></label>
+            <select data-fa="caja_id" multiple aria-label="Caja"></select></label>
           <label class="fa-campo"><span>Cajero</span>
-            <select data-fa="cajero_id"><option value="">Todos</option></select></label>
+            <select data-fa="cajero_id" multiple aria-label="Cajero"></select></label>
           <label class="fa-campo"><span>Forma de pago</span>
-            <select data-fa="metodo"><option value="">Todas</option>
+            <select data-fa="metodo" multiple aria-label="Forma de pago">
               <option value="efectivo">Efectivo</option><option value="tarjeta">Tarjeta</option>
               <option value="transferencia">Transferencia</option><option value="credito">Fiado</option>
               <option value="otro">Otro</option></select></label>
@@ -357,6 +357,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { montarMenu, escapar } from './menu.js';
 import { imprimirTicket } from './ticket.js';
 import { escanear, hayCamara } from './escaner.js';
+import { montarMulti, valores, fijar } from './multi.js';
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth:{ persistSession:true, autoRefreshToken:true }
@@ -443,6 +444,9 @@ async function arrancar(){
   $('#h-sucursal').textContent = data.sucursales[0]?.nombre || '';
   $('#app').classList.remove('oculto');
   ver('#btn-camara', hayCamara());
+  montarMulti($('[data-fa="caja_id"]'), { todos:'Todas las cajas', unidad:'cajas' });
+  montarMulti($('[data-fa="cajero_id"]'), { todos:'Todos los cajeros', unidad:'cajeros' });
+  montarMulti($('[data-fa="metodo"]'), { todos:'Todas las formas', unidad:'formas' });
 
   S.menu = montarMenu({
     contenedor:'#menu', modulo:'ventas', ctx:S.ctx,
@@ -471,21 +475,18 @@ function ponerPeriodo(p){
 $('#filtros').addEventListener('click', e => {
   const b = e.target.closest('.fl'); if (!b) return;
   if (b.dataset.p){
-    S.estado = null; S.soloFiadas = false;
-    document.querySelectorAll('.fl').forEach(x => x.classList.toggle('activo', x === b));
+    // El periodo es uno solo (es un rango de fechas); los de estado no se tocan
+    document.querySelectorAll('.fl[data-p]').forEach(x => x.classList.toggle('activo', x === b));
     ponerPeriodo(b.dataset.p);
     return;
   }
-  // los de estado se prenden y apagan sin tocar el periodo
-  const quieroAnuladas = b.dataset.e === 'anulada';
-  const yaEstaba = b.classList.contains('activo');
-  document.querySelectorAll('.fl[data-e]').forEach(x => x.classList.remove('activo'));
-  if (yaEstaba){ S.estado = null; S.soloFiadas = false; }
-  else {
-    b.classList.add('activo');
-    S.estado = quieroAnuladas ? 'anulada' : null;
-    S.soloFiadas = !quieroAnuladas;
-  }
+  // Anuladas y fiadas se prenden y apagan cada una: las dos juntas enseñan
+  // las anuladas Y las fiadas.
+  b.classList.toggle('activo');
+  S.verAnuladas = !!document.querySelector('.fl[data-e="anulada"].activo');
+  S.verFiadas = !!document.querySelector('.fl[data-e="fiado"].activo');
+  S.estado = S.verAnuladas && !S.verFiadas ? 'anulada' : null;
+  S.soloFiadas = S.verFiadas && !S.verAnuladas;
   cargar();
 });
 
@@ -593,7 +594,7 @@ async function cargarListasAv(){
     ]);
     const llenar = (sel, filas) => {
       const el = $(`[data-fa="${sel}"]`);
-      el.innerHTML = el.options[0].outerHTML + (filas || []).map(f =>
+      el.innerHTML = (filas || []).map(f =>
         `<option value="${escapar(f.id)}">${escapar(f.nombre)}</option>`).join('');
     };
     llenar('caja_id', cj?.data);
@@ -604,7 +605,10 @@ async function cargarListasAv(){
 function leerFiltrosAv(){
   const av = {};
   document.querySelectorAll('[data-fa]').forEach(el => {
-    const k = el.dataset.fa, v = el.value.trim();
+    const k = el.dataset.fa;
+    // Caja, cajero y forma de pago: se escogen varios
+    if (el.multiple){ const l = valores(el); if (l.length) av[k] = l; return; }
+    const v = el.value.trim();
     if (!v) return;
     if (/_(min|max)$/.test(k)){ const n = numFa(v); if (n !== null) av[k] = n; }
     else av[k] = v;
@@ -626,9 +630,10 @@ function pintarChips(){
   if (av.hora_desde || av.hora_hasta)
     chips.push(['hora', 'Hora ' + rango(av.hora_desde || null, av.hora_hasta || null, false)]);
   for (const k of ['producto', 'cliente']) if (av[k]) chips.push([k, NOMBRE_FA[k] + ': ' + av[k]]);
-  for (const k of ['caja_id', 'cajero_id', 'metodo']) if (av[k]){
-    const op = $(`[data-fa="${k}"]`).selectedOptions?.[0]?.textContent || av[k];
-    chips.push([k, NOMBRE_FA[k] + ': ' + op]);
+  for (const k of ['caja_id', 'cajero_id', 'metodo']) if (av[k]?.length){
+    const sel = $(`[data-fa="${k}"]`);
+    const nombres = av[k].map(v => [...sel.options].find(o => o.value === v)?.textContent.trim() || v);
+    chips.push([k, NOMBRE_FA[k] + ': ' + nombres.join(', ')]);
   }
   $('#fa-chips').innerHTML = chips.map(([k, t]) =>
     `<span class="fa-chip">${escapar(t)}<button type="button" data-quitar-fa="${k}" aria-label="Quitar">✕</button></span>`).join('');
@@ -652,7 +657,7 @@ $('#fa-aplicar').addEventListener('click', () => {
   cargar();
 });
 $('#fa-limpiar').addEventListener('click', () => {
-  document.querySelectorAll('[data-fa]').forEach(el => el.value = '');
+  document.querySelectorAll('[data-fa]').forEach(el => { if (el.multiple) fijar(el, []); else el.value = ''; });
   S.av = {};
   pintarChips();
   cargar();
@@ -665,7 +670,8 @@ $('#fa-chips').addEventListener('click', e => {
   const k = b.dataset.quitarFa;
   const campos = ['monto', 'efectivo', 'cambio'].includes(k) ? [k + '_min', k + '_max']
                : k === 'hora' ? ['hora_desde', 'hora_hasta'] : [k];
-  campos.forEach(c => { delete S.av[c]; const el = $(`[data-fa="${c}"]`); if (el) el.value = ''; });
+  campos.forEach(c => { delete S.av[c]; const el = $(`[data-fa="${c}"]`);
+    if (el?.multiple) fijar(el, []); else if (el) el.value = ''; });
   pintarChips();
   cargar();
 });
@@ -675,7 +681,7 @@ function pintarResumen(){
   if (S.resumenFiltrado){
     $('#tarjetas').innerHTML = `
       <div class="tj"><small>Coinciden</small><b>${r.ventas || 0}</b></div>
-      <div class="tj"><small>Vendido</small><b>${money(r.total)}</b></div>
+      <div class="tj destacada"><small>Vendido</small><b>${money(r.total)}</b></div>
       <div class="tj"><small>Efectivo entregado</small><b>${money(r.recibido)}</b></div>
       <div class="tj"><small>Cambio dado</small><b>${money(r.cambio)}</b></div>
       ${r.ganancia === null || r.ganancia === undefined ? ''
@@ -686,7 +692,7 @@ function pintarResumen(){
   const ganancia = r.ganancia === null || r.ganancia === undefined
     ? '' : `<div class="tj bien"><small>Ganancia</small><b>${money(r.ganancia)}</b></div>`;
   $('#tarjetas').innerHTML = `
-    <div class="tj"><small>${Number(r.devuelto) > 0 ? 'Vendido neto' : 'Vendido'}</small><b>${money(r.total)}</b></div>
+    <div class="tj destacada"><small>${Number(r.devuelto) > 0 ? 'Vendido neto' : 'Vendido'}</small><b>${money(r.total)}</b></div>
     <div class="tj"><small>Ventas</small><b>${r.ventas || 0}</b></div>
     <div class="tj"><small>Efectivo</small><b>${money(r.efectivo)}</b></div>
     <div class="tj"><small>Fiado</small><b>${money(r.fiado)}</b></div>
@@ -698,6 +704,7 @@ function pintarResumen(){
 }
 
 function visibles(){
+  if (S.verAnuladas && S.verFiadas) return S.ventas.filter(v => v.estado === 'anulada' || v.es_credito);
   return S.soloFiadas ? S.ventas.filter(v => v.es_credito) : S.ventas;
 }
 

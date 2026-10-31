@@ -126,6 +126,7 @@ if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin co
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { montarMenu, escapar } from './menu.js';
+import { montarMulti, valores } from './multi.js';
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth:{ persistSession:true, autoRefreshToken:true } });
 
@@ -487,9 +488,9 @@ async function pintarPrecios(){
       <div class="form-p">
         <div class="campo-g"><label for="p-por">¿A cuáles?</label>
           <select class="entrada" id="p-por">
-            <option value="categoria">Una categoría</option><option value="marca">Una marca</option>
-            <option value="proveedor">Un proveedor</option><option value="todos">Todos los productos</option></select></div>
-        <div class="campo-g" id="p-cual-g"><label for="p-cual">Cuál</label><select class="entrada" id="p-cual"></select></div>
+            <option value="categoria">Categorías</option><option value="marca">Marcas</option>
+            <option value="proveedor">Proveedores</option><option value="todos">Todos los productos</option></select></div>
+        <div class="campo-g" id="p-cual-g"><label for="p-cual">Cuáles</label><select class="entrada" id="p-cual" multiple></select></div>
         <div class="campo-g"><label for="p-valor" id="p-valor-l">Porcentaje</label>
           <input class="entrada num" id="p-valor" inputmode="decimal" placeholder="5"></div>
         <div class="campo-g"><label for="p-red">Redondear hacia arriba a</label>
@@ -508,8 +509,10 @@ async function pintarPrecios(){
   const llenarCual = () => {
     const l = L[por] || [];
     ver('#p-cual-g', por !== 'todos');
-    $('#p-cual').innerHTML = l.length ? l.map(x => `<option value="${x.id}">${escapar(x.nombre)}</option>`).join('')
-      : '<option value="">— No hay —</option>';
+    $('#p-cual').innerHTML = l.map(x => `<option value="${x.id}">${escapar(x.nombre)}</option>`).join('');
+    const nombre = { categoria:'categorías', marca:'marcas', proveedor:'proveedores' }[por] || '';
+    // al pasar de «categorías» a «marcas» el botón cambia su texto
+    montarMulti($('#p-cual'), { todos:(l.length ? 'Escoja ' : 'No hay ') + nombre, unidad:nombre });
   };
   const pintarModo = () => {
     $$('#modo button').forEach(b => b.classList.toggle('si', b.dataset.m === modo));
@@ -525,8 +528,11 @@ async function pintarPrecios(){
     err('');
     const valor = Number(String($('#p-valor').value).replace(',', '.'));
     if (!isFinite(valor) || $('#p-valor').value.trim() === '') return err('Escriba el porcentaje') || null;
-    const filtro = por === 'todos' ? { todos:true } : { [por + '_id']:$('#p-cual').value };
-    if (por !== 'todos' && !$('#p-cual').value) return err('Escoja cuál') || null;
+    // Varias a la vez: con una sola se manda el valor solo (así entiende
+    // también una base sin la 045); con varias, la lista.
+    const cuales = valores($('#p-cual'));
+    if (por !== 'todos' && !cuales.length) return err('Escoja al menos una') || null;
+    const filtro = por === 'todos' ? { todos:true } : { [por + '_id']:cuales.length === 1 ? cuales[0] : cuales };
     const { data, error } = await sb.rpc('fn_cambiar_precios', { p_filtro:filtro, p_modo:modo, p_valor:valor,
       p_redondeo:Number($('#p-red').value), p_aplicar:aplicar });
     if (error){ err(limpiarError(error)); return null; }

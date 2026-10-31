@@ -133,6 +133,8 @@ async function montar(estado){
     }
   };
 
+  const mu = await import(BASE + 'multi.js');
+  w.montarMulti = mu.montarMulti; w.valores = mu.valores; w.fijar = mu.fijar;
   const menu = await import(BASE + 'menu.js');
   w.montarMenu = menu.montarMenu; w.escapar = menu.escapar;
 
@@ -140,6 +142,7 @@ async function montar(estado){
     .replace(/^import \{ createClient \} from 'https:\/\/esm\.sh\/@supabase\/supabase-js@2';$/m, '')
     .replace(/^import \{ montarMenu, escapar \} from '\.\/menu\.js';$/m, '')
     .replace(/^import \{ escanear, hayCamara \} from '\.\/escaner\.js';$/m, '')
+    .replace(/^import \{ montarMulti, valores \} from '\.\/multi\.js';$/m, '')
     .replace(/createClient\(SUPABASE_URL, SUPABASE_KEY, \{[\s\S]*?\}\)/, '__sb');
 
   w.__m = {};
@@ -433,6 +436,22 @@ console.log('\n=== CSV ===');
   const { m } = await montar(base('supervisor', 2));
   const csv = m.armarCsv(m.S.datos, 'control');
   chk('el CSV del supervisor no lleva costo', !/;Costo;/.test(csv) && !/Merma desc\. L/.test(csv));
+}
+
+console.log('\n=== VARIAS CATEGORÍAS ===');
+{
+  const e = base();
+  const { d } = await montar(e);
+  const s = d.querySelector('#f-categoria');
+  chk('la categoría es un selector de varios', s.nextElementSibling?.classList.contains('multi'));
+  const antes = e.llamadas.filter(l => l.fn === 'fn_control_inventario').length;
+  [...s.options].forEach(o => { o.selected = ['c1', 'c2', 'c3'].includes(o.value); });
+  s.dispatchEvent(new window.Event('change'));
+  await esperar();
+  const nuevas = e.llamadas.filter(l => l.fn === 'fn_control_inventario').slice(antes);
+  chk('pide cada categoría (Aceites sobra: viene en Abarrotes)',
+      nuevas.length === 2 && nuevas.map(l => l.args.p_categoria_id).sort().join() === 'c1,c3');
+  chk('y junta las filas de las dos', d.querySelectorAll('.control tbody tr').length === 8);
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);

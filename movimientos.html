@@ -43,6 +43,7 @@
 .busca .entrada{flex:1;height:44px;font-size:14px;min-width:0}
 .escanear{flex:0 0 44px;height:44px;border-radius:var(--r-md);background:var(--tinta);
   color:#fff;display:grid;place-items:center}
+.filtros .multi{flex:0 1 260px;width:auto}
 .filtros select{flex:0 1 230px;height:44px;border:1.5px solid var(--linea);
   border-radius:var(--r-md);padding:0 10px;outline:none;font-size:13.5px;
   background:var(--panel);min-width:0}
@@ -175,7 +176,7 @@ table.control{border-collapse:separate;border-spacing:0;font-size:12.5px;width:m
   .ficha{padding:14px 15px}
   .filtros{flex-wrap:wrap}
   .busca{flex:1 1 100%}
-  .filtros select{flex:1 1 100%}
+  .filtros select,.filtros .multi{flex:1 1 100%}
   .opciones{flex-wrap:wrap}
   /* En el telefono los filtros corren con el contenido: fijos se comian
      media pantalla y la tabla quedaba en una rendija. */
@@ -272,9 +273,7 @@ table.control{border-collapse:separate;border-spacing:0;font-size:12.5px;width:m
               <path d="M7 12h10"/></svg>
           </button>
         </div>
-        <select id="f-categoria" aria-label="Categoría o departamento">
-          <option value="">Todas las categorías</option>
-        </select>
+        <select id="f-categoria" multiple aria-label="Categoría o departamento"></select>
       </div>
 
       <div class="opciones" id="opciones">
@@ -308,6 +307,7 @@ if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin co
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { montarMenu, escapar } from './menu.js';
 import { escanear, hayCamara } from './escaner.js';
+import { montarMulti, valores } from './multi.js';
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth:{ persistSession:true, autoRefreshToken:true }
@@ -491,10 +491,15 @@ async function arrancar(){
    filtro simplemente no aparece: no vale la pena tumbar la pantalla. */
 async function cargarCategorias(){
   const { data, error } = await sb.rpc('fn_categorias_arbol');
-  if (error || !Array.isArray(data) || !data.length){ ver('#f-categoria', false); return; }
+  if (error || !Array.isArray(data) || !data.length){
+    ver('#f-categoria', false);
+    $('#f-categoria')._multi?.raiz.classList.add('oculto');
+    return;
+  }
+  S.arbol = data;
   const raiz = data.filter(c => !c.padre_id);
   const hijos = id => data.filter(c => c.padre_id === id);
-  let html = '<option value="">Todas las categorías</option>';
+  let html = '';
   for (const c of raiz){
     const h = hijos(c.id);
     if (h.length){
@@ -505,6 +510,7 @@ async function cargarCategorias(){
     }
   }
   $('#f-categoria').innerHTML = html;
+  montarMulti($('#f-categoria'), { todos:'Todas las categorías', unidad:'categorías' });
 }
 
 /* ================= filtros ================= */
@@ -543,7 +549,11 @@ $('#f-sucursal').addEventListener('change', e => {
   $('#h-sucursal').textContent = e.target.selectedOptions[0]?.textContent || '';
   cargar();
 });
-$('#f-categoria').addEventListener('change', e => { S.categoria = e.target.value; cargar(); });
+$('#f-categoria').addEventListener('change', e => {
+  S.categorias = valores(e.target);
+  S.categoria = S.categorias[0] || null;
+  cargar();
+});
 
 let espera = null;
 $('#f-buscar').addEventListener('input', e => {
@@ -589,15 +599,30 @@ async function cargar(){
   const turno = ++S.pedido;
   S.cargando = true; pintar();
 
-  const { data, error } = dia
-    ? await sb.rpc('fn_inventario_por_fecha', {
+  const pedir = cat => dia
+    ? sb.rpc('fn_inventario_por_fecha', {
         p_desde:desde, p_hasta:hasta, p_sucursal_id:S.sucursal,
-        p_buscar:S.buscar || null, p_categoria_id:S.categoria || null,
+        p_buscar:S.buscar || null, p_categoria_id:cat || null,
         p_solo_movidos:false })
-    : await sb.rpc('fn_control_inventario', {
+    : sb.rpc('fn_control_inventario', {
         p_desde:desde, p_hasta:hasta, p_sucursal_id:S.sucursal,
-        p_buscar:S.buscar || null, p_categoria_id:S.categoria || null,
+        p_buscar:S.buscar || null, p_categoria_id:cat || null,
         p_por_dia:S.porDia });
+
+  /* Varias categorías: las funciones reciben una sola (cambiar su firma
+     exige un drop), así que se pide cada una y se juntan. Una categoría
+     cuyo departamento también se escogió sobra: ya viene dentro. */
+  const cats = (S.categorias || []).filter(c => {
+    const padre = (S.arbol || []).find(x => x.id === c)?.padre_id;
+    return !(padre && S.categorias.includes(padre));
+  });
+  let data, error;
+  if (cats.length <= 1) ({ data, error } = await pedir(cats[0]));
+  else {
+    const rs = await Promise.all(cats.map(pedir));
+    error = rs.find(r => r.error)?.error;
+    if (!error) data = juntarInventario(rs.map(r => r.data));
+  }
 
   if (turno !== S.pedido) return;
   S.cargando = false;
@@ -610,6 +635,42 @@ async function cargar(){
   S.datos = data;
   S.datosVista = S.vista;
   pintar();
+}
+
+/* Junta las respuestas de varias categorías en una sola. Las categorías no
+   se pisan (ver arriba), así que las cuentas se suman sin contar doble. */
+function juntarInventario(lista){
+  const ok = lista.filter(Boolean);
+  if (ok.length <= 1) return ok[0] || null;
+  const r = { ...ok[0] };
+  const sumar = objs => {
+    const t = {};
+    for (const o of objs) for (const [k, v] of Object.entries(o || {})){
+      if (typeof v === 'number') t[k] = (t[k] || 0) + v;
+      else if (v === null && !(k in t)) t[k] = null;
+    }
+    return t;
+  };
+  const porLlave = (k, llave) => {
+    const m = new Map();
+    for (const o of ok) for (const x of o[k] || []){
+      const id = x[llave];
+      if (!m.has(id)) m.set(id, { ...x });
+      else { const y = m.get(id); for (const [kk, v] of Object.entries(x))
+        if (typeof v === 'number' && kk !== llave) y[kk] = (Number(y[kk]) || 0) + v; }
+    }
+    return [...m.values()];
+  };
+  r.totales = sumar(ok.map(o => o.totales));
+  const nombre = (a, b) => String(a.dia || '').localeCompare(String(b.dia || '')) ||
+                           String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es');
+  if (ok.some(o => o.filas)) r.filas = ok.flatMap(o => o.filas || []).sort(nombre);
+  if (ok.some(o => o.productos)) r.productos = ok.flatMap(o => o.productos || []).sort(nombre);
+  if (ok.some(o => o.por_tipo)) r.por_tipo = porLlave('por_tipo', 'tipo');
+  if (ok.some(o => o.por_fecha)) r.por_fecha = porLlave('por_fecha', 'dia').sort(nombre);
+  r.truncado = ok.some(o => o.truncado);
+  r.hay_otros = ok.some(o => o.hay_otros);
+  return r;
 }
 
 /* ================= pintar ================= */

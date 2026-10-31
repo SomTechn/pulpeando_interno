@@ -90,6 +90,8 @@ async function montar(estado){
     }
   };
 
+  const mu = await import(BASE + 'multi.js');
+  w.montarMulti = mu.montarMulti; w.valores = mu.valores; w.fijar = mu.fijar;
   const menu = await import(BASE + 'menu.js');
   w.montarMenu = menu.montarMenu; w.escapar = menu.escapar;
 
@@ -98,6 +100,7 @@ async function montar(estado){
     .replace(/^import \{ montarMenu, escapar \} from '\.\/menu\.js';$/m, '')
     .replace(/^import \{ imprimirTicket \} from '\.\/ticket\.js';$/m,
              'const imprimirTicket = async (d, o) => { (window.__impresos = window.__impresos || []).push({ d, o }); };')
+    .replace(/^import \{ montarMulti, valores, fijar \} from '\.\/multi\.js';$/m, '')
     .replace(/^import \{ escanear, hayCamara \} from '\.\/escaner\.js';$/m,
              'const escanear = async () => window.__escaneo ?? null; const hayCamara = () => !!window.__hayCamara;')
     .replace(/createClient\(SUPABASE_URL, SUPABASE_KEY, \{[\s\S]*?\}\)/, '__sb');
@@ -633,7 +636,8 @@ console.log('\n=== FILTROS AVANZADOS (DESCUADRES) ===');
   const f = ultimaBusqueda()?.args?.p_filtros || {};
   chk('manda el efectivo entregado', f.efectivo_min === 500 && f.efectivo_max === 500);
   chk('y el cambio, la hora, el producto y la forma de pago',
-      f.cambio_min === 100 && f.hora_desde === '18:00' && f.producto === 'arroz' && f.metodo === 'efectivo');
+      f.cambio_min === 100 && f.hora_desde === '18:00' && f.producto === 'arroz'
+      && JSON.stringify(f.metodo) === '["efectivo"]');
   chk('sin mandar lo que quedó vacío', !('monto_min' in f) && !('cliente' in f));
   chk('respeta las fechas de arriba', f.desde === hoyISO);
   chk('el panel se cierra al buscar', d.querySelector('#filtros-av').classList.contains('oculto'));
@@ -660,6 +664,45 @@ console.log('\n=== FILTROS AVANZADOS (DESCUADRES) ===');
   chk('la venta en efectivo dice cuánto entregó y el cambio',
       /Entregó L 500\.00 · cambio L 345\.00/.test(d.querySelector('#lista').textContent));
   chk('el detalle trae el botón PDF', !!d.querySelector('#btn-pdf'));
+}
+
+console.log('\n=== ESCOGER VARIOS ===');
+{
+  const estado = baseEstado();
+  const { w, d } = await montar(estado);
+  const ultimaBusqueda = () => [...estado.llamadas].reverse().find(l => l.fn === 'fn_buscar_ventas');
+  // las cajas llegan de la base: se simulan llenando el select
+  const selCaja = d.querySelector('[data-fa="caja_id"]');
+  selCaja.innerHTML = '<option value="k1">Caja 1</option><option value="k2">Caja 2</option><option value="k3">Caja 3</option>';
+  await esperar(20);
+  d.querySelector('#btn-filtros').click();
+  const multi = selCaja.nextElementSibling;
+  chk('la caja es un selector de varios', multi?.classList.contains('multi'));
+  chk('sin escoger dice «Todas las cajas»', /Todas las cajas/.test(multi.textContent));
+  multi.querySelector('.multi-btn').click();
+  const casillas = [...multi.querySelectorAll('.multi-lista input')];
+  chk('abre la lista con una casilla por caja', casillas.length === 3);
+  casillas[0].checked = true; casillas[0].dispatchEvent(new w.Event('change', { bubbles:true }));
+  casillas[2].checked = true; casillas[2].dispatchEvent(new w.Event('change', { bubbles:true }));
+  chk('el botón dice la primera y cuántas más', /Caja 1/.test(multi.textContent) && /\+1/.test(multi.textContent));
+  d.querySelector('#fa-aplicar').click();
+  await esperar(80);
+  chk('manda las dos cajas', JSON.stringify(ultimaBusqueda()?.args?.p_filtros?.caja_id) === '["k1","k3"]');
+  chk('la etiqueta las nombra', /Caja: Caja 1, Caja 3/.test(d.querySelector('#fa-chips').textContent));
+  d.querySelector('#fa-limpiar').click();
+  await esperar(60);
+  chk('Limpiar las suelta', !('caja_id' in (ultimaBusqueda()?.args?.p_filtros || {})) && /Todas las cajas/.test(multi.textContent));
+}
+{
+  const estado = baseEstado();
+  const { d } = await montar(estado);
+  d.querySelector('[data-e="anulada"]').click(); await esperar(60);
+  d.querySelector('[data-e="fiado"]').click(); await esperar(60);
+  chk('anuladas y fiadas se prenden las dos', d.querySelectorAll('.fl[data-e].activo').length === 2);
+  const filas = [...d.querySelectorAll('#lista .venta')].map(x => x.textContent);
+  chk('y enseña las anuladas Y las fiadas', filas.length === 2 && filas.some(t => /Anulada/.test(t)) && filas.some(t => /Fiado/.test(t)));
+  d.querySelector('.fl[data-p="ayer"]').click(); await esperar(60);
+  chk('cambiar el periodo no apaga los de estado', d.querySelectorAll('.fl[data-e].activo').length === 2);
 }
 
 console.log('\n' + ok + ' bien, ' + mal + ' mal');

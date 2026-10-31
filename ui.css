@@ -32,9 +32,10 @@
   --tenue:#6B7A90;
   --claro:#8A99B3;
 
-  --r-sm:10px;
-  --r-md:16px;
-  --r-lg:22px;
+  /* Radios: más rectos desde el 31 de octubre (Somar los quería menos redondos) */
+  --r-sm:7px;
+  --r-md:10px;
+  --r-lg:13px;
   --sombra:0 1px 2px rgba(15,23,41,.06), 0 8px 24px -12px rgba(15,23,41,.18);
   --sombra-alta:0 24px 60px -18px rgba(15,23,41,.5);
 
@@ -404,6 +405,13 @@ select.entrada{cursor:pointer}
 .aviso.ojo{background:#FFF4E0;color:#8A5A00}
 .acciones{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
 
+/* Una tarjeta que manda: la cifra principal de la pantalla, con el color del
+   negocio. Una o dos por pantalla, no más, o ya nada destaca. */
+.destacada{background:var(--marca)!important;border-color:var(--marca)!important;color:var(--marca-sobre)!important;
+  box-shadow:0 10px 26px -14px var(--marca-sombra)}
+.destacada small,.destacada .sub,.destacada .pie,.destacada span{color:inherit!important;opacity:.85}
+.destacada b,.destacada strong{color:inherit!important}
+
 /* ==========================================================================
    VISTAS (vistas.js)
    Lo que antes flotaba encima ahora es una pantalla propia dentro de
@@ -445,10 +453,14 @@ select.entrada{cursor:pointer}
 .principal > .vista.form-velo .cerrar-x::before{content:'← Volver';font-size:14px;font-weight:700;color:var(--tinta)}
 .principal > .vista.form-velo .cerrar-x:hover{background:var(--marca-suave)}
 
+/* En una vista el fondo es el de la pantalla: el botón secundario lleva
+   borde y fondo blanco para no perderse */
+.principal > .vista .btn.secundario{background:var(--panel);border:1.5px solid var(--linea)}
+
 /* El aviso de arriba: lo que antes era un «Guardado · Entendido». Arriba, para no tapar Guardar */
 .aviso-flotante{position:fixed;left:50%;top:calc(74px + env(safe-area-inset-top));z-index:120;
   transform:translateX(-50%);width:min(520px, calc(100% - 28px));display:flex;align-items:center;gap:12px;
-  background:var(--tinta);color:#fff;border-radius:16px;padding:14px 12px 14px 18px;
+  background:var(--tinta);color:#fff;border-radius:var(--r-lg);padding:14px 12px 14px 18px;
   box-shadow:0 18px 40px -12px rgba(15,23,41,.55);animation:af-entra .22s cubic-bezier(.2,.8,.3,1)}
 .aviso-flotante.malo{background:#9F1239}
 .aviso-flotante.saliendo{opacity:0;transform:translate(-50%, -10px);transition:opacity .18s,transform .18s}
@@ -461,9 +473,47 @@ select.entrada{cursor:pointer}
 .af-x{width:40px;height:40px;border-radius:10px;color:rgba(255,255,255,.8);font-size:15px;flex:0 0 auto}
 .af-x:hover,.af-accion:hover{background:rgba(255,255,255,.24)}
 
+/* ==========================================================================
+   SELECTOR DE VARIOS (multi.js)
+   ========================================================================== */
+.multi-nativo{display:none!important}
+.multi{position:relative;min-width:0;width:100%}
+.multi-btn{width:100%;height:44px;display:flex;align-items:center;gap:8px;padding:0 12px;
+  border:1.5px solid var(--linea);border-radius:var(--r-sm);background:var(--panel);
+  font-size:14px;color:var(--tinta);text-align:left;min-width:0}
+.multi-btn:focus-visible,.multi.abierto .multi-btn{border-color:var(--azul);outline:none}
+.multi.con-valor .multi-btn{border-color:var(--marca);background:var(--marca-suave)}
+.multi-txt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.multi:not(.con-valor) .multi-txt{color:var(--texto-2)}
+.multi-cuenta{flex:0 0 auto;min-width:24px;height:22px;border-radius:11px;padding:0 7px;display:grid;place-items:center;
+  background:var(--marca);color:var(--marca-sobre);font-size:12px;font-weight:800}
+.multi-btn svg{flex:0 0 auto;color:var(--tenue);transition:transform .15s}
+.multi.abierto .multi-btn svg{transform:rotate(180deg)}
+.multi-panel{position:absolute;left:0;top:calc(100% + 6px);z-index:70;min-width:100%;width:max-content;
+  max-width:min(340px, calc(100vw - 28px));background:var(--panel);border:1px solid var(--linea);
+  border-radius:var(--r-md);box-shadow:0 18px 40px -16px rgba(15,23,41,.35);padding:6px}
+.multi-panel.a-la-derecha{left:auto;right:0}
+.multi-buscar{width:100%;height:40px;border:1.5px solid var(--linea);border-radius:var(--r-sm);
+  padding:0 10px;margin:2px 0 6px;outline:none;font-size:14px;background:var(--fondo)}
+.multi-lista{max-height:260px;overflow-y:auto}
+.multi-op{display:flex;align-items:center;gap:10px;min-height:42px;padding:0 10px;border-radius:var(--r-sm);
+  font-size:14px;cursor:pointer;user-select:none}
+.multi-op:hover{background:var(--fondo)}
+.multi .multi-op input{width:18px!important;height:18px!important;min-width:0;flex:0 0 auto;padding:0!important;
+  border:0!important;margin:0;accent-color:var(--marca)}
+.multi .multi-op span{min-width:0;overflow-wrap:anywhere;text-transform:none;letter-spacing:0;
+  font-size:14px;font-weight:inherit;color:var(--tinta)}
+.multi .multi-buscar{width:100%!important;height:40px!important}
+.multi-cuenta[hidden],.multi-panel[hidden]{display:none!important}
+.multi-todos{border-bottom:1px solid var(--linea);border-radius:var(--r-sm) var(--r-sm) 0 0;font-weight:700}
+.multi-pie{display:flex;align-items:center;gap:10px;padding:6px 4px 2px;border-top:1px solid var(--linea);margin-top:4px}
+.multi-n{flex:1;font-size:12.5px;color:var(--tenue)}
+.multi-listo{height:36px;padding:0 16px;border-radius:var(--r-sm);background:var(--marca);color:var(--marca-sobre);
+  font-weight:800;font-size:13px}
+
 /* Botón flotante (Editar en una vista de detalle) */
 .fab{position:fixed;right:calc(22px + env(safe-area-inset-right));bottom:calc(22px + env(safe-area-inset-bottom));
-  z-index:60;height:56px;padding:0 22px 0 18px;border-radius:18px;background:var(--marca);color:var(--marca-sobre);
+  z-index:60;height:56px;padding:0 22px 0 18px;border-radius:var(--r-lg);background:var(--marca);color:var(--marca-sobre);
   font-weight:800;font-size:15px;display:inline-flex;align-items:center;gap:9px;
   box-shadow:0 14px 30px -10px var(--marca-sombra), 0 4px 10px rgba(15,23,41,.12)}
 .fab:hover{background:var(--marca-oscuro)}

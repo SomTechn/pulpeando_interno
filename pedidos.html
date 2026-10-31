@@ -416,7 +416,7 @@ async function resumen(){
     <div class="dato-r"><small>Preparando</small><b>${data.en_proceso}</b></div>
     <div class="dato-r"><small>En ruta</small><b>${data.en_ruta}</b></div>
     <div class="dato-r bien"><small>Entregados hoy</small><b>${data.entregados}</b></div>
-    <div class="dato-r bien"><small>Vendido hoy</small><b>${money(data.vendido_hoy)}</b></div>
+    <div class="dato-r destacada"><small>Vendido hoy</small><b>${money(data.vendido_hoy)}</b></div>
     <div class="dato-r ${tarde ? 'urge' : ''}"><small>Espera máx.</small><b>${data.espera_max}′</b></div>`;
 }
 

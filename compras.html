@@ -42,6 +42,8 @@
   background:var(--azul-suave);display:grid;place-items:center;font-size:17px}
 .res-nuevo small{display:block;font-weight:500;color:var(--tenue);font-size:12px;margin-top:2px}
 .sg-barra{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.sg-barra .multi{flex:1 1 220px;width:auto}
+.sg-barra .multi-btn{height:46px}
 .sg-barra select{flex:1 1 220px;height:46px;border:1.5px solid var(--linea);border-radius:var(--r-md);
   padding:0 10px;font-size:14px;background:var(--panel);min-width:0}
 .sg-barra label{display:flex;align-items:center;gap:7px;height:46px;padding:0 12px;
@@ -246,7 +248,7 @@
       <!-- ====== HISTORIAL ====== -->
       <div class="limite oculto" id="t-sugerencias">
         <div class="sg-barra">
-          <select id="sg-prov" aria-label="Proveedor"></select>
+          <select id="sg-prov" multiple aria-label="Proveedor"></select>
           <label><input type="checkbox" id="sg-todos"> Ver también lo que no hace falta</label>
         </div>
         <div id="sg-lista"></div>
@@ -288,6 +290,7 @@ if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin co
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { montarMenu, escapar } from './menu.js';
 import { escanear, hayCamara } from './escaner.js';
+import { montarMulti, valores } from './multi.js';
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth:{ persistSession:true, autoRefreshToken:true }
@@ -296,7 +299,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
 const S = { ctx:null, sucursal:null, moneda:'L', menu:null,
             catalogo:[], proveedores:[], lineas:[], guardando:false, vista:'nueva',
             categorias:null, impuestos:null, codigoNuevo:null,
-            sugerencias:null, sgTodos:false, sgProv:'' };
+            sugerencias:null, sgTodos:false, sgProv:[] };
 
 const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
   {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -420,16 +423,21 @@ function proximaVisita(dias){
 
 function llenarProveedoresSg(){
   const sel = $('#sg-prov');
-  sel.innerHTML = '<option value="">Todos los proveedores</option>' +
-    S.proveedores.map(p => `<option value="${p.id}">${escapar(p.nombre)}</option>`).join('');
-  sel.value = S.sgProv;
+  // Se escogen varios proveedores; nada escogido = todos
+  const ya = sel.dataset.llenos === String(S.proveedores.length);
+  if (!ya){
+    sel.innerHTML = S.proveedores.map(p => `<option value="${p.id}" ${S.sgProv.includes(p.id) ? 'selected' : ''}
+      >${escapar(p.nombre)}</option>`).join('');
+    sel.dataset.llenos = String(S.proveedores.length);
+  }
+  montarMulti(sel, { todos:'Todos los proveedores', unidad:'proveedores' });
 }
 
 async function cargarSugerencias(){
   llenarProveedoresSg();
   $('#sg-lista').innerHTML = '<div class="vacio"><span class="girando"></span></div>';
   const { data, error } = await sb.rpc('fn_sugerencias_compra', {
-    p_sucursal_id:S.sucursal, p_proveedor_id:S.sgProv || null, p_todos:S.sgTodos });
+    p_sucursal_id:S.sucursal, p_proveedor_id:S.sgProv.length === 1 ? S.sgProv[0] : null, p_todos:S.sgTodos });
   if (error){
     const m = limpiarError(error);
     $('#sg-lista').innerHTML = `<div class="tarjeta"><div class="vacio"><p>${escapar(
@@ -439,13 +447,16 @@ async function cargarSugerencias(){
   }
   // La cantidad a pedir se puede corregir a mano y desmarcar: se guarda
   // en cada item para que al pasar a la entrada vaya lo que el usuario dejó.
+  // Con varios proveedores escogidos se piden todos y se quedan esos
+  if (S.sgProv.length > 1 && Array.isArray(data?.proveedores))
+    data.proveedores = data.proveedores.filter(g => S.sgProv.includes(g.proveedor_id));
   for (const g of data.proveedores || [])
     for (const it of g.items) { it.pedir = it.cajas; it.marcado = it.estado !== 'ok'; }
   S.sugerencias = data;
   pintarSugerencias();
 }
 
-$('#sg-prov').addEventListener('change', e => { S.sgProv = e.target.value; cargarSugerencias(); });
+$('#sg-prov').addEventListener('change', e => { S.sgProv = valores(e.target); cargarSugerencias(); });
 $('#sg-todos').addEventListener('change', e => { S.sgTodos = e.target.checked; cargarSugerencias(); });
 
 function pintarSugerencias(){
@@ -456,7 +467,7 @@ function pintarSugerencias(){
 
   if (!grupos.length){
     $('#sg-lista').innerHTML = `<div class="tarjeta"><div class="vacio"><div>✅</div>
-      <p><b>No hace falta pedir nada${S.sgProv ? ' a este proveedor' : ''}.</b><br>
+      <p><b>No hace falta pedir nada${S.sgProv.length === 1 ? ' a este proveedor' : S.sgProv.length > 1 ? ' a esos proveedores' : ''}.</b><br>
       Con lo que hay alcanza hasta que llegue el próximo pedido.</p></div></div>`;
     return;
   }

@@ -127,7 +127,7 @@
 /* vista de detalle */
 .det-cab{display:flex;gap:16px;align-items:center;background:var(--panel);border:1px solid var(--linea);
   border-radius:var(--r-lg);padding:18px;margin-bottom:16px}
-.det-foto{width:72px;height:72px;border-radius:18px;flex:0 0 auto;display:grid;place-items:center;
+.det-foto{width:72px;height:72px;border-radius:var(--r-lg);flex:0 0 auto;display:grid;place-items:center;
   background:var(--fondo) center/cover no-repeat;font-size:28px;font-weight:800;color:#8A99B3}
 .det-cab-txt{flex:1;min-width:0}
 .det-cab-txt h3{font-size:21px;line-height:1.2;letter-spacing:-.01em;overflow-wrap:anywhere}
@@ -156,6 +156,23 @@
   padding:12px 14px;font-size:13px;color:var(--tenue)}
 .item-auto b{font-family:var(--num);font-size:17px;color:var(--tinta);letter-spacing:.06em}
 .cajon-cuerpo.con-fab{padding-bottom:96px!important}
+/* foto del producto */
+.foto-campo{display:flex;gap:14px;align-items:center}
+.foto-prev{width:96px;height:96px;border-radius:var(--r-md);flex:0 0 auto;display:grid;place-items:center;
+  background:var(--fondo) center/cover no-repeat;border:1px dashed var(--linea);font-size:30px;font-weight:800;color:#AEB9CA}
+.foto-prev.con{border-style:solid}
+.foto-acc{display:flex;flex-direction:column;gap:8px;min-width:0;flex:1}
+.foto-botones{display:flex;gap:8px;flex-wrap:wrap}
+.foto-botones .btn{height:42px;padding:0 16px;font-size:14px}
+.foto-subir{position:relative;overflow:hidden;display:inline-flex;align-items:center;cursor:pointer}
+.foto-subir input{position:absolute;inset:0;opacity:0;cursor:pointer}
+/* crear una categoría, marca o proveedor sin salir del producto */
+.crear-en-linea{grid-column:1/-1;display:flex;gap:8px;align-items:center;background:var(--marca-suave);
+  border-radius:var(--r-sm);padding:10px;margin-top:-4px}
+.crear-en-linea .entrada{flex:1;min-width:0;height:42px}
+.crear-en-linea .btn{height:42px;padding:0 14px;font-size:13.5px;flex:0 0 auto}
+.crear-en-linea .error-cl{flex-basis:100%;font-size:12.5px;color:#9F1239;font-weight:600}
+.crear-en-linea{flex-wrap:wrap}
 @media (max-width:820px){
   .zona{padding:12px 14px 0}
   .cajon{width:100%}
@@ -302,7 +319,7 @@ const ENTIDADES = {
   productos: {
     nombre:'Productos', singular:'Producto', icono:'inventario',
     tabla:'productos', nivel:3, orden:'nombre',
-    columnas:'id,sku,nombre,categoria_id,marca_id,proveedor_id,impuesto_id,tipo,unidad_base,controla_lote,controla_vencimiento,stock_minimo,stock_maximo,unidades_empaque,dias_cobertura,imagen_url,se_vende,se_compra,activo',
+    columnas:'id,sku,nombre,categoria_id,marca_id,proveedor_id,impuesto_id,tipo,unidad_base,controla_lote,controla_vencimiento,stock_minimo,stock_maximo,unidades_empaque,dias_cobertura,imagen_url,color,tamano,se_vende,se_compra,activo',
     buscaEn:['nombre','sku'],
     numero: r => r.sku ? { e:'Item', v:r.sku } : null,
     fila: r => ({
@@ -319,11 +336,20 @@ const ENTIDADES = {
       { k:'nombre', e:'Nombre', tipo:'texto', req:true, ancho:true },
       { k:'sku', e:'Item', tipo:'item' },
       { k:'activo', e:'Activo', tipo:'si', def:true },
+      { k:'imagen_url', e:'Foto del producto', tipo:'foto', ancho:true },
+      { k:'tamano', e:'Tamaño', tipo:'texto', ayuda:'Lo que lo distingue: 3 L, 400 g, grande, #3…' },
+      { k:'color', e:'Color', tipo:'texto', ayuda:'Si viene en colores o sabores: rojo, uva, menta…' },
       { s:'Clasificación' },
-      { k:'categoria_id', e:'Categoría', tipo:'lista', de:'categorias' },
-      { k:'marca_id', e:'Marca', tipo:'lista', de:'marcas' },
-      { k:'proveedor_id', e:'Proveedor habitual', tipo:'lista', de:'proveedores' },
+      // crear: si no está en la lista, se agrega ahí mismo sin salir del producto
+      { k:'categoria_id', e:'Categoría', tipo:'lista', de:'categorias', crear:{ tabla:'categorias', nombre:'categoría', nueva:'Nueva categoría', de:'de la nueva categoría' } },
+      { k:'marca_id', e:'Marca', tipo:'lista', de:'marcas', crear:{ tabla:'marcas', nombre:'marca', nueva:'Nueva marca', de:'de la nueva marca' } },
+      { k:'proveedor_id', e:'Proveedor habitual', tipo:'lista', de:'proveedores', crear:{ tabla:'proveedores', nombre:'proveedor', nueva:'Nuevo proveedor', de:'del nuevo proveedor' } },
       { k:'impuesto_id', e:'Impuesto', tipo:'lista', de:'impuestos' },
+      { s:'Compra' },
+      { k:'unidades_empaque', e:'Cantidad por empaque', tipo:'decimal', vacioEsNulo:true,
+        ayuda:'Lo que trae el empaque en que se compra (la caja, el fardo). Al auditar ' +
+              'la bodega aparece el botón de «caja completa» y no hay que contar una por una.' },
+      { k:'se_compra', e:'Se compra a proveedor', tipo:'si', def:true },
       { s:'Venta' },
       { k:'precio', e:'Precio de venta', tipo:'decimal', req:true,
         ayuda:'Sin este precio el producto no aparece en la caja.' },
@@ -332,19 +358,11 @@ const ENTIDADES = {
         opciones:[['unidad','Unidad'],['peso','Peso'],['granel','Granel'],['servicio','Servicio']],
         def:'unidad' },
       { k:'se_vende', e:'Se vende en caja', tipo:'si', def:true },
-      { k:'se_compra', e:'Se compra a proveedor', tipo:'si', def:true },
-      { k:'imagen_url', e:'Foto del producto', tipo:'texto', ancho:true,
-        ayuda:'Dirección de una imagen en internet. Sale en la tarjeta de la caja ' +
-              'y ayuda a encontrar el producto de un vistazo. Sin foto se ve la ' +
-              'inicial del nombre.' },
       { s:'Inventario' },
       { k:'stock_minimo', e:'Stock mínimo', tipo:'decimal', def:0,
         ayuda:'Debajo de esto se marca en rojo.' },
       { k:'stock_maximo', e:'Stock máximo', tipo:'decimal', vacioEsNulo:true,
         ayuda:'Hasta cuánto conviene tener. Se ve en Consultar. Déjelo vacío si no lo usa.' },
-      { k:'unidades_empaque', e:'Unidades por caja', tipo:'decimal', vacioEsNulo:true,
-        ayuda:'Cuántas trae la caja cerrada del proveedor. Al auditar la bodega ' +
-              'aparece el botón de «caja completa» y no hay que contar una por una.' },
       { k:'dias_cobertura', e:'Días de cobertura', tipo:'entero', def:15,
         ayuda:'Para las sugerencias de compra.' },
       { k:'controla_vencimiento', e:'Controla vencimiento', tipo:'si', def:false,
@@ -820,6 +838,26 @@ function abrirForm(fila){
     // auxiliar vea cómo está, pero bloqueado: la base lo rechazaría igual.
     const bloqueado = c.nivel !== undefined && S.nivel < c.nivel;
 
+    if (c.tipo === 'foto'){
+      const url = fila?.[c.k] || '';
+      html += `<div class="ancho-total foto-campo">
+        <div class="foto-prev ${url ? 'con' : ''}" id="foto-prev"
+             ${url ? `style="background-image:url('${escapar(url)}')"` : ''}>${url ? '' : escapar((fila?.nombre || '·')[0])}</div>
+        <div class="foto-acc">
+          <label style="font-size:12px;font-weight:700;color:var(--tenue)">${escapar(c.e)}</label>
+          <div class="foto-botones">
+            <label class="btn secundario foto-subir">${url ? 'Cambiar foto' : 'Subir foto'}
+              <input type="file" accept="image/*" id="foto-archivo"></label>
+            <button type="button" class="btn secundario ${url ? '' : 'oculto'}" id="foto-quitar">Quitar</button>
+          </div>
+          <div class="ayuda" id="foto-ayuda">Sale en la tarjeta de la caja y ayuda a encontrarlo de un vistazo.
+            Desde el teléfono puede tomarla con la cámara.</div>
+        </div>
+        <input type="hidden" data-k="${c.k}" value="${escapar(url)}">
+      </div>`;
+      continue;
+    }
+
     if (c.tipo === 'item' || c.tipo === 'numero'){
       const v = fila?.[c.k];
       html += `<div class="ancho-total"><div class="item-auto">${v
@@ -953,11 +991,8 @@ function abrirForm(fila){
     html += `<div class="${cls}"><label>${escapar(c.e)}${c.req ? ' *' : ''}</label>`;
 
     if (c.tipo === 'lista'){
-      const ops = (S.aux[c.de] || []).filter(o => !(fila && o.id === fila.id));
-      html += `<select class="entrada" data-k="${c.k}">
-        <option value="">— ninguno —</option>
-        ${ops.map(o => `<option value="${o.id}" ${String(val(c.k)) === String(o.id) ? 'selected' : ''}
-          >${escapar(o.nombre)}</option>`).join('')}</select>`;
+      html += `<select class="entrada" data-k="${c.k}" ${c.crear ? `data-crear="${c.crear.tabla}"` : ''}>
+        ${opcionesLista(c, val(c.k), fila)}</select>`;
     } else if (c.tipo === 'opciones'){
       html += `<select class="entrada" data-k="${c.k}">
         ${c.opciones.map(([v,t]) => `<option value="${v}" ${String(val(c.k)) === v ? 'selected' : ''}
@@ -987,6 +1022,8 @@ function abrirForm(fila){
   $('#form-cuerpo').innerHTML = html;
   ver('#form-velo');
 
+  prepararCrearEnLinea();
+  prepararFoto();
   if (S.entidad === 'productos') prepararCodigos(fila);
   if (S.entidad === 'productos') prepararPresentaciones(fila);
   if (S.entidad === 'clientes') prepararDiasPago(fila);
@@ -994,6 +1031,112 @@ function abrirForm(fila){
 
   const primero = $('#form-cuerpo').querySelector('input[data-k],select[data-k]');
   if (primero && !fila) setTimeout(() => primero.focus(), 220);
+}
+
+/* Las opciones de una lista. Con «crear», al final va «+ Nueva …». */
+function opcionesLista(c, valor, fila){
+  const ops = (S.aux[c.de] || []).filter(o => !(fila && o.id === fila.id));
+  return `<option value="">— ninguno —</option>
+    ${ops.map(o => `<option value="${o.id}" ${String(valor) === String(o.id) ? 'selected' : ''}
+      >${escapar(o.nombre)}</option>`).join('')}
+    ${c.crear ? `<option value="__nuevo__">+ ${escapar(c.crear.nueva)}…</option>` : ''}`;
+}
+
+/* «+ Nueva categoría…»: se escribe el nombre ahí mismo, debajo de la lista,
+   se crea, y queda escogida. No se sale del producto ni se pierde lo escrito. */
+function prepararCrearEnLinea(){
+  $('#form-cuerpo').querySelectorAll('select[data-crear]').forEach(sel => {
+    const c = ENTIDADES[S.entidad].campos.find(x => x.k === sel.dataset.k);
+    sel.dataset.prev = sel.value;
+    sel.addEventListener('change', () => {
+      if (sel.value !== '__nuevo__'){ sel.dataset.prev = sel.value; return; }
+      const campo = sel.closest('.campo-g');
+      if (campo.nextElementSibling?.classList.contains('crear-en-linea')) return;
+      const z = document.createElement('div');
+      z.className = 'crear-en-linea';
+      z.innerHTML = `<input class="entrada" placeholder="Nombre ${escapar(c.crear.de)}" maxlength="80">
+        <button type="button" class="btn principal-b">Crear</button>
+        <button type="button" class="btn secundario">Cancelar</button>
+        <div class="error-cl oculto"></div>`;
+      // la ayuda del campo (si tiene) va antes del recuadro
+      const despues = campo.nextElementSibling?.classList.contains('ayuda') ? campo.nextElementSibling : campo;
+      despues.insertAdjacentElement('afterend', z);
+      const inp = z.querySelector('input'), [bSi, bNo] = z.querySelectorAll('button'), err = z.querySelector('.error-cl');
+      const cerrar = () => { z.remove(); };
+      bNo.onclick = () => { sel.value = sel.dataset.prev || ''; cerrar(); };
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter'){ e.preventDefault(); bSi.click(); }
+        if (e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); bNo.click(); }
+      });
+      bSi.onclick = async () => {
+        const nombre = inp.value.trim();
+        if (!nombre){ err.textContent = 'Escriba el nombre.'; err.classList.remove('oculto'); inp.focus(); return; }
+        bSi.disabled = true; bSi.innerHTML = '<span class="girando"></span>';
+        const { data, error } = await sb.from(c.crear.tabla)
+          .insert({ organizacion_id:S.ctx.organizacion.id, nombre }).select('id,nombre').single();
+        bSi.disabled = false; bSi.textContent = 'Crear';
+        if (error){ err.textContent = limpiarError(error); err.classList.remove('oculto'); return; }
+        await cargarAuxiliares();
+        // por si la lista llegó antes de que la base la viera: se agrega a mano
+        if (!(S.aux[c.de] || []).some(o => String(o.id) === String(data.id)))
+          (S.aux[c.de] = S.aux[c.de] || []).push({ id:data.id, nombre:data.nombre || nombre });
+        sel.innerHTML = opcionesLista(c, data.id, S.editando);
+        sel.value = data.id; sel.dataset.prev = data.id;
+        sel.dispatchEvent(new Event('change'));
+        cerrar();
+      };
+      setTimeout(() => inp.focus(), 30);
+    });
+  });
+}
+
+/* La foto: se achica en el teléfono (800 px, JPG) antes de subirla, así una
+   foto de 12 MB de la cámara pesa ~100 KB y la caja no se pone lenta. Va al
+   bucket «marca», en la carpeta del negocio. Queda guardada al Guardar. */
+async function achicarImagen(archivo, lado = 800){
+  const url = URL.createObjectURL(archivo);
+  try{
+    const img = await new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = url; });
+    const k = Math.min(1, lado / Math.max(img.naturalWidth, img.naturalHeight));
+    const cv = document.createElement('canvas');
+    cv.width = Math.round(img.naturalWidth * k); cv.height = Math.round(img.naturalHeight * k);
+    const cx = cv.getContext('2d');
+    cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);   // sin fondo negro en PNG transparente
+    cx.drawImage(img, 0, 0, cv.width, cv.height);
+    return await new Promise(ok => cv.toBlob(ok, 'image/jpeg', 0.85));
+  } finally { URL.revokeObjectURL(url); }
+}
+
+function prepararFoto(){
+  const arch = $('#foto-archivo'); if (!arch) return;
+  const oculto = $('#form-cuerpo').querySelector('input[type=hidden][data-k="imagen_url"]');
+  const prev = $('#foto-prev'), ayuda = $('#foto-ayuda');
+  const poner = url => {
+    oculto.value = url || '';
+    prev.classList.toggle('con', !!url);
+    prev.style.backgroundImage = url ? `url('${url}')` : '';
+    prev.textContent = url ? '' : (($('#form-cuerpo').querySelector('[data-k="nombre"]')?.value || '·')[0]);
+    ver('#foto-quitar', !!url);
+    arch.parentElement.firstChild.textContent = url ? 'Cambiar foto' : 'Subir foto';
+  };
+  arch.addEventListener('change', async () => {
+    const f = arch.files?.[0]; arch.value = '';
+    if (!f) return;
+    if (!/^image\//.test(f.type)){ ayuda.textContent = 'Ese archivo no es una imagen.'; return; }
+    ayuda.textContent = 'Subiendo la foto…';
+    try{
+      const blob = await achicarImagen(f);
+      const ruta = `${S.ctx.organizacion.id}/productos/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.jpg`;
+      const { error } = await sb.storage.from('marca').upload(ruta, blob,
+        { contentType:'image/jpeg', upsert:false, cacheControl:'31536000' });
+      if (error) throw error;
+      poner(`${SUPABASE_URL}/storage/v1/object/public/marca/${ruta}`);
+      ayuda.textContent = 'Lista. Se guarda con el producto.';
+    }catch(e){
+      ayuda.textContent = 'No se pudo subir: ' + limpiarError(e);
+    }
+  });
+  $('#foto-quitar')?.addEventListener('click', () => { poner(''); ayuda.textContent = 'Sin foto se ve la inicial del nombre.'; });
 }
 
 async function cargarPrecio(productoId){
@@ -1292,7 +1435,7 @@ $('#form-guardar').addEventListener('click', async () => {
     else if (vacio)                 v = null;
     else if (c.tipo === 'decimal')  v = num(el.value);
     else if (c.tipo === 'entero')   v = Math.round(num(el.value));
-    else if (c.tipo === 'lista')    v = el.value || null;
+    else if (c.tipo === 'lista')    v = el.value && el.value !== '__nuevo__' ? el.value : null;
     else if (c.tipo === 'clave')    v = el.value;   // la contraseña va tal cual
     else                            v = el.value.trim() || null;
 

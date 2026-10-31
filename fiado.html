@@ -184,7 +184,7 @@
 
     <div class="zona">
       <div class="tarjetas">
-        <div class="tj"><small>Le deben</small><b id="r-total">—</b></div>
+        <div class="tj destacada"><small>Le deben</small><b id="r-total">—</b></div>
         <div class="tj"><small>Clientes</small><b id="r-clientes">—</b></div>
         <div class="tj" id="tj-tope"><small>En su tope</small><b id="r-tope">—</b></div>
         <div class="tj" id="tj-viejo"><small>Más de 30 días</small><b id="r-viejo">—</b></div>
@@ -445,14 +445,17 @@ function visibles(){
     (f.cliente || '').toLowerCase().includes(q) ||
     (f.telefono || '').toLowerCase().includes(q));
 
-  if (S.filtro === 'viejo') l = l.filter(f => (f.dias ?? 0) > 30);
-  if (S.filtro === 'tope')  l = l.filter(f => f.tope_alcanzado);
-  if (S.filtro === 'hoy')   l = l.filter(f => f.le_toca_hoy);
-  if (S.filtro === 'atrasado') l = l.filter(f => f.atrasado);
+  // Se prenden varios a la vez y se cumplen todos: «Atrasados» + «En su
+  // tope» son los atrasados que además ya no pueden fiar.
+  const f = S.filtros || new Set();
+  if (f.has('viejo'))    l = l.filter(x => (x.dias ?? 0) > 30);
+  if (f.has('tope'))     l = l.filter(x => x.tope_alcanzado);
+  if (f.has('hoy'))      l = l.filter(x => x.le_toca_hoy);
+  if (f.has('atrasado')) l = l.filter(x => x.atrasado);
 
   l = [...l];
-  if (S.filtro === 'monto')      l.sort((a,b) => Number(b.debe) - Number(a.debe));
-  else if (S.filtro === 'viejo') l.sort((a,b) => (b.dias ?? 0) - (a.dias ?? 0));
+  if (f.has('monto'))      l.sort((a,b) => Number(b.debe) - Number(a.debe));
+  else if (f.has('viejo')) l.sort((a,b) => (b.dias ?? 0) - (a.dias ?? 0));
   return l;
 }
 
@@ -503,8 +506,13 @@ function pintar(){
 $('#buscar').addEventListener('input', e => { S.busqueda = e.target.value; pintar(); });
 $('#filtros').addEventListener('click', e => {
   const b = e.target.closest('.fl'); if (!b) return;
-  S.filtro = b.dataset.f;
-  document.querySelectorAll('.fl').forEach(x => x.classList.toggle('activo', x === b));
+  if (!S.filtros) S.filtros = new Set();
+  if (b.dataset.f === 'todos') S.filtros.clear();
+  else if (S.filtros.has(b.dataset.f)) S.filtros.delete(b.dataset.f);
+  else S.filtros.add(b.dataset.f);
+  S.filtro = S.filtros.size ? [...S.filtros].pop() : 'todos';
+  document.querySelectorAll('#filtros .fl').forEach(x =>
+    x.classList.toggle('activo', x.dataset.f === 'todos' ? !S.filtros.size : S.filtros.has(x.dataset.f)));
   pintar();
 });
 $('#lista').addEventListener('click', e => {

@@ -42,11 +42,14 @@ async function montar(pagina, estado, hash = ''){
     },
     from: t => tabla(t)
   };
+  const mu = await import(BASE + 'multi.js');
+  w.montarMulti = mu.montarMulti; w.valores = mu.valores; w.fijar = mu.fijar;
   const menu = await import(BASE + 'menu.js');
   w.montarMenu = menu.montarMenu; w.escapar = menu.escapar; w.nombreCorto = nombreCorto;
   const prep = cuerpo
     .replace(/^import \{ createClient \} from 'https:\/\/esm\.sh\/@supabase\/supabase-js@2';$/m, '')
     .replace(/^import \{ montarMenu, escapar \} from '\.\/menu\.js';$/m, '')
+    .replace(/^import \{ montarMulti, valores \} from '\.\/multi\.js';$/m, '')
     .replace(/^import \{ nombreCorto \} from '\.\/promos\.js';$/m, '')
     .replace(/createClient\(SUPABASE_URL, SUPABASE_KEY, \{[\s\S]*?\}\)/, '__sb');
   await w.eval(`(async () => { ${prep} })()`);
@@ -147,6 +150,15 @@ console.log('\n=== VENCIMIENTOS ===');
 
   d.querySelector('#resumen [data-f="semana"]').click();
   chk('tocar "esta semana" filtra', d.querySelectorAll('.lt').length === 1);
+  const otro = [...d.querySelectorAll('#resumen [data-f]')].find(b => b.dataset.f !== 'semana' && Number(b.querySelector('b').textContent) > 0);
+  if (otro){
+    otro.click();
+    chk('y tocar otro grupo suma los dos', d.querySelectorAll('.lt').length === 1 + Number(otro.querySelector('b').textContent)
+        && d.querySelectorAll('#resumen .res.si').length === 2);
+  }
+  d.querySelector('#resumen [data-f="semana"]').click();
+  if (otro) otro.click();
+  chk('apagando los dos vuelve a enseñar todo', !d.querySelectorAll('#resumen .res.si').length);
 }
 
 console.log('\n=== IMPORTAR ===');
@@ -192,6 +204,10 @@ console.log('\n=== IMPORTAR ===');
   await esperar(120);
   chk('entra a cambiar precios por el enlace', /Cambiar precios en lote/.test(d.body.textContent));
   d.querySelector('#p-valor').value = '10';
+  d.querySelector('#b-ver').click();
+  await esperar(60);
+  chk('sin escoger categoría no sigue', /Escoja al menos una/.test(d.querySelector('#p-error').textContent));
+  [...d.querySelector('#p-cual').options].forEach(o => { o.selected = o.value === 'cat1'; });
   d.querySelector('#b-ver').click();
   await esperar(150);
   const v = estado.llamadas.find(l => l.fn === 'fn_cambiar_precios');

@@ -44,7 +44,7 @@
 
 .lista{display:flex;flex-direction:column;gap:10px}
 .lt{display:grid;grid-template-columns:6px minmax(0,1fr) auto;gap:0 14px;background:var(--panel);
-  border:1px solid var(--linea);border-radius:14px;overflow:hidden}
+  border:1px solid var(--linea);border-radius:var(--r-md);overflow:hidden}
 .lt .barra-c{background:var(--linea)}
 .lt.vencido .barra-c{background:var(--mal)}
 .lt.semana .barra-c{background:#E4A11B}
@@ -209,16 +209,20 @@ function pintar(){
   const R = [
     ['vencido', 'Vencido', venc, 'mal'], ['semana', 'Esta semana', sem, 'ojo'], ['mes', 'Este mes', mes, '']];
   $('#resumen').innerHTML = R.map(([k, t, l, c]) => `
-    <button class="res ${c} ${S.filtro === k ? 'si' : ''}" data-f="${k}" aria-pressed="${S.filtro === k}">
+    <button class="res ${c} ${S.grupos?.has(k) ? 'si' : ''}" data-f="${k}" aria-pressed="${!!S.grupos?.has(k)}">
       <small>${t}</small><b>${l.length}</b>
       <span>${l.length ? cant(l.reduce((s, x) => s + Number(x.cantidad), 0)) + ' u.' : '—'}${ve && l.length ? ' · ' + money(suma(l)) : ''}</span>
     </button>`).join('');
   $$('#resumen [data-f]').forEach(b => b.onclick = () => {
-    S.filtro = S.filtro === b.dataset.f ? 'todo' : b.dataset.f; pintar();
+    // Se prenden varios: «Vencidos» + «Esta semana» enseña los dos grupos
+    if (!S.grupos) S.grupos = new Set();
+    if (S.grupos.has(b.dataset.f)) S.grupos.delete(b.dataset.f); else S.grupos.add(b.dataset.f);
+    S.filtro = S.grupos.size ? [...S.grupos].pop() : 'todo';
+    pintar();
   });
 
   const q = S.busqueda.trim().toLowerCase();
-  const vis = lotes.filter(x => (S.filtro === 'todo' || grupo(x.dias) === S.filtro) &&
+  const vis = lotes.filter(x => (!S.grupos?.size || S.grupos.has(grupo(x.dias))) &&
     (!q || [x.nombre, x.lote, x.proveedor, x.sku, x.categoria].some(v => String(v || '').toLowerCase().includes(q))));
   if (!vis.length){
     $('#contenido').innerHTML = `<div class="vacio"><div>✓</div><p>${lotes.length

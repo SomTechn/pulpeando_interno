@@ -93,6 +93,8 @@ async function montar(estado){
     }
   };
 
+  const mu = await import(BASE + 'multi.js');
+  w.montarMulti = mu.montarMulti; w.valores = mu.valores; w.fijar = mu.fijar;
   const menu = await import(BASE + 'menu.js');
   w.montarMenu = menu.montarMenu; w.escapar = menu.escapar;
   w.escanear = async () => estado.codigo || null;
@@ -102,6 +104,7 @@ async function montar(estado){
     .replace(/^import \{ createClient \} from 'https:\/\/esm\.sh\/@supabase\/supabase-js@2';$/m, '')
     .replace(/^import \{ montarMenu, escapar \} from '\.\/menu\.js';$/m, '')
     .replace(/^import \{ escanear, hayCamara \} from '\.\/escaner\.js';$/m, '')
+    .replace(/^import \{ montarMulti, valores \} from '\.\/multi\.js';$/m, '')
     .replace(/createClient\(SUPABASE_URL, SUPABASE_KEY, \{[\s\S]*?\}\)/, '__sb');
 
   w.__caja = {};
@@ -183,6 +186,12 @@ console.log('\n=== EMPEZAR UN CONTEO ===');
   chk('y el de proveedor sigue escondido',
       d.querySelector('#caja-pro').classList.contains('oculto'));
 
+  chk('la categoría se escoge con casillas (varias)', d.querySelector('#al-cat').nextElementSibling?.classList.contains('multi'));
+  d.querySelector('#al-si').click();
+  await esperar(60);
+  chk('sin escoger ninguna no arranca', /Escoja al menos una categoría/.test(d.querySelector('#al-error').textContent)
+      && !estado.llamadas.some(l => l.fn === 'fn_abrir_conteo'));
+  [...d.querySelector('#al-cat').options].forEach(o => { o.selected = o.value === 'cat1'; });
   d.querySelector('#al-notas').value = 'Conteo del lunes';
   d.querySelector('#al-si').click();
   await esperar(140);
@@ -320,7 +329,13 @@ console.log('\n=== FILTROS Y ESCÁNER ===');
   d.querySelector('[data-f="diferencias"]').click();
   await esperar(90);
   u = [...estado.llamadas].reverse().find(l => l.fn === 'fn_conteo_lineas');
-  chk('y el de diferencias también', u?.args?.p_solo_diferencias === true);
+  chk('los dos juntos se suman: falta contar O con diferencia (se pide todo)',
+      u?.args?.p_solo_diferencias === false && u?.args?.p_solo_pendientes === false &&
+      d.querySelectorAll('#filtros .fl.activo').length === 2);
+  d.querySelector('[data-f="pendientes"]').click();
+  await esperar(90);
+  u = [...estado.llamadas].reverse().find(l => l.fn === 'fn_conteo_lineas');
+  chk('y el de diferencias solo va al servidor', u?.args?.p_solo_diferencias === true);
 
   d.querySelector('#btn-camara').click();
   await esperar(140);

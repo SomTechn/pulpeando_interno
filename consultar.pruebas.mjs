@@ -158,13 +158,14 @@ async function montar(estado){
   const et = await import(BASE + 'etiqueta.js');
   estado.impresas = [];
   w.htmlEtiqueta = et.htmlEtiqueta; w.TAMANOS = et.TAMANOS;
+  w.elegirCodigo = et.elegirCodigo; w.barrasSVG = et.barrasSVG;
   w.imprimirEtiquetas = async (datos, op) => { estado.impresas.push({ datos, op }); };
 
   const prep = cuerpo
     .replace(/^import \{ createClient \} from 'https:\/\/esm\.sh\/@supabase\/supabase-js@2';$/m, '')
     .replace(/^import \{ montarMenu, escapar \} from '\.\/menu\.js';$/m, '')
     .replace(/^import \{ escanear, hayCamara \} from '\.\/escaner\.js';$/m, '')
-    .replace(/^import \{ imprimirEtiquetas, htmlEtiqueta, TAMANOS \} from '\.\/etiqueta\.js';$/m, '')
+    .replace(/^import \{ imprimirEtiquetas, htmlEtiqueta, TAMANOS, elegirCodigo, barrasSVG \} from '\.\/etiqueta\.js';$/m, '')
     .replace(/createClient\(SUPABASE_URL, SUPABASE_KEY, \{[\s\S]*?\}\)/, '__sb');
 
   w.__p = {};
@@ -1274,6 +1275,41 @@ console.log('\n=== ETIQUETA Y OFERTA ===');
   await esperar();
   chk('el auxiliar no ve cómo poner ofertas', !d.querySelector('#of-poner'));
   chk('pero sí imprime', !!d.querySelector('#et-si'));
+}
+
+console.log('\n=== EL CÓDIGO DE BARRAS EN PANTALLA ===');
+{
+  const estado = base();
+  const { d, p } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  const caja = d.querySelector('#barras-caja');
+  chk('la ficha trae el código de barras dibujado', !!caja?.querySelector('svg rect'));
+  chk('con el código de fábrica debajo', /7421001234567/.test(caja.textContent));
+  chk('y dice qué tipo es', /EAN-13|Code 128/.test(d.querySelector('.barras-tipo').textContent));
+  caja.click();
+  chk('tocarlo lo agranda', caja.classList.contains('grande'));
+}
+{
+  const estado = base();
+  estado.rpc.fn_consultar_producto = { data:{ ...PERFIL(true), codigos:[] }, error:null };
+  const { d, p } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  chk('sin código de fábrica enseña el item en Code 128', /Code 128/.test(d.querySelector('.barras-tipo')?.textContent || '')
+      && /LEC1L/.test(d.querySelector('#barras-caja').textContent));
+}
+{
+  const estado = base();
+  estado.rpc.fn_consultar_producto = { data:{ ...PERFIL(true), codigos:['7421001234567', 'LEC1L-VIEJO'] }, error:null };
+  const { d, p } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  const otros = d.querySelectorAll('.barras-otros [data-cod]');
+  chk('con varios códigos se escoge cuál enseñar', otros.length === 2);
+  otros[1].click();
+  await esperar(30);
+  chk('y cambia el dibujo', /LEC1L-VIEJO/.test(d.querySelector('#barras-caja').textContent));
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);

@@ -90,6 +90,8 @@ async function montar(estado){
     }
   };
 
+  const mu = await import(BASE + 'multi.js');
+  w.montarMulti = mu.montarMulti; w.valores = mu.valores; w.fijar = mu.fijar;
   const menu = await import(BASE + 'menu.js');
   w.montarMenu = menu.montarMenu; w.escapar = menu.escapar;
 
@@ -97,6 +99,7 @@ async function montar(estado){
     .replace(/^import \{ createClient \} from 'https:\/\/esm\.sh\/@supabase\/supabase-js@2';$/m, '')
     .replace(/^import \{ montarMenu, escapar \} from '\.\/menu\.js';$/m, '')
     .replace(/^import \{ escanear, hayCamara \} from '\.\/escaner\.js';$/m, '')
+    .replace(/^import \{ montarMulti, valores \} from '\.\/multi\.js';$/m, '')
     .replace(/createClient\(SUPABASE_URL, SUPABASE_KEY, \{[\s\S]*?\}\)/, '__sb');
 
   w.__m = {};
@@ -427,6 +430,21 @@ const irA = async (d, v) => {
   t.checked = true; t.dispatchEvent(new window.Event('change'));
   await esperar();
   chk('«ver también lo que no hace falta» viaja', ultima(estado, 'fn_sugerencias_compra').args.p_todos === true);
+}
+{
+  const estado = conSugerencias();
+  const { d } = await montar(estado);
+  await irA(d, 'sugerencias');
+  const sel = d.querySelector('#sg-prov');
+  chk('el proveedor es un selector de varios', sel.nextElementSibling?.classList.contains('multi'));
+  if (![...sel.options].some(o => o.value === 'pvX')) sel.insertAdjacentHTML('beforeend', '<option value="pvX">Otro proveedor</option>');
+  await esperar(20);
+  [...sel.options].forEach(o => { o.selected = ['pv1', 'pvX'].includes(o.value); });
+  sel.dispatchEvent(new window.Event('change'));
+  await esperar();
+  chk('con varios pide todos y se queda con esos (sin «sin proveedor»)',
+      ultima(estado, 'fn_sugerencias_compra').args.p_proveedor_id === null
+      && d.querySelectorAll('.sg-prov').length === 1 && /La Ceiba/.test(d.querySelector('.sg-prov').textContent));
 }
 {
   const estado = conSugerencias('supervisor', 2);

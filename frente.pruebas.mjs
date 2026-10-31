@@ -671,8 +671,13 @@ console.log('\n=== CATÁLOGOS: productos, empaque y máximo ===');
 
   const foto = d.querySelector('[data-k="imagen_url"]');
   chk('hay campo para la foto del producto', !!foto);
-  chk('y se explica dónde se ve',
-      /tarjeta de la caja/i.test(foto?.closest('.campo-g')?.nextElementSibling?.textContent || ''));
+  chk('y se explica dónde se ve', /tarjeta de la caja/i.test(d.querySelector('#foto-ayuda')?.textContent || ''));
+  chk('la foto se sube desde el aparato (cámara o archivos)', d.querySelector('#foto-archivo')?.accept === 'image/*');
+  chk('hay color y tamaño', !!d.querySelector('[data-k="color"]') && !!d.querySelector('[data-k="tamano"]'));
+  const emp = d.querySelector('[data-k="unidades_empaque"]');
+  chk('«Cantidad por empaque» con su nombre claro', /Cantidad por empaque/.test(emp?.closest('.campo-g')?.textContent || ''));
+  d.querySelector('[data-k="color"]').value = 'Blanco';
+  d.querySelector('[data-k="tamano"]').value = '5 lb';
 
   d.querySelector('[data-k="nombre"]').value = 'Arroz de primera 5 lb';
   d.querySelector('[data-k="precio"]').value = '98';
@@ -683,6 +688,39 @@ console.log('\n=== CATÁLOGOS: productos, empaque y máximo ===');
   const esc2 = estado.escrituras.find(e => e.tabla === 'productos');
   chk('la dirección de la foto se guarda',
       esc2 && esc2.datos.imagen_url === 'https://ejemplo.hn/arroz.jpg');
+  chk('y el color y el tamaño', esc2 && esc2.datos.color === 'Blanco' && esc2.datos.tamano === '5 lb');
+}
+
+console.log('\n=== CATÁLOGOS: crear la categoría desde el producto ===');
+{
+  const estado = {
+    enLinea:true, alertas:[], llamadas:[],
+    tablas:{ productos:[], categorias:[{ id:'c1', nombre:'Abarrotes' }], marcas:[], proveedores:[], impuestos:[],
+             precios:[], producto_codigos:[] },
+    rpc:{ fn_pos_contexto:{ data:{ ...CTX_BASE, usuario:{ ...CTX_BASE.usuario, rol:'gerente', nivel:3 } }, error:null } }
+  };
+  const { d, caja } = await montar('catalogo.html', estado);
+  caja.S.entidad = 'productos';
+  d.querySelector('#btn-nuevo').click();
+  await new Promise(r => setTimeout(r, 40));
+  const sel = d.querySelector('[data-k="categoria_id"]');
+  chk('la lista ofrece «+ Nueva categoría…»', [...sel.options].some(o => /\+ Nueva categoría/.test(o.textContent)));
+  chk('también marca y proveedor', /\+ Nueva marca/.test(d.querySelector('[data-k="marca_id"]').textContent)
+      && /\+ Nuevo proveedor/.test(d.querySelector('[data-k="proveedor_id"]').textContent));
+  sel.value = '__nuevo__'; sel.dispatchEvent(new window.Event('change'));
+  const caja2 = d.querySelector('.crear-en-linea');
+  chk('se abre ahí mismo, debajo (no otra pantalla)', !!caja2 && !d.querySelector('#form-velo').classList.contains('oculto'));
+  caja2.querySelector('input').value = 'Bebidas';
+  caja2.querySelector('.btn.principal-b').click();
+  await new Promise(r => setTimeout(r, 80));
+  const ins = estado.escrituras.find(e => e.tabla === 'categorias' && e.op === 'insert');
+  chk('crea la categoría con su nombre', ins && ins.datos.nombre === 'Bebidas');
+  chk('y queda escogida en el producto', sel.value === 'nuevo-1' && /Bebidas/.test(sel.selectedOptions[0].textContent));
+  chk('el recuadro se cierra', !d.querySelector('.crear-en-linea'));
+  // cancelar devuelve lo que estaba
+  sel.value = '__nuevo__'; sel.dispatchEvent(new window.Event('change'));
+  d.querySelector('.crear-en-linea .btn.secundario').click();
+  chk('Cancelar deja la que estaba', sel.value === 'nuevo-1' && !d.querySelector('.crear-en-linea'));
 }
 
 console.log('\n=== CATÁLOGOS: departamentos, visitas y presentaciones ===');

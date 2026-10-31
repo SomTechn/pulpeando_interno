@@ -186,6 +186,7 @@ if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin co
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { montarMenu, escapar } from './menu.js';
 import { escanear, hayCamara } from './escaner.js';
+import { montarMulti, valores } from './multi.js';
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth:{ persistSession:true, autoRefreshToken:true }
@@ -361,19 +362,19 @@ function preguntarAlcance(){
       <label for="al-alcance">¿Qué va a contar?</label>
       <select class="entrada" id="al-alcance">
         <option value="general">Todo el inventario</option>
-        <option value="categoria">Una categoría</option>
-        <option value="proveedor">Lo de un proveedor</option>
+        <option value="categoria">Categorías</option>
+        <option value="proveedor">Lo de uno o varios proveedores</option>
       </select>
     </div>
     <div class="campo-g oculto" id="caja-cat">
-      <label for="al-cat">Categoría</label>
-      <select class="entrada" id="al-cat">
+      <label for="al-cat">Categorías</label>
+      <select class="entrada" id="al-cat" multiple>
         ${S.categorias.map(c => `<option value="${escapar(c.id)}">${escapar(c.nombre)}</option>`).join('')}
       </select>
     </div>
     <div class="campo-g oculto" id="caja-pro">
-      <label for="al-pro">Proveedor</label>
-      <select class="entrada" id="al-pro">
+      <label for="al-pro">Proveedores</label>
+      <select class="entrada" id="al-pro" multiple>
         ${S.proveedores.map(p => `<option value="${escapar(p.id)}">${escapar(p.nombre)}</option>`).join('')}
       </select>
     </div>
@@ -395,6 +396,9 @@ function preguntarAlcance(){
   };
   $('#al-alcance').onchange = refrescar;
   refrescar();
+  // Se cuentan varias a la vez: una sola hoja con todo
+  montarMulti($('#al-cat'), { todos:'Escoja las categorías', unidad:'categorías' });
+  montarMulti($('#al-pro'), { todos:'Escoja los proveedores', unidad:'proveedores' });
 
   $('#al-no').onclick = () => ver('#velo', false);
   $('#al-si').onclick = async () => {
@@ -402,23 +406,30 @@ function preguntarAlcance(){
     const alcance = $('#al-alcance').value;
     err.classList.add('oculto');
 
-    if (alcance === 'categoria' && !$('#al-cat').value){
-      err.textContent = 'Primero cree una categoría en Catálogos.';
+    const cats = valores($('#al-cat')), provs = valores($('#al-pro'));
+    if (alcance === 'categoria' && !cats.length){
+      err.textContent = S.categorias.length ? 'Escoja al menos una categoría.' : 'Primero cree una categoría en Catálogos.';
       err.classList.remove('oculto'); return;
     }
-    if (alcance === 'proveedor' && !$('#al-pro').value){
-      err.textContent = 'Primero cree un proveedor en Catálogos.';
+    if (alcance === 'proveedor' && !provs.length){
+      err.textContent = S.proveedores.length ? 'Escoja al menos un proveedor.' : 'Primero cree un proveedor en Catálogos.';
       err.classList.remove('oculto'); return;
     }
 
     b.disabled = true; b.innerHTML = '<span class="girando"></span>';
-    const { data, error } = await sb.rpc('fn_abrir_conteo', {
-      p_sucursal_id:S.sucursal,
-      p_alcance:alcance,
-      p_categoria_id:alcance === 'categoria' ? $('#al-cat').value : null,
-      p_proveedor_id:alcance === 'proveedor' ? $('#al-pro').value : null,
-      p_notas:$('#al-notas').value.trim() || null
-    });
+    const ids = alcance === 'categoria' ? cats : provs;
+    // Una sola: el conteo de siempre. Varias: una hoja con todas (migración 45).
+    const { data, error } = alcance !== 'general' && ids.length > 1
+      ? await sb.rpc('fn_abrir_conteo_varios', {
+          p_sucursal_id:S.sucursal, p_alcance:alcance, p_ids:ids,
+          p_notas:$('#al-notas').value.trim() || null })
+      : await sb.rpc('fn_abrir_conteo', {
+          p_sucursal_id:S.sucursal,
+          p_alcance:alcance,
+          p_categoria_id:alcance === 'categoria' ? cats[0] : null,
+          p_proveedor_id:alcance === 'proveedor' ? provs[0] : null,
+          p_notas:$('#al-notas').value.trim() || null
+        });
     b.disabled = false; b.textContent = 'Empezar';
 
     if (error){ err.textContent = limpiarError(error); err.classList.remove('oculto'); return; }
@@ -440,7 +451,7 @@ async function abrirConteo(id){
   S.resumen = res.data || {};
   S.lineas = lin.data || [];
   S.conteo = id;
-  S.busqueda = ''; S.filtro = 'todas';
+  S.busqueda = ''; S.filtro = 'todas'; S.filtros = new Set();
   $('#h-titulo').textContent = 'Conteo ' + (S.resumen.numero || '');
   pintarConteo();
 }
@@ -450,12 +461,19 @@ async function recargarLineas(){
     sb.rpc('fn_conteo_resumen', { p_conteo_id:S.conteo }),
     sb.rpc('fn_conteo_lineas', { p_conteo_id:S.conteo,
       p_buscar:S.busqueda || null,
-      p_solo_pendientes:S.filtro === 'pendientes',
-      p_solo_diferencias:S.filtro === 'diferencias',
+      // Los dos filtros juntos son «falta contar» O «con diferencia»: el
+      // servidor los cruza (Y), así que entonces se pide todo y se filtra aquí.
+      p_solo_pendientes:S.filtros?.size === 1 && S.filtros.has('pendientes'),
+      p_solo_diferencias:S.filtros?.size === 1 && S.filtros.has('diferencias'),
       p_limite:500 })
   ]);
   if (!res.error) S.resumen = res.data || {};
-  if (!lin.error) S.lineas = lin.data || [];
+  if (!lin.error){
+    S.lineas = lin.data || [];
+    if (S.filtros?.size === 2)
+      S.lineas = S.lineas.filter(l => l.contada === null || l.contada === undefined
+                                   || (l.diferencia !== null && Number(l.diferencia) !== 0));
+  }
   pintarConteo();
 }
 
@@ -465,7 +483,7 @@ function pintarConteo(){
   const veDif = r.con_diferencia !== null && r.con_diferencia !== undefined;
 
   const tarjetas = `
-    <div class="tj"><small>Contados</small><b>${r.contadas || 0} de ${r.lineas || 0}</b></div>
+    <div class="tj destacada"><small>Contados</small><b>${r.contadas || 0} de ${r.lineas || 0}</b></div>
     <div class="tj ${(r.pendientes || 0) > 0 ? 'ojo' : 'bien'}">
       <small>Faltan por contar</small><b>${r.pendientes || 0}</b></div>
     ${veDif ? (() => {
@@ -560,9 +578,9 @@ function pintarConteo(){
       ${camara}
     </div>
     <div class="filtros" id="filtros">
-      <button class="fl ${S.filtro === 'todas' ? 'activo' : ''}" data-f="todas">Todos</button>
-      <button class="fl ${S.filtro === 'pendientes' ? 'activo' : ''}" data-f="pendientes">Falta contar</button>
-      ${veDif ? `<button class="fl ${S.filtro === 'diferencias' ? 'activo' : ''}"
+      <button class="fl ${!S.filtros?.size ? 'activo' : ''}" data-f="todas">Todos</button>
+      <button class="fl ${S.filtros?.has('pendientes') ? 'activo' : ''}" data-f="pendientes">Falta contar</button>
+      ${veDif ? `<button class="fl ${S.filtros?.has('diferencias') ? 'activo' : ''}"
          data-f="diferencias">Con diferencia</button>` : ''}
     </div>
     <div class="conteo-txt">${S.lineas.length} ${S.lineas.length === 1 ? 'producto' : 'productos'}</div>
@@ -576,7 +594,12 @@ function pintarConteo(){
   });
   $('#filtros').addEventListener('click', e => {
     const f = e.target.closest('.fl'); if (!f) return;
-    S.filtro = f.dataset.f; recargarLineas();
+    if (!S.filtros) S.filtros = new Set();
+    if (f.dataset.f === 'todas') S.filtros.clear();
+    else if (S.filtros.has(f.dataset.f)) S.filtros.delete(f.dataset.f);
+    else S.filtros.add(f.dataset.f);
+    S.filtro = S.filtros.size ? [...S.filtros].pop() : 'todas';
+    recargarLineas();
   });
   $('#lista').querySelectorAll('input[data-prod]').forEach(x => {
     x.addEventListener('keydown', ev => { if (ev.key === 'Enter') x.blur(); });
