@@ -157,6 +157,13 @@ function precioPartido(v){
   return `<span class="mon">L</span><span class="ent">${ent}</span><span class="dec">.${dec}</span>`;
 }
 
+/* Markdown: cuánto se rebaja, en porcentaje del precio de antes. */
+function ahorro(d){
+  const antes = Number(d.precio_regular) || 0, ahora = Number(d.precio) || 0;
+  if (!(antes > 0) || ahora >= antes) return 0;
+  return Math.round((antes - ahora) / antes * 100);
+}
+
 /* ---------- una etiqueta ---------- */
 export function etiquetaHTML(d){
   const cod = elegirCodigo(d.codigo, d.sku);
@@ -172,7 +179,7 @@ export function etiquetaHTML(d){
     <div class="et-precio">
       ${of ? '<div class="et-tag">OFERTA</div>' : ''}
       <div class="et-monto">${precioPartido(d.precio)}</div>
-      ${of ? `<div class="et-antes">Antes L ${n2(d.precio_regular)}</div>` : ''}
+      ${of ? `<div class="et-antes">Antes L ${n2(d.precio_regular)}${ahorro(d) ? ` · −${ahorro(d)}%` : ''}</div>` : ''}
     </div>
   </div>
   ${of ? `<div class="et-pie">Válido hasta el ${fechaCorta(of.hasta)}</div>` : ''}

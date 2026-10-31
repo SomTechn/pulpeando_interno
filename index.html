@@ -8,14 +8,24 @@
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" href="icono-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icono-192.png">
-<title>Panel · Pulpeando</title>
+<title>Inicio · Pulpeando</title>
 <script src="config.js"></script>
+<script src="tema.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="ui.css">
 <style>
 /* ---------- propio del panel ---------- */
+.zona{flex:1;overflow-y:auto;min-height:0;padding:26px 28px 44px}
+.zona > *{max-width:1080px;margin-left:auto;margin-right:auto}
+@media (max-width:640px){
+  .zona{padding:18px 16px 32px}
+  .modulos{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .mod{padding:12px;gap:10px}
+  .mod .ico{width:34px;height:34px}
+  .mod b{font-size:14px}
+}
 .saludo{padding:4px 0 2px}
 .saludo h1{font-size:clamp(22px,3.4vw,30px);font-weight:800;letter-spacing:-.02em;margin:0}
 .saludo p{color:var(--tenue);font-size:14.5px;margin:6px 0 0}
@@ -23,17 +33,19 @@
 /* La caja va aparte y primero: es a donde entra la cajera todo el día. */
 .a-caja{
   display:flex;align-items:center;gap:16px;width:100%;text-align:left;
-  background:var(--tinta);color:#fff;border-radius:var(--r-md);
-  padding:20px 22px;margin:20px 0 26px;
+  background:var(--marca);color:var(--marca-sobre);border-radius:var(--r-md);
+  padding:20px 22px;margin:20px auto 26px;box-shadow:0 10px 26px -14px var(--marca-sombra);
+  transition:background .15s;
 }
+.a-caja:hover{background:var(--marca-oscuro)}
 .a-caja .ico{
   flex:0 0 auto;width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.12);
   display:grid;place-items:center;
 }
 .a-caja-txt{flex:1;min-width:0}
 .a-caja-txt b{display:block;font-size:18px;font-weight:800;letter-spacing:-.015em}
-.a-caja-txt small{display:block;font-size:13px;color:#9FB2CC;margin-top:3px;line-height:1.4}
-.a-caja .flecha{flex:0 0 auto;font-size:26px;line-height:1;color:#7E93B2}
+.a-caja-txt small{display:block;font-size:13px;opacity:.82;margin-top:3px;line-height:1.4}
+.a-caja .flecha{flex:0 0 auto;font-size:26px;line-height:1;opacity:.7}
 
 .titulin{font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
   color:var(--tenue);margin-bottom:12px}
@@ -43,11 +55,11 @@
   border:1px solid var(--linea);border-radius:var(--r-md);padding:15px 16px;
   text-align:left;min-height:66px;transition:border-color .15s,box-shadow .15s,transform .1s;
 }
-.mod:hover{border-color:#C9D6E8;box-shadow:var(--sombra)}
+.mod:hover{border-color:var(--marca-borde);box-shadow:var(--sombra)}
 .mod:active{transform:scale(.985)}
-.mod .ico{flex:0 0 auto;width:38px;height:38px;border-radius:11px;background:var(--fondo);
-  display:grid;place-items:center;color:var(--azul)}
-.mod b{font-size:14.5px;font-weight:700;min-width:0;overflow-wrap:anywhere}
+.mod .ico{flex:0 0 auto;width:38px;height:38px;border-radius:11px;background:var(--marca-suave);
+  display:grid;place-items:center;color:var(--marca-tinta)}
+.mod b{font-size:14.5px;font-weight:700;min-width:0;overflow-wrap:break-word;hyphens:auto}
 </style>
 </head>
 <body>
@@ -84,7 +96,7 @@
              stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
       <div class="barra-titulo">
-        <b>Panel</b>
+        <b>Inicio</b>
         <small id="h-sucursal">—</small>
       </div>
       <div class="barra-fin">
@@ -145,6 +157,8 @@ const MODULOS = [
     d:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>' },
   { id:'fiado', nombre:'Fiado', url:'fiado.html', nivel:1,
     d:'<path d="M4 5h16a1 1 0 0 1 1 1v3H3V6a1 1 0 0 1 1-1z"/><path d="M3 9v9a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9"/><path d="M7 14h5"/>' },
+  { id:'finanzas', nombre:'Finanzas', url:'finanzas.html', nivel:2,
+    d:'<path d="M3 7a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v2"/><path d="M3 7v11a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1v-3"/><path d="M21 12h-4a2 2 0 0 0 0 4h4a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1z"/>' },
   { id:'compras', nombre:'Compras', url:'compras.html', nivel:2,
     d:'<path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.2"/><circle cx="18" cy="20" r="1.2"/>' },
   { id:'conteo', nombre:'Conteo', url:'conteo.html', nivel:1,

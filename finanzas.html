@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12805C">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="icono-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icono-192.png">
+<title>Finanzas · Pulpeando</title>
+<script src="config.js"></script>
+<script src="tema.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ui.css">
+<style>
+/* ==========================================================================
+   Finanzas.
+   El resumen es el estado de resultados del período con sus indicadores;
+   cada sección del menú es el detalle de una parte: los egresos, los
+   arqueos, el cuadre de cada cajero, y lo que pasa en la caja y no termina
+   en venta (anuladas, abortadas, suspendidas, líneas quitadas, devueltas).
+   ========================================================================== */
+:root{ --bien:#0e7a3a; --bien-f:#E7F7EE; --mal:#B4123A; --mal-f:#FFEDF1; --ojo:#8A5A00; --ojo-f:#FFF4E0 }
+.fz{flex:1;overflow-y:auto;min-height:0}
+.fz-in{max-width:1240px;margin:0 auto;padding:18px 20px 44px}
+.fz-enc{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.fz-enc h1{font-size:clamp(20px,2.4vw,26px);font-weight:800;letter-spacing:-.02em}
+.fz-enc p{font-size:13px;color:var(--tenue);margin-top:3px}
+.fz-enc .fin{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+
+.filtros{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+.rangos{display:flex;background:var(--panel);border:1px solid var(--linea);border-radius:12px;
+  padding:3px;gap:2px;overflow-x:auto;max-width:100%;scrollbar-width:none}
+.rangos::-webkit-scrollbar{display:none}
+.rangos button{height:36px;padding:0 13px;border-radius:9px;font-size:13px;font-weight:700;
+  color:var(--tenue);white-space:nowrap}
+.rangos button.si{background:var(--marca);color:var(--marca-sobre)}
+.fechas{display:flex;gap:6px;align-items:center}
+.fechas input,.filtros select{height:40px;border:1px solid var(--linea);border-radius:10px;
+  background:var(--panel);padding:0 10px;font:inherit;font-size:13px;color:var(--tinta);min-width:0}
+.fechas span{color:var(--tenue);font-size:13px}
+
+.btn-chico{height:40px;padding:0 14px;border-radius:10px;font-size:13px;font-weight:700;
+  display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.btn-chico.prin{background:var(--marca);color:var(--marca-sobre)}
+.btn-chico.prin:hover{background:var(--marca-oscuro)}
+.btn-chico.sec{background:var(--panel);border:1px solid var(--linea);color:var(--texto-2)}
+.btn-chico.sec:hover{border-color:var(--marca-borde);color:var(--marca-tinta)}
+
+/* cifras grandes */
+.kpis{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:14px}
+.kpi{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);padding:15px 16px;min-width:0}
+.kpi small{display:block;font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--tenue)}
+.kpi b{display:block;font-family:var(--num);font-size:clamp(19px,2vw,25px);font-weight:600;
+  letter-spacing:-.02em;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .pie{font-size:12px;color:var(--tenue);margin-top:5px}
+.kpi.destacado{background:var(--marca);border-color:var(--marca);color:var(--marca-sobre)}
+.kpi.destacado small,.kpi.destacado .pie{color:inherit;opacity:.8}
+.kpi .neg{color:var(--mal)}
+
+/* tarjetas */
+.rej{display:grid;gap:14px;grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:14px}
+.tj{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);padding:16px 18px;min-width:0;margin-bottom:14px}
+.rej > .tj{margin-bottom:0}
+.tj-enc{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.tj h2{font-size:15px;font-weight:800;letter-spacing:-.01em}
+.tj .sub{font-size:12.5px;color:var(--tenue)}
+.tj-enc .fin{margin-left:auto}
+
+/* estado de resultados */
+.er{width:100%;border-collapse:collapse;font-size:14px}
+.er td{padding:9px 4px;border-bottom:1px solid var(--linea)}
+.er td.n{text-align:right;font-family:var(--num);white-space:nowrap}
+.er td.p{text-align:right;font-family:var(--num);color:var(--tenue);font-size:12.5px;width:72px}
+.er tr.menos td:first-child{padding-left:18px;color:var(--texto-2)}
+.er tr.sub td{font-weight:800;background:var(--fondo);border-bottom:0}
+.er tr.sub td:first-child{border-radius:8px 0 0 8px;padding-left:10px}
+.er tr.sub td:last-child{border-radius:0 8px 8px 0;padding-right:10px}
+.er tr.total td{font-weight:800;font-size:15.5px;background:var(--marca-suave);color:var(--marca-tinta);border:0}
+.er tr.total td:first-child{border-radius:8px 0 0 8px;padding-left:10px}
+.er tr.total td:last-child{border-radius:0 8px 8px 0;padding-right:10px}
+.er tr.total.neg td{background:var(--mal-f);color:var(--mal)}
+.er tr.nota td{font-size:12.5px;color:var(--tenue);border:0;padding-top:12px}
+
+/* punto de equilibrio */
+.equi{margin-top:14px}
+.equi-barra{height:10px;border-radius:5px;background:var(--fondo);overflow:hidden;position:relative}
+.equi-barra i{display:block;height:100%;border-radius:5px;background:var(--marca)}
+.equi-barra i.falta{background:#E4A11B}
+.equi-txt{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--tenue);margin-top:6px;flex-wrap:wrap}
+.equi-txt b{color:var(--tinta);font-family:var(--num);font-weight:600}
+
+/* indicadores */
+.ind{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.ind > div{border:1px solid var(--linea);border-radius:12px;padding:12px 13px;min-width:0}
+.ind small{display:block;font-size:12px;font-weight:700;color:var(--texto-2)}
+.ind b{display:block;font-family:var(--num);font-size:20px;font-weight:600;margin-top:4px}
+.ind p{font-size:11.5px;color:var(--tenue);margin-top:4px;line-height:1.4}
+
+/* control de caja: contadores que llevan a su sección */
+.ctrl{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+.ctrl button{text-align:left;border:1px solid var(--linea);border-radius:12px;padding:12px 13px;
+  background:var(--panel);transition:border-color .15s,box-shadow .15s;min-width:0}
+.ctrl button:hover{border-color:var(--marca-borde);box-shadow:var(--sombra)}
+.ctrl small{display:block;font-size:12px;font-weight:700;color:var(--texto-2)}
+.ctrl b{display:block;font-family:var(--num);font-size:20px;font-weight:600;margin-top:4px}
+.ctrl span{display:block;font-size:12px;color:var(--tenue);margin-top:2px;font-family:var(--num)}
+.ctrl .mal b{color:var(--mal)}
+
+/* barras */
+.barras{display:flex;flex-direction:column;gap:9px}
+.br{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center}
+.br .nom{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.br .val{font-family:var(--num);font-size:12.5px;font-weight:600;text-align:right;white-space:nowrap}
+.br .val small{color:var(--tenue);font-weight:500;margin-left:6px}
+.br .pista{display:block;grid-column:1 / -1;height:8px;border-radius:4px;background:var(--fondo);overflow:hidden}
+.br .lleno{display:block;height:100%;border-radius:4px;background:var(--marca)}
+.nada{font-size:13px;color:var(--tenue);padding:6px 0}
+
+/* tablas que en el celular se vuelven tarjetas */
+.tabla-env{overflow-x:auto}
+.tabla{width:100%;border-collapse:collapse;font-size:13px}
+.tabla th{text-align:left;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--tenue);padding:0 8px 8px;border-bottom:1px solid var(--linea);white-space:nowrap}
+.tabla td{padding:10px 8px;border-bottom:1px solid var(--linea);vertical-align:top}
+.tabla tr:last-child td{border-bottom:0}
+.tabla .n{text-align:right;font-family:var(--num);white-space:nowrap}
+.tabla .mal{color:var(--mal);font-weight:700}
+.tabla .bien{color:var(--bien);font-weight:700}
+.tabla .chico{font-size:12px;color:var(--tenue);display:block;margin-top:2px}
+.tabla tr.anulado td{opacity:.55}
+.tabla tr.anulado td:first-child{text-decoration:line-through}
+.sello-p{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap}
+.sello-p.mal{background:var(--mal-f);color:var(--mal)}
+.sello-p.bien{background:var(--bien-f);color:var(--bien)}
+.sello-p.ojo{background:var(--ojo-f);color:var(--ojo)}
+.sello-p.neu{background:var(--fondo);color:var(--tenue)}
+.tabla .acc button{font-size:12.5px;font-weight:700;color:var(--mal)}
+.det{font-size:12px;color:var(--tenue);margin-top:4px;line-height:1.5}
+.det b{color:var(--texto-2);font-weight:600}
+.pie-lista{font-size:12.5px;color:var(--tenue);margin-top:12px}
+
+.cargando{display:grid;place-items:center;padding:80px 0}
+.cargando .girando{border-color:var(--linea);border-top-color:var(--marca)}
+
+/* la hoja de un egreso */
+.hoja.ancha{max-width:520px}
+.form{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+.form .ancho{grid-column:1 / -1}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1;min-width:90px;height:42px;border-radius:10px;border:1.5px solid var(--linea);
+  font-size:13px;font-weight:700;color:var(--texto-2);background:var(--panel)}
+.seg button.si{border-color:var(--marca);background:var(--marca-suave);color:var(--marca-tinta)}
+
+@media (max-width:1000px){
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:820px){
+  .rej{grid-template-columns:1fr}
+}
+@media (max-width:640px){
+  .fz-in{padding:14px 16px 32px}
+  .fechas{width:100%}
+  .fechas input{flex:1}
+  .filtros select{width:100%}
+  .fz-enc .fin{margin-left:0;width:100%}
+  .fz-enc .fin .btn-chico{flex:1;justify-content:center}
+  .form{grid-template-columns:1fr}
+  .kpi:first-child{grid-column:1 / -1}
+  /* la tabla se vuelve una tarjeta por fila, con su etiqueta en cada dato */
+  .tabla.r thead{display:none}
+  .tabla.r, .tabla.r tbody, .tabla.r tr, .tabla.r td{display:block;width:100%}
+  .tabla.r tr{border:1px solid var(--linea);border-radius:12px;padding:6px 12px;margin-bottom:10px}
+  .tabla.r td{border:0;padding:6px 0;display:flex;justify-content:space-between;gap:12px;text-align:right}
+  .tabla.r td::before{content:attr(data-l);font-size:12px;font-weight:700;color:var(--tenue);text-align:left;flex:0 0 auto}
+  .tabla.r td.n{white-space:normal}
+  .tabla.r td.primero{display:block;text-align:left;font-weight:700;font-size:14px}
+  .tabla.r td.primero::before{display:none}
+  .tabla.r td:empty{display:none}
+}
+@media print{
+  #menu,.barra,.filtros,.fz-enc .fin{display:none!important}
+  .fz{overflow:visible}
+}
+</style>
+</head>
+<body>
+
+<div class="oscura oculto" id="p-config">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Configuración</div>
+    <div class="titulo-o">Falta conectar el proyecto</div>
+    <p class="sub-o">Cree <b>config.js</b> con la dirección y la llave de Supabase.</p>
+  </div>
+</div>
+
+<div class="oscura oculto" id="p-sesion">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Pulpeando</div>
+    <div class="titulo-o">Iniciar sesión</div>
+    <p class="sub-o">Finanzas es para supervisor, gerente o dueño</p>
+    <input class="campo-o" id="s-email" type="email" placeholder="correo@negocio.hn" autocomplete="username">
+    <input class="campo-o" id="s-clave" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <div class="error-o" id="s-error"></div>
+    <button class="btn-o" id="s-entrar">Entrar</button>
+  </div>
+</div>
+
+<div class="oscura oculto" id="p-bloqueado">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Pulpeando</div>
+    <div class="titulo-o">Finanzas no es para su rol</div>
+    <p class="sub-o">Aquí están los arqueos, los faltantes y los gastos del negocio. Lo ve un supervisor en adelante.</p>
+    <a class="btn-o" href="index.html" style="display:grid;place-items:center">Volver al inicio</a>
+  </div>
+</div>
+
+<div class="armazon oculto" id="app">
+  <aside id="menu"></aside>
+  <div class="principal">
+    <header class="barra">
+      <button class="hamburguesa" id="abrir-menu" aria-label="Menú">
+        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="barra-titulo">
+        <b>Finanzas</b>
+        <small id="h-seccion">Resumen</small>
+      </div>
+      <div class="barra-fin"><span class="pill" id="h-usuario">—</span></div>
+    </header>
+
+    <main class="fz">
+      <div class="fz-in">
+        <div class="fz-enc">
+          <div>
+            <h1 id="titulo">Resumen</h1>
+            <p id="periodo-txt"></p>
+          </div>
+          <div class="fin" id="acciones"></div>
+        </div>
+        <div class="filtros">
+          <div class="rangos" id="rangos" aria-label="Período">
+            <button data-r="hoy">Hoy</button>
+            <button data-r="7">7 días</button>
+            <button data-r="mes">Este mes</button>
+            <button data-r="mes-1">Mes pasado</button>
+            <button data-r="30">30 días</button>
+            <button data-r="anio">Este año</button>
+          </div>
+          <div class="fechas">
+            <input type="date" id="f-desde" aria-label="Desde">
+            <span>a</span>
+            <input type="date" id="f-hasta" aria-label="Hasta">
+          </div>
+          <select id="f-sucursal" class="oculto" aria-label="Sucursal"></select>
+        </div>
+        <div id="contenido"><div class="cargando"><span class="girando"></span></div></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="velo oculto" id="velo"><div class="hoja ancha" id="hoja" role="dialog" aria-modal="true"></div></div>
+
+<script type="module">
+const CFG = window.SUPABASE_CONFIG || {};
+const SUPABASE_URL = CFG.url || 'PEGUE_AQUI_LA_URL';
+const SUPABASE_KEY = CFG.key || 'PEGUE_AQUI_LA_LLAVE';
+
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const ver = (id, si = true) => $(id).classList.toggle('oculto', !si);
+
+if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin configurar'); }
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { montarMenu, escapar } from './menu.js';
+
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth:{ persistSession:true, autoRefreshToken:true }
+});
+
+const SECCIONES = [
+  { valor:'resumen',      nombre:'Resumen',              icono:'reportes' },
+  { valor:'egresos',      nombre:'Egresos',              icono:'finanzas' },
+  { valor:'arqueos',      nombre:'Arqueos y cierres',    icono:'caja' },
+  { valor:'cuadre',       nombre:'Faltantes y sobrantes', icono:'fiado' },
+  { valor:'anulaciones',  nombre:'Anulaciones',          icono:'merma' },
+  { valor:'abortadas',    nombre:'Ventas abortadas',     icono:'merma' },
+  { valor:'suspendidas',  nombre:'Suspendidas',          icono:'calendario' },
+  { valor:'quitadas',     nombre:'Líneas quitadas',      icono:'etiqueta' },
+  { valor:'devoluciones', nombre:'Devoluciones',         icono:'compras' }
+];
+
+const S = {
+  ctx:null, menu:null, moneda:'L', nivel:0,
+  seccion:'resumen', rango:'mes', desde:null, hasta:null, sucursal:'',
+  resumen:null, lista:[], pidiendo:0, categorias:null
+};
+
+/* ---------- formato ---------- */
+const n2 = v => (Number(v) || 0).toLocaleString('es-HN', { minimumFractionDigits:2, maximumFractionDigits:2 });
+const money = v => (Number(v) < 0 ? '−' : '') + S.moneda + ' ' + n2(Math.abs(Number(v) || 0));
+const cant = v => (Number(v) || 0).toLocaleString('es-HN', { maximumFractionDigits:2 });
+const pct = v => v === null || v === undefined ? '—'
+  : Number(v).toLocaleString('es-HN', { maximumFractionDigits:1 }) + '%';
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const deIso = s => { const [a,m,d] = String(s).slice(0,10).split('-').map(Number); return new Date(a, m-1, d); };
+const fecha = s => { if (!s) return '—'; const d = deIso(s); return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`; };
+const fechaHora = s => {
+  if (!s) return '—';
+  const d = new Date(s);
+  return `${d.getDate()} ${MESES[d.getMonth()]} · ${d.toLocaleTimeString('es-HN', { hour:'numeric', minute:'2-digit' })}`;
+};
+const METODO = { efectivo:'Efectivo', tarjeta:'Tarjeta', transferencia:'Transferencia',
+                 credito:'Fiado', cheque:'Cheque', otro:'Otro' };
+const ORIGEN = { caja:'Gaveta de caja', banco:'Banco', oficina:'Efectivo de oficina' };
+const CLASE  = { operativo:'Gasto operativo', financiero:'Gasto financiero',
+                 impuesto:'Impuestos', retiro_dueno:'Retiro del dueño' };
+
+function limpiarError(e){
+  const m = (e?.message || String(e)).replace(/^(?:[0-9A-Z]{5}|error|Error|ERROR):\s*/, '');
+  if (/JWT|token/i.test(m)) return 'La sesión venció. Vuelva a entrar.';
+  if (/Failed to fetch|NetworkError/i.test(m)) return 'Sin conexión con el servidor';
+  return m;
+}
+
+/* ---------- período ---------- */
+function calcularRango(r){
+  const hoy = new Date(); hoy.setHours(12, 0, 0, 0);
+  const menos = n => { const d = new Date(hoy); d.setDate(d.getDate() - n); return d; };
+  if (r === 'hoy') return [iso(hoy), iso(hoy)];
+  if (r === '7') return [iso(menos(6)), iso(hoy)];
+  if (r === '30') return [iso(menos(29)), iso(hoy)];
+  if (r === 'mes-1') return [iso(new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)),
+                             iso(new Date(hoy.getFullYear(), hoy.getMonth(), 0))];
+  if (r === 'anio') return [iso(new Date(hoy.getFullYear(), 0, 1)), iso(hoy)];
+  return [iso(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), iso(hoy)];
+}
+function fijarRango(r){
+  S.rango = r;
+  [S.desde, S.hasta] = calcularRango(r);
+  $('#f-desde').value = S.desde; $('#f-hasta').value = S.hasta;
+  $$('#rangos button').forEach(b => b.classList.toggle('si', b.dataset.r === r));
+}
+const args = () => ({ p_desde:S.desde, p_hasta:S.hasta, p_sucursal_id:S.sucursal || null });
+
+/* ================= sesión ================= */
+$('#s-entrar').addEventListener('click', async () => {
+  const b = $('#s-entrar');
+  $('#s-error').textContent = '';
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+  const { error } = await sb.auth.signInWithPassword({
+    email:$('#s-email').value.trim(), password:$('#s-clave').value });
+  b.disabled = false; b.textContent = 'Entrar';
+  if (error){ $('#s-error').textContent = 'Correo o contraseña incorrectos'; return; }
+  arrancar();
+});
+$('#s-clave').addEventListener('keydown', e => { if (e.key === 'Enter') $('#s-entrar').click(); });
+
+async function arrancar(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session){ ver('#p-sesion'); return; }
+  ver('#p-sesion', false);
+
+  const { data, error } = await sb.rpc('fn_pos_contexto');
+  if (error){
+    ver('#p-sesion');
+    $('#s-error').textContent = 'Su usuario no tiene perfil en ningún negocio';
+    await sb.auth.signOut();
+    return;
+  }
+  S.ctx = data;
+  S.nivel = data.usuario?.nivel ?? 0;
+  S.moneda = !data.organizacion?.moneda || data.organizacion.moneda === 'HNL' ? 'L' : data.organizacion.moneda;
+  if (S.nivel < 2){ ver('#p-bloqueado'); return; }
+
+  $('#h-usuario').textContent = data.usuario.nombre;
+  ver('#app');
+
+  const inicial = SECCIONES.find(x => x.valor === location.hash.slice(1)) ? location.hash.slice(1) : 'resumen';
+  S.seccion = inicial;
+  S.menu = montarMenu({
+    contenedor:'#menu', modulo:'finanzas', ctx:S.ctx,
+    alSalir: async () => { await sb.auth.signOut(); location.reload(); },
+    secciones:[{ id:'finanzas', titulo:'Finanzas',
+      items:SECCIONES.map(x => ({ ...x, activo:x.valor === inicial })) }]
+  });
+  S.menu.alElegir(irA);
+  $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
+
+  const sucs = data.sucursales || [];
+  if (sucs.length > 1){
+    $('#f-sucursal').innerHTML = `<option value="">Todas las sucursales</option>` +
+      sucs.map(s => `<option value="${s.id}">${escapar(s.nombre)}</option>`).join('');
+    ver('#f-sucursal');
+  }
+  fijarRango('mes');
+  await cargar();
+}
+
+function irA(valor){
+  if (!SECCIONES.some(x => x.valor === valor)) return;
+  S.seccion = valor;
+  try { history.replaceState(null, '', '#' + valor); } catch(e){}
+  S.menu?.marcar(valor);
+  cargar();
+}
+
+/* ================= los datos ================= */
+async function cargar(){
+  const turno = ++S.pidiendo;
+  const sec = SECCIONES.find(x => x.valor === S.seccion);
+  $('#titulo').textContent = sec.nombre;
+  $('#h-seccion').textContent = sec.nombre;
+  const d = deIso(S.desde), h = deIso(S.hasta);
+  $('#periodo-txt').textContent = S.desde === S.hasta ? fecha(S.desde) : `${fecha(S.desde)} – ${fecha(S.hasta)}`;
+  pintarAcciones();
+  $('#contenido').innerHTML = '<div class="cargando"><span class="girando"></span></div>';
+
+  const r = S.seccion === 'resumen'
+    ? await sb.rpc('fn_finanzas_resumen', args())
+    : await sb.rpc('fn_finanzas_lista', { p_seccion:S.seccion, ...args(), p_limite:500 });
+  if (turno !== S.pidiendo) return;
+  if (r.error){
+    $('#contenido').innerHTML = `<div class="vacio"><p>${escapar(limpiarError(r.error))}</p></div>`;
+    return;
+  }
+  if (S.seccion === 'resumen'){ S.resumen = r.data; pintarResumen(); }
+  else { S.lista = r.data || []; pintarLista(); }
+}
+
+function pintarAcciones(){
+  const a = [];
+  if (S.seccion === 'egresos' || S.seccion === 'resumen')
+    a.push('<button class="btn-chico prin" id="b-nuevo">+ Registrar egreso</button>');
+  if (S.seccion !== 'resumen')
+    a.push('<button class="btn-chico sec" id="b-csv">Descargar CSV</button>');
+  a.push('<button class="btn-chico sec" id="b-imprimir">Imprimir</button>');
+  $('#acciones').innerHTML = a.join('');
+  $('#b-nuevo')?.addEventListener('click', hojaEgreso);
+  $('#b-csv')?.addEventListener('click', descargarCSV);
+  $('#b-imprimir').addEventListener('click', () => window.print());
+}
+
+/* ================= resumen ================= */
+function pintarResumen(){
+  const d = S.resumen;
+  const r = d.resultados, i = d.indicadores || {}, c = d.caja || {}, f = d.flujo || {};
+  const ve = !!d.puede_ver_utilidad;
+  const vn = Number(r?.venta_neta) || 0;
+  const p = v => vn > 0 ? pct(Number(v) / vn * 100) : '';
+
+  const kpis = ve ? `
+    <div class="kpis">
+      <div class="kpi destacado"><small>Venta neta sin ISV</small><b>${money(r.venta_neta)}</b>
+        <div class="pie">${money(i.venta_diaria)} por día con ISV</div></div>
+      <div class="kpi"><small>Utilidad bruta</small><b>${money(r.utilidad_bruta)}</b>
+        <div class="pie">Margen ${pct(i.margen_bruto)} · Markup ${pct(i.markup)}</div></div>
+      <div class="kpi"><small>Gastos y merma</small><b>${money(Number(r.gastos) + Number(r.merma))}</b>
+        <div class="pie">${pct(i.gasto_sobre_venta)} de la venta</div></div>
+      <div class="kpi"><small>Utilidad neta</small><b class="${r.utilidad_neta < 0 ? 'neg' : ''}">${money(r.utilidad_neta)}</b>
+        <div class="pie">Margen neto ${pct(i.margen_neto)}</div></div>
+    </div>` : `
+    <div class="kpis">
+      <div class="kpi destacado"><small>Venta por día</small><b>${money(i.venta_diaria)}</b>
+        <div class="pie">Ticket promedio ${money(i.ticket_promedio)}</div></div>
+      <div class="kpi"><small>Faltantes de caja</small><b class="${c.faltante < 0 ? 'neg' : ''}">${money(Math.abs(c.faltante))}</b>
+        <div class="pie">${cant(c.turnos)} turnos cerrados</div></div>
+      <div class="kpi"><small>Anuladas</small><b>${cant(c.anuladas)}</b><div class="pie">${money(c.monto_anulado)}</div></div>
+      <div class="kpi"><small>Abortadas</small><b>${cant(c.abortadas)}</b><div class="pie">${money(c.monto_abortado)}</div></div>
+    </div>`;
+
+  // punto de equilibrio: la venta que cubre los gastos del período
+  const eq = Number(i.punto_equilibrio) || 0;
+  const avance = eq > 0 ? Math.min(vn / eq * 100, 100) : 100;
+  const bloqueEquilibrio = ve && eq > 0 ? `
+    <div class="equi">
+      <div class="equi-barra"><i class="${vn < eq ? 'falta' : ''}" style="width:${avance}%"></i></div>
+      <div class="equi-txt">
+        <span>Punto de equilibrio <b>${money(eq)}</b></span>
+        <span>${vn >= eq ? `Cubierto, con <b>${money(vn - eq)}</b> de más` : `Faltan <b>${money(eq - vn)}</b> de venta`}</span>
+      </div>
+    </div>` : '';
+
+  const estado = ve ? `
+    <section class="tj">
+      <div class="tj-enc"><h2>Estado de resultados</h2><span class="sub">del período</span></div>
+      <table class="er">
+        <tbody>
+          <tr><td>Venta bruta (con ISV)</td><td class="n">${money(r.venta_bruta)}</td><td class="p"></td></tr>
+          <tr class="menos"><td>− ISV cobrado</td><td class="n">${money(-r.isv)}</td><td class="p"></td></tr>
+          <tr class="menos"><td>− Devoluciones</td><td class="n">${money(-r.devoluciones)}</td><td class="p"></td></tr>
+          <tr class="sub"><td>Venta neta</td><td class="n">${money(r.venta_neta)}</td><td class="p">100%</td></tr>
+          <tr class="menos"><td>− Costo de lo vendido</td><td class="n">${money(-r.costo_ventas)}</td><td class="p">${p(r.costo_ventas)}</td></tr>
+          <tr class="sub"><td>Utilidad bruta</td><td class="n">${money(r.utilidad_bruta)}</td><td class="p">${p(r.utilidad_bruta)}</td></tr>
+          <tr class="menos"><td>− Merma</td><td class="n">${money(-r.merma)}</td><td class="p">${p(r.merma)}</td></tr>
+          ${['operativo','financiero','impuesto'].map(k => `
+          <tr class="menos"><td>− ${CLASE[k]}</td><td class="n">${money(-(r.gastos_por_clase?.[k] || 0))}</td><td class="p">${p(r.gastos_por_clase?.[k] || 0)}</td></tr>`).join('')}
+          <tr class="total ${r.utilidad_neta < 0 ? 'neg' : ''}"><td>Utilidad neta</td><td class="n">${money(r.utilidad_neta)}</td><td class="p">${p(r.utilidad_neta)}</td></tr>
+          ${Number(r.retiros_dueno) ? `<tr class="nota"><td colspan="3">Retiros del dueño en el período: <b>${money(r.retiros_dueno)}</b>.
+            No son gasto: se restan de la utilidad, no de la operación.</td></tr>` : ''}
+        </tbody>
+      </table>
+      ${bloqueEquilibrio}
+    </section>` : '';
+
+  const IND = [
+    ve && ['Margen bruto', pct(i.margen_bruto), 'De cada L 100 vendidos sin ISV, lo que queda después del costo.'],
+    ve && ['Markup', pct(i.markup), 'Cuánto se le sube al costo en promedio. 25% de margen es 33% de markup.'],
+    ve && ['Margen neto', pct(i.margen_neto), 'Lo que queda después de costo, merma y gastos.'],
+    ['Gasto sobre venta', pct(i.gasto_sobre_venta), 'Gastos de operación contra la venta neta.'],
+    ve && ['Rotación del inventario', i.rotacion != null ? cant(i.rotacion) + ' veces al año' : '—', 'Cuántas veces al año se vende todo lo que hay en bodega.'],
+    ve && ['Días de inventario', i.dias_inventario != null ? cant(i.dias_inventario) + ' días' : '—', 'Para cuántos días alcanza lo que hay, al ritmo del período.'],
+    ['Días de cobro (fiado)', i.dias_cobro != null ? cant(i.dias_cobro) + ' días' : '—', `Lo fiado en la calle (${money(i.fiado)}) contra lo que se fía por día.`],
+    ['Merma sobre venta', pct(i.merma_sobre_venta), 'Arriba de 1.5% conviene revisar.'],
+    ['Ticket promedio', money(i.ticket_promedio), 'Lo que gasta cada cliente por compra.'],
+    ['Venta diaria', money(i.venta_diaria), 'Promedio del período, con ISV.']
+  ].filter(Boolean);
+
+  const CTRL = [
+    ['arqueos', 'Arqueos y cierres', cant(Number(c.arqueos) + Number(c.turnos)), `${cant(c.cuadrados)} de ${cant(c.turnos)} cierres cuadrados`],
+    ['cuadre', 'Faltante de caja', money(Math.abs(c.faltante)), `sobrante ${money(c.sobrante)}`, c.faltante < 0],
+    ['anulaciones', 'Ventas anuladas', cant(c.anuladas), money(c.monto_anulado), c.anuladas > 0],
+    ['abortadas', 'Ventas abortadas', cant(c.abortadas), money(c.monto_abortado), c.abortadas > 0],
+    ['suspendidas', 'Suspendidas', cant(c.suspendidas), `${cant(c.retomadas)} retomadas · ${cant(c.descartadas)} descartadas`],
+    ['quitadas', 'Líneas quitadas', cant(c.lineas_quitadas), money(c.monto_quitado)],
+    ['devoluciones', 'Devoluciones', cant(c.devoluciones), money(c.monto_devuelto)]
+  ];
+
+  const gastos = d.gastos_por_categoria || [];
+  const maxG = Math.max(...gastos.map(g => Number(g.monto)), 1);
+  const cobros = Object.entries(f.cobros || {}).sort((a, b) => b[1] - a[1]);
+  const maxC = Math.max(...cobros.map(x => Number(x[1])), 1);
+
+  $('#contenido').innerHTML = `
+    ${kpis}
+    ${estado}
+    <section class="tj">
+      <div class="tj-enc"><h2>Indicadores financieros</h2></div>
+      <div class="ind">${IND.map(([t, v, x]) => `<div><small>${t}</small><b>${v}</b><p>${x}</p></div>`).join('')}</div>
+    </section>
+    <section class="tj">
+      <div class="tj-enc"><h2>Control de caja</h2><span class="sub">toque uno para ver el detalle</span></div>
+      <div class="ctrl">${CTRL.map(([s, t, v, x, mal]) => `
+        <button data-ir="${s}" class="${mal ? 'mal' : ''}"><small>${t}</small><b>${v}</b><span>${x}</span></button>`).join('')}</div>
+    </section>
+    <div class="rej">
+      <section class="tj">
+        <div class="tj-enc"><h2>Egresos por categoría</h2>
+          <button class="btn-chico sec fin" data-ir="egresos">Ver todos</button></div>
+        ${gastos.length ? `<div class="barras">${gastos.map(g => `
+          <div class="br"><span class="nom">${escapar(g.categoria)}</span>
+            <span class="val">${money(g.monto)}<small>${cant(g.veces)}×</small></span>
+            <span class="pista"><span class="lleno" style="width:${Number(g.monto) / maxG * 100}%"></span></span></div>`).join('')}</div>`
+          : '<div class="nada">No hay egresos registrados en el período.</div>'}
+      </section>
+      <section class="tj">
+        <div class="tj-enc"><h2>Entradas y salidas</h2><span class="sub">del período</span></div>
+        ${cobros.length ? `<div class="barras">${cobros.map(([m, v]) => `
+          <div class="br"><span class="nom">Cobrado en ${escapar((METODO[m] || m).toLowerCase())}</span>
+            <span class="val">${money(v)}</span>
+            <span class="pista"><span class="lleno" style="width:${Number(v) / maxC * 100}%"></span></span></div>`).join('')}</div>`
+          : '<div class="nada">Sin cobros en el período.</div>'}
+        <table class="er" style="margin-top:14px"><tbody>
+          <tr><td>Compras a proveedores</td><td class="n">${money(f.compras)}</td></tr>
+          <tr><td>Egresos (con retiros del dueño)</td><td class="n">${money(f.egresos)}</td></tr>
+          ${Object.entries(f.egresos_por_origen || {}).map(([o, v]) => `
+          <tr class="menos"><td>${ORIGEN[o] || o}</td><td class="n">${money(v)}</td></tr>`).join('')}
+        </tbody></table>
+      </section>
+    </div>
+    <p class="pie-lista">La venta neta no lleva ISV ni devoluciones. El costo es el costo promedio de cada producto al
+      momento de venderlo. El inventario y el fiado son de hoy.</p>`;
+
+  $$('#contenido [data-ir]').forEach(b => b.addEventListener('click', () => irA(b.dataset.ir)));
+}
+
+/* ================= las listas ================= */
+const COLUMNAS = {
+  egresos: [
+    ['Fecha', x => fecha(x.fecha)],
+    ['Concepto', x => `${escapar(x.concepto)}<span class="chico">${escapar(x.categoria)}${x.beneficiario ? ' · ' + escapar(x.beneficiario) : ''}</span>`, 'primero'],
+    ['Pagado', x => `${escapar(METODO[x.metodo] || x.metodo)}<span class="chico">${escapar(ORIGEN[x.origen] || x.origen)}${x.caja ? ' · ' + escapar(x.caja) : ''}</span>`],
+    ['Registró', x => escapar(x.registro)],
+    ['Monto', x => money(x.monto), 'n'],
+    ['', x => x.anulado ? `<span class="sello-p neu" title="${escapar(x.motivo_anulacion || '')}">Anulado</span>`
+      : S.nivel >= 3 ? `<span class="acc"><button data-anular="${x.id}">Anular</button></span>` : '']
+  ],
+  arqueos: [
+    ['Cuándo', x => fechaHora(x.cuando), 'primero'],
+    ['Tipo', x => x.tipo === 'cierre' ? '<span class="sello-p neu">Cierre de turno</span>' : '<span class="sello-p ojo">Arqueo sorpresa</span>'],
+    ['Caja · cajero', x => `${escapar(x.caja)}<span class="chico">${escapar(x.cajero)}</span>`],
+    ['Autorizó', x => escapar(x.autorizo || '—')],
+    ['Esperado', x => money(x.esperado), 'n'],
+    ['Contado', x => money(x.contado), 'n'],
+    ['Diferencia', x => dif(x.diferencia), 'n']
+  ],
+  cuadre: [
+    ['Cajero', x => `${escapar(x.cajero)}${x.codigo ? ` <span class="chico" style="display:inline">${escapar(x.codigo)}</span>` : ''}`, 'primero'],
+    ['Turnos', x => `${cant(x.turnos)}<span class="chico">${cant(x.cuadrados)} cuadrados</span>`, 'n'],
+    ['Vendió', x => money(x.vendido), 'n'],
+    ['Faltante', x => Number(x.faltante) < 0 ? `<span class="mal">${money(Math.abs(x.faltante))}</span>` : '—', 'n'],
+    ['Sobrante', x => Number(x.sobrante) > 0 ? money(x.sobrante) : '—', 'n'],
+    ['Neto', x => dif(x.neto), 'n'],
+    ['Peor cierre', x => dif(x.peor), 'n'],
+    ['% de su venta', x => x.faltante_pct ? pct(x.faltante_pct) : '—', 'n']
+  ],
+  anulaciones: [
+    ['Venta', x => `${escapar(x.numero)}<span class="chico">${fechaHora(x.creada_en)}</span>`, 'primero'],
+    ['Cajero', x => `${escapar(x.cajero || '—')}<span class="chico">${escapar(x.caja || '')}</span>`],
+    ['Anuló', x => `${escapar(x.anulo || '—')}<span class="chico">${x.minutos != null ? 'a los ' + cant(x.minutos) + ' min' : ''}</span>`],
+    ['Motivo', x => escapar(x.motivo || '—')],
+    ['Total', x => money(x.total), 'n']
+  ],
+  devoluciones: [
+    ['Devolución', x => `${escapar(x.numero)}<span class="chico">${fechaHora(x.creada_en)} · venta ${escapar(x.venta || '—')}</span>`, 'primero'],
+    ['Hizo', x => escapar(x.hizo || '—')],
+    ['Motivo', x => escapar(x.motivo || '—')],
+    ['Devuelto en', x => Number(x.reembolso) > 0 ? `${money(x.reembolso)}<span class="chico">${escapar(METODO[x.metodo] || x.metodo || '')}</span>`
+      : Number(x.rebaja_fiado) > 0 ? `${money(x.rebaja_fiado)}<span class="chico">rebajado del fiado</span>` : '—', 'n'],
+    ['Total', x => money(x.total), 'n']
+  ],
+  eventos: [
+    ['Cuándo', x => `${fechaHora(x.cuando)}${x.tipo !== 'abortada' && x.tipo !== 'linea_quitada' ? ' ' + selloEvento(x.tipo) : ''}`, 'primero'],
+    ['Caja · cajero', x => `${escapar(x.caja)}<span class="chico">${escapar(x.cajero)}</span>`],
+    ['Qué llevaba', x => detalleEvento(x)],
+    ['Monto', x => money(x.monto), 'n']
+  ]
+};
+const dif = v => {
+  const n = Number(v) || 0;
+  if (Math.abs(n) < 0.005) return '<span class="bien">Cuadró</span>';
+  return `<span class="${n < 0 ? 'mal' : 'bien'}">${n > 0 ? '+' : '−'}${S.moneda} ${n2(Math.abs(n))}</span>`;
+};
+const selloEvento = t => ({ suspendida:'<span class="sello-p ojo">Suspendida</span>',
+  retomada:'<span class="sello-p bien">Retomada</span>', descartada:'<span class="sello-p mal">Descartada</span>' }[t] || '');
+function detalleEvento(x){
+  const items = Array.isArray(x.detalle) ? x.detalle : [];
+  const txt = items.slice(0, 4).map(i => `<b>${cant(i.cantidad)}</b> ${escapar(i.nombre || '')}`).join(', ');
+  return `${cant(x.lineas)} ${x.lineas === 1 ? 'línea' : 'líneas'} · ${cant(x.unidades)} u.` +
+    (txt ? `<div class="det">${txt}${items.length > 4 ? ` y ${items.length - 4} más` : ''}</div>` : '') +
+    (x.motivo ? `<div class="det">Motivo: ${escapar(x.motivo)}</div>` : '');
+}
+
+const EXPLICA = {
+  egresos:'Todo lo que sale y no es mercadería. Si salió de una gaveta, ya está descontado del arqueo de esa caja.',
+  arqueos:'Los arqueos sorpresa y los cierres de turno, con lo que el sistema esperaba y lo que se contó.',
+  cuadre:'Por cajero: cuántos turnos cerró y cuánto le faltó o le sobró en total.',
+  anulaciones:'Ventas cobradas que después se anularon. Muchas anulaciones de una misma persona, o anuladas a los pocos minutos, es lo primero que se revisa.',
+  abortadas:'Ventas que la cajera canceló con productos ya marcados, antes de cobrar. Es donde se esconde marcar, cobrar en efectivo y cancelar.',
+  suspendidas:'Ventas que se dejaron en espera, cuáles se retomaron y cuáles se borraron sin cobrar.',
+  quitadas:'Productos que se marcaron y luego se quitaron de la venta.',
+  devoluciones:'Mercadería devuelta por clientes y cómo se les devolvió el dinero.'
+};
+
+function pintarLista(){
+  const sec = S.seccion;
+  const cols = COLUMNAS[sec] || COLUMNAS.eventos;
+  const lista = S.lista;
+  const total = ['egresos','anulaciones','devoluciones','abortadas','quitadas'].includes(sec)
+    ? lista.filter(x => !x.anulado).reduce((s, x) => s + Number(x.monto ?? x.total ?? 0), 0) : null;
+
+  $('#contenido').innerHTML = `
+    <section class="tj">
+      <p class="sub" style="margin-bottom:14px">${EXPLICA[sec] || ''}</p>
+      ${lista.length ? `<div class="tabla-env"><table class="tabla r">
+        <thead><tr>${cols.map(([t, , cl]) => `<th class="${cl === 'n' ? 'n' : ''}">${t}</th>`).join('')}</tr></thead>
+        <tbody>${lista.map(x => `<tr class="${x.anulado ? 'anulado' : ''}">${cols.map(([t, f, cl]) =>
+          `<td class="${cl || ''}" data-l="${t}">${f(x)}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table></div>
+      <p class="pie-lista">${cant(lista.length)} ${lista.length === 1 ? 'registro' : 'registros'}${
+        total !== null ? ` · total ${money(total)}` : ''}${lista.length >= 500 ? ' · se muestran los 500 más recientes: acorte el período para ver el resto' : ''}</p>`
+      : '<div class="nada">No hay nada en este período.</div>'}
+    </section>`;
+
+  $$('[data-anular]').forEach(b => b.addEventListener('click', () => hojaAnular(b.dataset.anular)));
+}
+
+/* ---------- CSV para el contador ---------- */
+function descargarCSV(){
+  const cols = COLUMNAS[S.seccion] || COLUMNAS.eventos;
+  const limpio = h => String(h).replace(/<span class="chico">/g, ' · ').replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
+  const fila = v => v.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',');
+  const enc = cols.filter(([t]) => t).map(([t]) => t);
+  const lineas = [fila(enc), ...S.lista.map(x => fila(cols.filter(([t]) => t).map(([, f]) => limpio(f(x)))))];
+  const blob = new Blob(['﻿' + lineas.join('\r\n')], { type:'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${S.seccion}_${S.desde}_${S.hasta}.csv`;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+
+/* ================= registrar un egreso ================= */
+const cerrarHoja = () => ver('#velo', false);
+$('#velo').addEventListener('click', e => { if (e.target === $('#velo')) cerrarHoja(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#velo').classList.contains('oculto')) cerrarHoja(); });
+
+async function hojaEgreso(){
+  if (!S.categorias){
+    const { data, error } = await sb.rpc('fn_categorias_egreso');
+    if (error){ aviso('No se pudo abrir', limpiarError(error)); return; }
+    S.categorias = data || [];
+  }
+  const { data:cajas } = await sb.rpc('fn_cajas_abiertas');
+  const abiertas = cajas || [];
+  let origen = 'oficina', metodo = 'efectivo';
+
+  const grupos = {};
+  S.categorias.forEach(c => { (grupos[c.clase] = grupos[c.clase] || []).push(c); });
+  $('#hoja').innerHTML = `
+    <h2>Registrar egreso</h2>
+    <p class="sub">Un gasto del negocio que no es compra de mercadería.</p>
+    <div class="form">
+      <div class="campo-g ancho"><label for="eg-cat">Categoría</label>
+        <select class="entrada" id="eg-cat">
+          ${Object.entries(grupos).map(([k, l]) => `<optgroup label="${CLASE[k] || k}">
+            ${l.map(c => `<option value="${c.id}">${escapar(c.nombre)}</option>`).join('')}</optgroup>`).join('')}
+          ${S.nivel >= 3 ? '<option value="__nueva">+ Otra categoría…</option>' : ''}
+        </select></div>
+      <div class="campo-g ancho oculto" id="eg-nueva-g"><label for="eg-nueva">Nombre de la categoría nueva</label>
+        <input class="entrada" id="eg-nueva" placeholder="Fumigación"></div>
+      <div class="campo-g ancho"><label for="eg-concepto">Concepto</label>
+        <input class="entrada" id="eg-concepto" placeholder="Factura ENEE de octubre"></div>
+      <div class="campo-g"><label for="eg-monto">Monto</label>
+        <input class="entrada num" id="eg-monto" inputmode="decimal" placeholder="0.00"></div>
+      <div class="campo-g"><label for="eg-fecha">Fecha</label>
+        <input class="entrada" id="eg-fecha" type="date" value="${iso(new Date())}" max="${iso(new Date())}"></div>
+      <div class="campo-g ancho"><label>¿De dónde salió el dinero?</label>
+        <div class="seg" id="eg-origen">
+          <button data-o="oficina" class="si">Oficina</button>
+          <button data-o="banco">Banco</button>
+          <button data-o="caja" ${abiertas.length ? '' : 'disabled title="No hay cajas con turno abierto"'}>Gaveta de caja</button>
+        </div></div>
+      <div class="campo-g ancho oculto" id="eg-caja-g"><label for="eg-caja">Caja</label>
+        <select class="entrada" id="eg-caja">${abiertas.map(c =>
+          `<option value="${c.turno_id}">${escapar(c.caja)} · ${escapar(c.cajero)} · hay ${money(c.en_gaveta)}</option>`).join('')}</select></div>
+      <div class="campo-g ancho" id="eg-metodo-g"><label>Forma de pago</label>
+        <div class="seg" id="eg-metodo">
+          <button data-m="efectivo" class="si">Efectivo</button>
+          <button data-m="transferencia">Transferencia</button>
+          <button data-m="tarjeta">Tarjeta</button>
+          <button data-m="cheque">Cheque</button>
+        </div></div>
+      <div class="campo-g"><label for="eg-benef">A quién (opcional)</label>
+        <input class="entrada" id="eg-benef" placeholder="ENEE"></div>
+      <div class="campo-g"><label for="eg-ref">Referencia (opcional)</label>
+        <input class="entrada" id="eg-ref" placeholder="Factura 001-002…"></div>
+    </div>
+    <div class="aviso ojo oculto" id="eg-aviso-caja" style="margin-top:12px">Sale de la gaveta: se registra también
+      como retiro de esa caja, y el arqueo ya lo cuenta.</div>
+    <div class="aviso malo oculto" id="eg-error" style="margin-top:12px"></div>
+    <div class="acciones" style="margin-top:16px">
+      <button class="btn secundario" id="eg-no">Cancelar</button>
+      <button class="btn principal-b" id="eg-si">Registrar</button>
+    </div>`;
+  ver('#velo');
+  setTimeout(() => $('#eg-concepto').focus(), 60);
+
+  $('#eg-cat').addEventListener('change', e => ver('#eg-nueva-g', e.target.value === '__nueva'));
+  $('#eg-origen').addEventListener('click', e => {
+    const b = e.target.closest('[data-o]'); if (!b || b.disabled) return;
+    origen = b.dataset.o;
+    $$('#eg-origen button').forEach(x => x.classList.toggle('si', x === b));
+    ver('#eg-caja-g', origen === 'caja'); ver('#eg-aviso-caja', origen === 'caja');
+    ver('#eg-metodo-g', origen !== 'caja');
+  });
+  $('#eg-metodo').addEventListener('click', e => {
+    const b = e.target.closest('[data-m]'); if (!b) return;
+    metodo = b.dataset.m;
+    $$('#eg-metodo button').forEach(x => x.classList.toggle('si', x === b));
+  });
+  $('#eg-no').onclick = cerrarHoja;
+  $('#eg-si').onclick = async () => {
+    const err = t => { $('#eg-error').textContent = t; ver('#eg-error', !!t); };
+    err('');
+    const monto = Number(String($('#eg-monto').value).replace(/,/g, ''));
+    const concepto = $('#eg-concepto').value.trim();
+    if (!concepto) return err('Escriba en qué se gastó');
+    if (!(monto > 0)) return err('Escriba el monto');
+    const b = $('#eg-si');
+    b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+    try{
+      let cat = $('#eg-cat').value;
+      if (cat === '__nueva'){
+        const nombre = $('#eg-nueva').value.trim();
+        if (!nombre) throw new Error('Escriba el nombre de la categoría');
+        const { data, error } = await sb.rpc('fn_crear_categoria_egreso', { p_nombre:nombre, p_clase:'operativo' });
+        if (error) throw error;
+        cat = data; S.categorias = null;
+      }
+      const { error } = await sb.rpc('fn_registrar_egreso', {
+        p_categoria_id:cat, p_monto:monto, p_concepto:concepto,
+        p_fecha:$('#eg-fecha').value || null, p_metodo:metodo, p_origen:origen,
+        p_sucursal_id:S.sucursal || null, p_beneficiario:$('#eg-benef').value.trim() || null,
+        p_referencia:$('#eg-ref').value.trim() || null,
+        p_turno_id:origen === 'caja' ? $('#eg-caja').value : null });
+      if (error) throw error;
+      cerrarHoja();
+      cargar();
+    }catch(e){
+      b.disabled = false; b.textContent = 'Registrar';
+      err(limpiarError(e));
+    }
+  };
+}
+
+function hojaAnular(id){
+  const x = S.lista.find(e => e.id === id); if (!x) return;
+  $('#hoja').innerHTML = `
+    <h2>Anular egreso</h2>
+    <p class="sub">${escapar(x.concepto)} · ${money(x.monto)}</p>
+    ${x.origen === 'caja' ? '<div class="aviso ojo">Salió de una gaveta: el dinero vuelve a esa caja como fondo, si su turno sigue abierto.</div>' : ''}
+    <div class="campo-g"><label for="an-motivo">¿Por qué se anula?</label>
+      <input class="entrada" id="an-motivo" placeholder="Se registró dos veces"></div>
+    <div class="aviso malo oculto" id="an-error" style="margin-top:12px"></div>
+    <div class="acciones" style="margin-top:16px">
+      <button class="btn secundario" id="an-no">Mejor no</button>
+      <button class="btn principal-b" id="an-si">Anular</button>
+    </div>`;
+  ver('#velo');
+  setTimeout(() => $('#an-motivo').focus(), 60);
+  $('#an-no').onclick = cerrarHoja;
+  $('#an-si').onclick = async () => {
+    const b = $('#an-si');
+    b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+    const { error } = await sb.rpc('fn_anular_egreso', { p_egreso_id:id, p_motivo:$('#an-motivo').value.trim() });
+    if (error){
+      b.disabled = false; b.textContent = 'Anular';
+      $('#an-error').textContent = limpiarError(error); ver('#an-error');
+      return;
+    }
+    cerrarHoja(); cargar();
+  };
+}
+
+function aviso(titulo, texto){
+  $('#hoja').innerHTML = `<h2>${escapar(titulo)}</h2><p class="sub">${escapar(texto)}</p>
+    <button class="btn principal-b" style="width:100%" id="ok">Entendido</button>`;
+  ver('#velo');
+  $('#ok').onclick = cerrarHoja;
+}
+
+/* ================= filtros ================= */
+$('#rangos').addEventListener('click', e => {
+  const b = e.target.closest('[data-r]'); if (!b) return;
+  fijarRango(b.dataset.r); cargar();
+});
+['#f-desde', '#f-hasta'].forEach(id => $(id).addEventListener('change', () => {
+  const de = $('#f-desde').value, a = $('#f-hasta').value;
+  if (!de || !a) return;
+  S.rango = ''; S.desde = de <= a ? de : a; S.hasta = de <= a ? a : de;
+  $$('#rangos button').forEach(b => b.classList.remove('si'));
+  cargar();
+}));
+$('#f-sucursal').addEventListener('change', e => { S.sucursal = e.target.value; cargar(); });
+
+window.__finanzas = { S, irA, calcularRango };
+
+arrancar();
+
+if ('serviceWorker' in navigator)
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>

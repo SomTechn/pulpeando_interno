@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" href="icono-192.png">
 <title>Tablero · Pulpeando</title>
 <script src="config.js"></script>
+<script src="tema.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -39,7 +40,7 @@
   padding:3px;gap:2px;overflow-x:auto;max-width:100%}
 .rangos button{height:36px;padding:0 13px;border-radius:9px;font-size:13px;font-weight:700;
   color:var(--tenue);white-space:nowrap}
-.rangos button.si{background:var(--tinta);color:#fff}
+.rangos button.si{background:var(--marca);color:var(--marca-sobre)}
 .fechas{display:flex;gap:6px;align-items:center}
 .fechas input,.filtros select{height:40px;border:1px solid var(--linea);border-radius:10px;
   background:var(--panel);padding:0 10px;font:inherit;font-size:13px;color:var(--tinta);min-width:0}
@@ -74,8 +75,8 @@
 .delta.sube{background:var(--bien-f);color:var(--bien)}
 .delta.baja{background:var(--mal-f);color:var(--mal)}
 .delta.igual{background:var(--fondo);color:var(--tenue)}
-.kpi.fuerte{background:var(--tinta);border-color:var(--tinta);color:#fff}
-.kpi.fuerte small,.kpi.fuerte .pie{color:#9FB2CC}
+.kpi.fuerte{background:var(--marca);border-color:var(--marca);color:var(--marca-sobre)}
+.kpi.fuerte small,.kpi.fuerte .pie{color:inherit;opacity:.85}
 
 /* tarjetas */
 .rej{display:grid;gap:14px;grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:14px}
@@ -462,7 +463,8 @@ function pintar(){
       </div>
       <div class="kpi">
         <small>Utilidad bruta</small><b>${money0(p.utilidad)}</b>
-        <div class="pie">${delta(p.utilidad, a.utilidad)}<span>margen ${pct(p.margen)}</span></div>
+        <div class="pie">${delta(p.utilidad, a.utilidad)}<span>margen ${pct(p.margen)}${
+          p.costo > 0 ? ' · markup ' + pct(p.utilidad / p.costo * 100) : ''}</span></div>
       </div>
       <div class="kpi">
         <small>Clientes atendidos</small><b>${cant(p.tickets)}</b>
@@ -537,9 +539,11 @@ function pintar(){
 
     <div class="rej">
       <section class="tj">
-        <div class="tj-enc"><h2>Lo que más se vende</h2><span class="sub">por venta, con su margen</span></div>
+        <div class="tj-enc"><h2>Lo que más se vende</h2><span class="sub">por venta · margen · markup</span></div>
         ${barras(d.top_productos || [], x => x.nombre, x => x.venta,
-                 x => `${money(x.venta)}<small>${pct(x.margen)}</small>`, 'Sin ventas en el período')}
+                 x => `${money(x.venta)}<small title="Margen · markup">${pct(x.margen)}${
+                   x.margen != null && x.margen < 100 ? ' · ' + pct(x.margen / (100 - x.margen) * 100) : ''}</small>`,
+                 'Sin ventas en el período')}
       </section>
       <section class="tj">
         <div class="tj-enc"><h2>Por categoría</h2><span class="sub">venta del período</span></div>

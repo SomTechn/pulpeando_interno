@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" href="../icono-192.png">
 <title>Caja · Pulpeando</title>
 <script src="../config.js"></script>
+<script src="../tema.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -85,7 +86,7 @@
 .en-ticket{
   position:absolute;top:8px;right:8px;min-width:24px;height:24px;
   padding:0 7px;border-radius:12px;
-  background:var(--verde);color:#fff;display:grid;place-items:center;
+  background:var(--marca);color:var(--marca-sobre);display:grid;place-items:center;
   font-size:12px;font-weight:800;font-family:var(--num);
 }
 
@@ -224,11 +225,12 @@
 .tot.grande b{font-size:clamp(32px,4.4vw,54px);font-weight:700;letter-spacing:-.035em;
   line-height:1}
 .btn-cobrar{
-  width:100%;height:60px;border-radius:var(--r-md);background:var(--verde);color:#fff;
+  width:100%;height:60px;border-radius:var(--r-md);background:var(--marca);color:var(--marca-sobre);
   display:flex;align-items:center;justify-content:space-between;padding:0 20px;
   font-size:17px;font-weight:800;margin-top:12px;
-  box-shadow:0 6px 18px -6px rgba(18,161,80,.6);
+  box-shadow:0 6px 18px -8px var(--marca-sombra);transition:background .15s;
 }
+.btn-cobrar:hover:not(:disabled){background:var(--marca-oscuro)}
 .btn-cobrar:disabled{background:#CBD5E1;box-shadow:none}
 .btn-cobrar b{font-family:var(--num);font-size:20px}
 .pill.accion{background:var(--azul-suave);color:var(--azul);font-weight:700;
@@ -578,7 +580,7 @@
 /* .listo, .marca-ok y .doc viven en ui.css: los comparte la pantalla de fiado */
 .imprimir-auto{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;
   font-weight:600;color:var(--tenue);margin:-2px 0 14px}
-.imprimir-auto input{width:17px;height:17px;accent-color:var(--verde)}
+.imprimir-auto input{width:17px;height:17px;accent-color:var(--marca)}
 /* El vuelto se canta en voz alta. Grande de verdad: la cajera lo lee de un
    vistazo y el cliente lo ve desde el otro lado del mostrador. */
 .entregar b{font-size:clamp(38px,13vw,62px);line-height:1;letter-spacing:-.035em;
@@ -666,7 +668,7 @@
   .movil-btn:disabled{background:#CBD5E1}
   /* crece con el texto: con dos cifras o con "0.75" no cabia en 26px */
   .movil-conteo{min-width:26px;height:26px;padding:0 8px;border-radius:13px;
-    background:var(--verde);display:grid;place-items:center;font-size:12px;
+    background:var(--marca);color:var(--marca-sobre);display:grid;place-items:center;font-size:12px;
     font-family:var(--num);font-weight:700}
 }
 </style>
@@ -1303,6 +1305,8 @@ async function arrancar(){
   S.ctx = data;
   S.cajero = data.usuario;
   S.moneda = data.organizacion.moneda === 'HNL' ? 'L' : data.organizacion.moneda;
+  // El color del negocio, también en la caja.
+  window.PulpeandoTema?.aplicar(data.organizacion.color || null);
 
   $('#t-org').textContent = data.organizacion.nombre;
   $('#t-nombre').textContent = data.usuario.nombre;
@@ -1688,6 +1692,7 @@ function fijarCant(id, n){
 function quitarLinea(id){
   const i = S.ticket.findIndex(x => x.producto_id === id);
   if (i < 0) return;
+  anotarEvento('linea_quitada', [S.ticket[i]]);
   S.ticket.splice(i, 1);
   // El puesto pasa a la linea que ocupo su lugar, o a la anterior si era la ultima.
   const sig = S.ticket[Math.min(i, S.ticket.length - 1)];
@@ -1826,7 +1831,8 @@ const ATAJOS = [
   { k:'F7',  t:'Suspender', fn:() => suspender(), linea:true },
   { k:'F8',  t:'Retomar',   fn:() => hojaSuspendidas() },
   { k:'F9',  t:'Bloquear',  fn:() => bloquear() },
-  { k:'F10', t:'Cobrar',    fn:() => $('#btn-cobrar').click(), linea:true }
+  { k:'F10', t:'Cobrar',    fn:() => $('#btn-cobrar').click(), linea:true },
+  { k:'F12', t:'Cancelar venta', fn:() => hojaCancelarVenta(), linea:true }
 ];
 
 function pintarAtajos(){
@@ -2185,6 +2191,7 @@ function suspender(){
     que: (S.catalogo.find(x => x.producto_id === S.ticket[0].producto_id) || {}).nombre || '—'
   });
   guardar(lista.slice(0, 20));
+  anotarEvento('suspendida', S.ticket);
   S.ticket = []; S.puesto = null; S.multi = null; S.cliente = null;
   pintarCliente(); pintarMulti(); pintar();
   $('#buscar').focus();
@@ -2235,6 +2242,7 @@ function hojaSuspendidas(){
       b.dataset.seguro = '1'; b.textContent = '¿Seguro? Toque otra vez para borrarlas';
       return;
     }
+    lista.forEach(sp => anotarEvento('descartada', sp.ticket || []));
     guardar([]); ver('#velo-hoja', false); pintarAtajos(); $('#buscar').focus();
   };
   document.querySelectorAll('[data-sp]').forEach(b =>
@@ -2262,6 +2270,7 @@ function retomar(id){
   S.puesto = S.ticket.length ? S.ticket[S.ticket.length - 1].producto_id : null;
 
   guardar(guardadas().filter(x => x.id !== id));
+  anotarEvento('retomada', s.ticket);
   pintarCliente(); pintar();
   ver('#velo-hoja', false);
   $('#buscar').focus();
@@ -3678,6 +3687,95 @@ function hojaAbono(){
 }
 
 /* ================= sincronizar ================= */
+/* =============== lo que pasa en la caja y no termina en venta ===============
+
+   Quitar una línea, suspender, retomar, descartar y cancelar una venta ya
+   marcada se anotan y se mandan al servidor (fn_eventos_caja), donde el
+   dueño los ve en Finanzas. Sin internet se guardan en este navegador y se
+   mandan después; cada uno lleva su propio id, así que reintentar no los
+   duplica.
+   ============================================================================ */
+const LLAVE_EVENTOS = 'pulp:eventos';
+function eventosPendientes(){
+  try { const x = JSON.parse(localStorage.getItem(LLAVE_EVENTOS) || '[]'); return Array.isArray(x) ? x : []; }
+  catch(e){ return []; }
+}
+function guardarEventos(l){
+  try { localStorage.setItem(LLAVE_EVENTOS, JSON.stringify(l.slice(-500))); } catch(e){}
+}
+const nuevoId = () => (crypto?.randomUUID ? crypto.randomUUID()
+  : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
+
+function anotarEvento(tipo, lineas, motivo = null){
+  const caja = cajaId();
+  if (!caja || !lineas) return;
+  const detalle = lineas.map(l => {
+    const p = S.catalogo.find(x => x.producto_id === l.producto_id) || {};
+    return { producto_id:l.producto_id, nombre:p.nombre || l.nombre || '',
+             cantidad:Number(l.cantidad) || 0, precio:Number(p.precio) || 0 };
+  });
+  guardarEventos([...eventosPendientes(), {
+    id:nuevoId(), caja_id:caja, turno_id:S.turno || null, tipo,
+    lineas:detalle.length,
+    unidades:Math.round(detalle.reduce((s, d) => s + d.cantidad, 0) * 1000) / 1000,
+    monto:Math.round(detalle.reduce((s, d) => s + d.cantidad * d.precio, 0) * 100) / 100,
+    detalle, motivo, ocurrido_en:new Date().toISOString() }]);
+  enviarEventos();
+}
+
+let enviandoEventos = false;
+async function enviarEventos(){
+  if (enviandoEventos || !S.enLinea) return;
+  const pend = eventosPendientes();
+  if (!pend.length) return;
+  enviandoEventos = true;
+  try{
+    const lote = pend.slice(0, 100);
+    const { error } = await sb.rpc('fn_eventos_caja', { p_eventos:lote });
+    if (!error){
+      const ids = new Set(lote.map(e => e.id));
+      guardarEventos(eventosPendientes().filter(e => !ids.has(e.id)));
+    }
+  }catch(e){ /* sin red: se manda la próxima vez */ }
+  finally{ enviandoEventos = false; }
+}
+window.addEventListener('online', () => setTimeout(enviarEventos, 1500));
+setInterval(enviarEventos, 60000);
+
+/* Cancelar la venta que está en pantalla. Se pide confirmar y, si se
+   quiere, el motivo: una venta abortada es lo primero que revisa el dueño
+   cuando falta plata. */
+function hojaCancelarVenta(){
+  if (!S.ticket.length) return;
+  const t = totales();
+  $('#hoja').innerHTML = `
+    <h2>Cancelar la venta</h2>
+    <p class="sub">${S.ticket.length} ${S.ticket.length === 1 ? 'línea' : 'líneas'} · ${money(t.total)}.
+      Se borra todo lo marcado y queda anotado como venta cancelada.</p>
+    <div class="campo-g" style="margin-bottom:14px"><label for="cv-motivo">Motivo (opcional)</label>
+      <input class="entrada" id="cv-motivo" placeholder="El cliente no traía dinero" autocomplete="off"></div>
+    <div class="acciones">
+      <button class="btn secundario" id="cv-no">Volver <kbd>Esc</kbd></button>
+      <button class="btn principal-b" id="cv-si" style="background:var(--rojo);color:#fff">Cancelar venta <kbd>Enter</kbd></button>
+    </div>`;
+  ver('#velo-hoja');
+  setTimeout(() => $('#cv-motivo').focus(), 40);
+  const volver = () => { ver('#velo-hoja', false); $('#buscar').focus(); };
+  const confirmar = () => {
+    anotarEvento('abortada', S.ticket, $('#cv-motivo').value.trim() || null);
+    S.ticket = []; S.puesto = null; S.multi = null; S.cliente = null;
+    pintarCliente(); pintarMulti(); pintar();
+    volver();
+  };
+  $('#cv-no').onclick = volver;
+  $('#cv-si').onclick = confirmar;
+  $('#cv-motivo').addEventListener('keydown', e => {
+    if (e.key === 'Enter'){ e.preventDefault(); confirmar(); }
+    if (e.key === 'Escape'){ e.preventDefault(); volver(); }
+  });
+}
+
 async function revisarCola(){
   const pend = await DB.pendientes();
   if (!pend.length) return;

@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" href="icono-192.png">
 <title>Catálogos · Pulpeando</title>
 <script src="config.js"></script>
+<script src="tema.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -18,10 +19,11 @@
 .zona{flex:1;display:flex;flex-direction:column;min-height:0;padding:14px 16px 0}
 .barra-busca{display:flex;gap:10px;margin-bottom:14px;flex:0 0 auto}
 .btn-nuevo{
-  height:50px;padding:0 18px;border-radius:var(--r-md);background:var(--verde);color:#fff;
+  height:50px;padding:0 18px;border-radius:var(--r-md);background:var(--marca);color:var(--marca-sobre);
   font-weight:700;font-size:14px;display:flex;align-items:center;gap:7px;flex:0 0 auto;
-  box-shadow:0 6px 18px -6px rgba(18,161,80,.6);
+  box-shadow:0 6px 18px -8px var(--marca-sombra);transition:background .15s;
 }
+.btn-nuevo:hover:not(:disabled){background:var(--marca-oscuro)}
 .btn-nuevo:disabled{background:#CBD5E1;box-shadow:none}
 
 /* min-height:0 para que la lista de abajo pueda hacer scroll */
@@ -78,9 +80,14 @@
 .campos.dos{grid-template-columns:1fr 1fr}
 .ancho-total{grid-column:1/-1}
 .ayuda{font-size:12px;color:var(--tenue);margin-top:-3px;line-height:1.4}
+.mk-calc{font-size:12.5px;color:var(--texto-2);background:var(--marca-suave);border-radius:8px;
+  padding:7px 10px;margin-top:6px;line-height:1.45}
+.mk-calc b{font-family:var(--num);font-weight:600}
+.mk-calc.ojo{background:#FFF4E0;color:#8A5A00}
+.mk-calc.mal{background:#FFEDF1;color:#9F1239}
 .marca-check{display:flex;align-items:center;gap:10px;padding:12px 14px;
   background:var(--fondo);border-radius:var(--r-sm);font-size:13.5px;font-weight:600}
-.marca-check input{width:20px;height:20px;flex:0 0 auto;accent-color:var(--verde)}
+.marca-check input{width:20px;height:20px;flex:0 0 auto;accent-color:var(--marca)}
 
 .codigos{display:flex;flex-direction:column;gap:7px}
 .codigo{display:flex;align-items:center;gap:10px;background:var(--fondo);
@@ -105,7 +112,7 @@
 .pres .entrada{height:40px;font-size:14px}
 .pres .compra{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;
   color:var(--tenue);white-space:nowrap}
-.pres .compra input{width:18px;height:18px;accent-color:var(--verde)}
+.pres .compra input{width:18px;height:18px;accent-color:var(--marca)}
 .pres button{width:32px;height:32px;border-radius:8px;color:var(--tenue);font-size:14px}
 .pres button:hover{background:#FFEDF1;color:var(--rojo)}
 @media (max-width:430px){
@@ -789,11 +796,51 @@ function abrirForm(fila){
 }
 
 async function cargarPrecio(productoId){
-  const { data } = await sb.from('precios')
-    .select('precio').eq('producto_id', productoId).eq('nivel','detalle')
-    .is('vigente_hasta', null).order('cantidad_minima').limit(1);
+  const [{ data }, costos, imps] = await Promise.all([
+    sb.from('precios')
+      .select('precio').eq('producto_id', productoId).eq('nivel','detalle')
+      .is('vigente_hasta', null).order('cantidad_minima').limit(1),
+    // El costo solo lo ve un supervisor en adelante: para los demás viene vacío.
+    sb.from('producto_costos').select('costo_promedio,ultimo_costo,sucursal_id')
+      .eq('producto_id', productoId),
+    sb.from('impuestos').select('id,tasa')
+  ]);
   const campo = $('#form-cuerpo').querySelector('[data-k="precio"]');
   if (campo && data?.length) campo.value = data[0].precio;
+  if (!campo) return;
+
+  const filas = costos?.data || [];
+  const c = filas.find(x => x.sucursal_id === S.sucursal) || filas[0];
+  const costo = Number(c?.costo_promedio) || Number(c?.ultimo_costo) || 0;
+  if (!(costo > 0)) return;
+  const tasas = Object.fromEntries((imps?.data || []).map(i => [i.id, Number(i.tasa) || 0]));
+
+  /* Margen y markup del precio que se está escribiendo, en vivo.
+       margen = lo que se gana sobre el precio sin ISV
+       markup = lo que se le sube al costo
+     El costo de compra va sin ISV, así que el precio se compara sin ISV. */
+  let z = $('#mk-calc');
+  if (!z){
+    z = document.createElement('div');
+    z.id = 'mk-calc'; z.className = 'mk-calc';
+    (campo.closest('.campo-f, .campo-g, label, div') || campo.parentElement).appendChild(z);
+  }
+  const calcular = () => {
+    const precio = num(campo.value);
+    const imp = $('#form-cuerpo').querySelector('[data-k="impuesto_id"]')?.value;
+    const tasa = tasas[imp] || 0;
+    if (!(precio > 0)){ z.innerHTML = `Costo promedio <b>${money(costo)}</b>`; return; }
+    const base = precio / (1 + tasa);
+    const margen = (base - costo) / base * 100;
+    const markup = (base - costo) / costo * 100;
+    const f = v => v.toLocaleString('es-HN', { maximumFractionDigits:1 }) + '%';
+    z.className = 'mk-calc' + (margen < 0 ? ' mal' : margen < 8 ? ' ojo' : '');
+    z.innerHTML = `Costo <b>${money(costo)}</b> · Margen <b>${f(margen)}</b> · Markup <b>${f(markup)}</b>` +
+      (margen < 0 ? ' · se vende con pérdida' : margen < 8 ? ' · casi sin ganancia' : '');
+  };
+  campo.addEventListener('input', calcular);
+  $('#form-cuerpo').querySelector('[data-k="impuesto_id"]')?.addEventListener('change', calcular);
+  calcular();
 }
 
 /* ---------- códigos de barras ---------- */

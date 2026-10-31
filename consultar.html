@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" href="icono-192.png">
 <title>Consultar · Pulpeando</title>
 <script src="config.js"></script>
+<script src="tema.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -212,7 +213,7 @@ button.fila-l:active{transform:scale(.995)}
   min-height:3px;transition:height .25s}
 .gcol.vacia .gbarra{background:var(--linea)}
 .gcol.vacia .gnum{color:var(--claro)}
-.gcol.ahora .gbarra{background:var(--verde)}
+.gcol.ahora .gbarra{background:var(--marca)}
 .gpie{display:flex;gap:8px;margin-top:9px}
 .gpie div{flex:1;text-align:center;font-size:11px;color:var(--tenue);line-height:1.35;
   min-width:0}
@@ -828,6 +829,10 @@ function pintarFicha(){
     ve ? `<div class="dato"><small>Costo promedio</small><b>${money(p.costo_promedio)}</b></div>` : '',
     ve && p.margen !== null && p.margen !== undefined
       ? `<div class="dato"><small>Margen</small><b>${p.margen}%</b></div>` : '',
+    /* markup: lo que se le sube al costo. Con 25% de margen, el markup es 33%. */
+    ve && p.margen !== null && p.margen !== undefined && Number(p.margen) < 100
+      ? `<div class="dato"><small>Markup</small><b>${(Number(p.margen) / (100 - Number(p.margen)) * 100)
+          .toLocaleString('es-HN', { maximumFractionDigits:1 })}%</b></div>` : '',
     ve ? `<div class="dato"><small>Valor del inventario</small><b>${money(p.valor_inventario)}</b></div>` : '',
     `<div class="dato"><small>Mínimo / máximo</small><b>${cant(p.stock_minimo)}${p.stock_maximo ? ' / ' + cant(p.stock_maximo) : ' / —'}</b></div>`,
     `<div class="dato"><small>Vendido en 30 días</small><b>${cant(p.vendido_30d)} ${escapar(p.unidad)}</b></div>`,
@@ -906,7 +911,7 @@ function pintarFicha(){
           <span class="ficha-cod">${escapar(p.sku)}${codigos ? ' · ' + escapar(codigos) : ''}</span>
         </div>
         <div class="ficha-precio ${oferta ? 'en-oferta' : ''}">
-          ${oferta ? '<span class="tag-oferta">Oferta</span>' : ''}
+          ${oferta ? `<span class="tag-oferta">Oferta −${markdown(oferta.precio, S.etq.precio_regular)}</span>` : ''}
           <b>${money(p.precio)}</b>
           ${oferta ? `<s>${money(S.etq.precio_regular)}</s>
           <small>hasta el ${fecha(oferta.hasta)}</small>`
@@ -1752,6 +1757,13 @@ function tamanoGuardado(){
 }
 function guardarTamano(t){ try { localStorage.setItem(LLAVE_TAM, t); } catch(e){} }
 
+/* markdown: cuánto se le rebaja al precio normal, en porcentaje */
+const markdown = (oferta, normal) => {
+  const n = Number(normal) || 0;
+  if (!(n > 0)) return '0%';
+  return ((n - Number(oferta)) / n * 100).toLocaleString('es-HN', { maximumFractionDigits:0 }) + '%';
+};
+
 const hoyISO = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -1776,7 +1788,7 @@ function hojaEtiqueta(){
     ${ofertas.length ? `<div class="of-lista">${ofertas.map(o => `
       <div class="of-fila">
         <div class="of-txt">
-          <b>${money(o.precio)}</b>${e.precio_regular ? ` <span style="color:var(--tenue)">antes ${money(e.precio_regular)}</span>` : ''}
+          <b>${money(o.precio)}</b>${e.precio_regular ? ` <span style="color:var(--tenue)">antes ${money(e.precio_regular)} · −${markdown(o.precio, e.precio_regular)}</span>` : ''}
           <small>${o.desde > e.hoy ? 'Empieza el ' + fecha(o.desde) + ' · ' : ''}Hasta el ${fecha(o.hasta)}${o.sucursal ? ' · solo ' + escapar(o.sucursal) : ''}</small>
         </div>
         <button data-quitar-oferta="${o.id}">Quitar</button>

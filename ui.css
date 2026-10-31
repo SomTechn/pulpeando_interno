@@ -4,14 +4,27 @@
    ========================================================================== */
 
 :root{
+  /* La marca del negocio. Son los de fábrica: tema.js los cambia por los del
+     color que el dueño eligió, antes de que se pinte la pantalla. */
+  --marca:#12805C;
+  --marca-oscuro:#0F6E4F;
+  --marca-suave:#E7F2EE;
+  --marca-borde:#B8D9CE;
+  --marca-tinta:#12805C;
+  --marca-sobre:#FFFFFF;
+  --marca-sombra:rgba(18,128,92,.45);
+
   --tinta:#0F1729;
   --tinta-2:#182236;
   --tinta-3:#22304A;
+  --texto-2:#3B4A63;
   --panel:#FFFFFF;
-  --fondo:#F2F5F9;
-  --linea:#E3E9F2;
-  --azul:#2563EB;
-  --azul-suave:#EFF4FF;
+  --fondo:#F4F6FA;
+  --linea:#E4E9F0;
+  /* "azul" quedó como el nombre del color de acento: enlaces, foco, lo
+     seleccionado. Ahora es el de la marca, en su versión legible. */
+  --azul:var(--marca-tinta);
+  --azul-suave:var(--marca-suave);
   --verde:#12A150;
   --verde-oscuro:#0E8443;
   --ambar:#F5B301;
@@ -28,7 +41,7 @@
   --ui:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
   --num:'IBM Plex Mono',ui-monospace,monospace;
 
-  --menu-ancho:236px;
+  --menu-ancho:252px;
   --menu-angosto:72px;
   --barra-alto:60px;
 }
@@ -53,8 +66,11 @@ a{color:inherit;text-decoration:none}
    ========================================================================== */
 .armazon{display:flex;height:100%;overflow:hidden}
 
+/* El menú es claro y callado: el color lo pone solo lo activo, con el de la
+   marca. Así el menú no compite con el contenido, y cada negocio se ve suyo. */
 .menu{
-  width:var(--menu-ancho);flex:0 0 auto;background:var(--tinta);color:#fff;
+  width:var(--menu-ancho);flex:0 0 auto;background:var(--panel);color:var(--tinta);
+  border-right:1px solid var(--linea);
   display:flex;flex-direction:column;overflow:hidden;
   transition:width .22s cubic-bezier(.2,.8,.3,1);
   padding-bottom:env(safe-area-inset-bottom);
@@ -62,89 +78,136 @@ a{color:inherit;text-decoration:none}
 .menu.angosto{width:var(--menu-angosto)}
 
 .menu-arriba{
-  display:flex;align-items:center;gap:10px;padding:14px 16px;flex:0 0 auto;
+  display:flex;align-items:center;gap:11px;padding:12px 12px 10px 16px;flex:0 0 auto;
   min-height:var(--barra-alto);
 }
 .menu-marca{
-  width:34px;height:34px;border-radius:10px;background:var(--verde);color:#fff;
-  display:grid;place-items:center;font-size:16px;flex:0 0 auto;font-style:normal;
+  width:36px;height:36px;border-radius:10px;background:var(--marca);color:var(--marca-sobre);
+  display:grid;place-items:center;font-size:13px;font-weight:800;letter-spacing:.02em;
+  flex:0 0 auto;overflow:hidden;
 }
+.menu-marca.con-logo{background:#fff;border:1px solid var(--linea)}
+.menu-marca img{width:100%;height:100%;object-fit:contain;padding:3px;display:block}
 .menu-nombre{flex:1;min-width:0;overflow:hidden}
-.menu-nombre b{display:block;font-size:14.5px;font-weight:800;white-space:nowrap;
-  overflow:hidden;text-overflow:ellipsis}
-.menu-nombre small{display:block;font-size:11px;color:var(--claro);white-space:nowrap;
-  overflow:hidden;text-overflow:ellipsis}
+.menu-nombre b{display:block;font-size:14px;font-weight:800;letter-spacing:-.01em;line-height:1.25;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu-nombre small{display:block;font-size:11.5px;color:var(--tenue);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;margin-top:1px}
 .menu.angosto .menu-nombre{display:none}
 
 .menu-plegar{
-  width:34px;height:34px;border-radius:10px;color:var(--claro);flex:0 0 auto;
-  display:grid;place-items:center;transition:background .15s;
+  width:32px;height:32px;border-radius:9px;color:#8592A6;flex:0 0 auto;
+  display:grid;place-items:center;transition:background .15s,color .15s;
 }
-.menu-plegar:hover{background:rgba(255,255,255,.08);color:#fff}
+.menu-plegar:hover{background:var(--fondo);color:var(--tinta)}
 .menu.angosto .menu-plegar{margin:0 auto}
-.menu.angosto .menu-arriba{flex-direction:column;gap:12px;padding:14px 8px}
+.menu.angosto .menu-arriba{flex-direction:column;gap:10px;padding:12px 8px}
 
-.menu-cuerpo{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px 10px 14px;
-  scrollbar-width:thin;scrollbar-color:#33415C transparent}
+.menu-cuerpo{flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 10px 14px;
+  scrollbar-width:thin;scrollbar-color:#D3DAE5 transparent}
 .menu-cuerpo::-webkit-scrollbar{width:5px}
-.menu-cuerpo::-webkit-scrollbar-thumb{background:#33415C;border-radius:3px}
+.menu-cuerpo::-webkit-scrollbar-thumb{background:#D3DAE5;border-radius:3px}
 
+.menu-grupo + .menu-grupo{margin-top:4px}
 .menu-titulo{
-  font-size:10.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;
-  color:#5E6E88;padding:14px 12px 7px;white-space:nowrap;
-}
-.menu.angosto .menu-titulo{
-  padding:14px 0 7px;text-align:center;font-size:9px;letter-spacing:.05em;
+  font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+  color:#98A3B4;padding:14px 12px 6px;white-space:nowrap;
 }
 
+.menu-nodo{position:relative}
 .menu-item{
-  display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;
-  border-radius:12px;color:#C7D3E6;font-size:14px;font-weight:600;
-  transition:background .14s,color .14s;margin-bottom:2px;text-align:left;
-  min-height:44px;
+  position:relative;display:flex;align-items:center;gap:11px;width:100%;padding:9px 12px;
+  border-radius:10px;color:var(--texto-2);font-size:14px;font-weight:600;
+  transition:background .14s,color .14s;margin-bottom:1px;text-align:left;
+  min-height:42px;
 }
-.menu-item:hover{background:rgba(255,255,255,.07);color:#fff}
-.menu-item.activo{background:rgba(18,161,80,.18);color:#fff}
-.menu-item.activo .menu-icono{color:var(--verde)}
-.menu-icono{flex:0 0 auto;width:20px;height:20px;display:grid;place-items:center;color:#8A99B3}
+.menu-item:hover{background:var(--fondo);color:var(--tinta)}
+.menu-item.activo{background:var(--marca-suave);color:var(--marca-tinta);font-weight:700}
+/* la rayita de la marca a la orilla: lo activo se ve aun de reojo */
+.menu-item.activo:not(.menu-sub)::before{
+  content:'';position:absolute;left:-10px;top:9px;bottom:9px;width:3px;
+  border-radius:0 3px 3px 0;background:var(--marca);
+}
+.menu-icono{flex:0 0 auto;width:20px;height:20px;display:grid;place-items:center;color:#8592A6;
+  transition:color .14s}
+.menu-item:hover .menu-icono{color:var(--texto-2)}
+.menu-item.activo .menu-icono{color:var(--marca-tinta)}
 .menu-texto{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .menu-cuenta{
-  font-family:var(--num);font-size:11.5px;font-weight:700;color:#7C8CA8;
-  background:rgba(255,255,255,.07);padding:2px 8px;border-radius:999px;flex:0 0 auto;
+  font-family:var(--num);font-size:11px;font-weight:600;color:var(--tenue);
+  background:var(--fondo);padding:1px 8px;border-radius:999px;flex:0 0 auto;
 }
-.menu-item.activo .menu-cuenta{background:rgba(255,255,255,.14);color:#D6E0EF}
-.menu.angosto .menu-texto,
-.menu.angosto .menu-cuenta{display:none}
-.menu.angosto .menu-item{justify-content:center;padding:11px 0}
+.menu-item.activo .menu-cuenta{background:var(--panel);color:var(--marca-tinta)}
 
-/* etiqueta flotante cuando el menú está angosto */
-.menu.angosto .menu-item{position:relative}
-.menu.angosto .menu-item:hover::after{
-  content:attr(data-nombre);position:absolute;left:calc(100% + 10px);top:50%;
-  transform:translateY(-50%);background:var(--tinta-3);color:#fff;
-  padding:7px 11px;border-radius:9px;font-size:12.5px;font-weight:600;
-  white-space:nowrap;z-index:60;pointer-events:none;box-shadow:var(--sombra);
+/* las secciones de la pantalla, colgando de su opción */
+.menu-nodo.con-hijos > .menu-item{padding-right:42px}
+/* Con secciones abiertas, el fondo lo lleva la sección elegida, no el padre:
+   dos renglones pintados confunden cuál es el lugar en que se está. */
+.menu-nodo.con-hijos:not(.plegado) > .menu-item.activo{background:transparent}
+.menu-nodo.con-hijos:not(.plegado) > .menu-item.activo:hover{background:var(--fondo)}
+.menu-nodo.con-hijos:not(.plegado) > .menu-item.activo::before{display:none}
+.menu-desplegar{
+  position:absolute;right:6px;top:7px;width:28px;height:28px;border-radius:8px;
+  display:grid;place-items:center;color:var(--marca-tinta);transition:background .14s;
+}
+.menu-desplegar:hover{background:var(--panel)}
+.menu-desplegar svg{transform:rotate(90deg);transition:transform .2s}
+.menu-nodo.plegado .menu-desplegar svg{transform:none}
+.menu-hijos{margin:2px 0 8px 21px;padding-left:9px;border-left:1px solid var(--linea)}
+.menu-hijos:empty{display:none}
+.menu-nodo.plegado > .menu-hijos{display:none}
+.menu-hijos.sueltos{margin:8px 0 0;padding:0;border:0}
+.menu-subtitulo{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:#A7B1C0;padding:10px 10px 4px}
+.menu-sub{min-height:36px;padding:7px 10px;font-size:13.5px;font-weight:500;gap:10px}
+.menu-sub .menu-icono{width:17px;height:17px}
+.menu-sub.activo{font-weight:700}
+.menu-sub.activo::before{
+  content:'';position:absolute;left:-10px;top:8px;bottom:8px;width:2px;border-radius:2px;
+  background:var(--marca);
 }
 
-.menu-abajo{flex:0 0 auto;padding:10px;border-top:1px solid rgba(255,255,255,.08)}
-.menu-usuario{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:12px;
+.menu-abajo{flex:0 0 auto;padding:10px;border-top:1px solid var(--linea)}
+.menu-usuario{display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:12px;
   width:100%;text-align:left;transition:background .14s}
-.menu-usuario:hover{background:rgba(255,255,255,.07)}
+.menu-usuario:hover{background:var(--fondo)}
 .menu-avatar{
   width:34px;height:34px;border-radius:50%;flex:0 0 auto;
-  background:linear-gradient(160deg,#2E3D5C,#1B2436);border:1px solid #33415C;
-  display:grid;place-items:center;font-weight:700;font-size:13px;color:#C7D3E6;
+  background:var(--marca-suave);border:1px solid var(--marca-borde);
+  display:grid;place-items:center;font-weight:800;font-size:12.5px;color:var(--marca-tinta);
 }
 .menu-quien{flex:1;min-width:0}
 .menu-quien b{display:block;font-size:13px;font-weight:700;white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
-.menu-quien small{display:block;font-size:11px;color:var(--claro);text-transform:capitalize}
-.menu.angosto .menu-quien{display:none}
-.menu.angosto .menu-usuario{justify-content:center;padding:9px 0}
+.menu-quien small{display:block;font-size:11.5px;color:var(--tenue)}
+.menu-salir{color:#98A3B4}
+.menu-usuario:hover .menu-salir{color:var(--rojo)}
+
+/* ---- solo iconos (escritorio plegado y tablet) ---- */
+.menu.angosto .menu-texto,
+.menu.angosto .menu-cuenta,
+.menu.angosto .menu-quien,
+.menu.angosto .menu-salir,
+.menu.angosto .menu-desplegar,
+.menu.angosto .menu-subtitulo{display:none}
+.menu.angosto .menu-titulo{font-size:0;padding:0;height:1px;background:var(--linea);margin:10px 12px}
+.menu.angosto .menu-item{justify-content:center;padding:10px 0}
+.menu.angosto .menu-hijos{margin:2px 0 6px;padding:0;border:0}
+.menu.angosto .menu-sub{min-height:36px}
+.menu.angosto .menu-nodo.plegado > .menu-hijos{display:block}
+.menu.angosto .menu-usuario{justify-content:center;padding:8px 0}
+/* Etiqueta flotante cuando el menú está en iconos. Va "fixed" para que el
+   scroll del menú no la recorte; sin "top", se queda a la altura del ícono. */
+.menu.angosto .menu-item:hover::after{
+  content:attr(data-nombre);position:fixed;left:calc(var(--menu-angosto) + 8px);
+  background:var(--tinta);color:#fff;
+  padding:7px 11px;border-radius:9px;font-size:12.5px;font-weight:600;
+  white-space:nowrap;z-index:60;pointer-events:none;box-shadow:var(--sombra);
+}
 
 /* velo del menú en móvil */
 .menu-velo{
-  position:fixed;inset:0;background:rgba(15,23,41,.5);z-index:79;
+  position:fixed;inset:0;background:rgba(15,23,41,.42);z-index:79;
   opacity:0;pointer-events:none;transition:opacity .22s;backdrop-filter:blur(2px);
 }
 .menu-velo.visible{opacity:1;pointer-events:auto}
@@ -191,7 +254,7 @@ a{color:inherit;text-decoration:none}
 
 .btn-camara{
   height:50px;min-width:50px;padding:0 16px;border-radius:var(--r-md);
-  background:var(--azul);color:#fff;font-weight:700;font-size:14px;
+  background:var(--marca);color:var(--marca-sobre);font-weight:700;font-size:14px;
   display:flex;align-items:center;gap:8px;box-shadow:var(--sombra);flex:0 0 auto;
 }
 .btn-camara:active{transform:scale(.97)}
@@ -200,7 +263,7 @@ a{color:inherit;text-decoration:none}
   height:46px;border:1.5px solid var(--linea);border-radius:var(--r-sm);
   padding:0 12px;background:var(--panel);outline:none;width:100%;
 }
-.entrada:focus{border-color:var(--azul)}
+.entrada:focus{border-color:var(--marca);box-shadow:0 0 0 3px var(--marca-suave)}
 .entrada.num{text-align:right;font-family:var(--num)}
 select.entrada{cursor:pointer}
 
@@ -208,7 +271,8 @@ select.entrada{cursor:pointer}
 .campo-g label{font-size:12px;font-weight:700;color:var(--tenue)}
 
 .btn{height:50px;padding:0 22px;border-radius:var(--r-md);font-weight:800;font-size:15px}
-.btn.principal-b{background:var(--verde);color:#fff;box-shadow:0 6px 18px -6px rgba(18,161,80,.6)}
+.btn.principal-b{background:var(--marca);color:var(--marca-sobre);box-shadow:0 6px 18px -8px var(--marca-sombra)}
+.btn.principal-b:hover:not(:disabled){background:var(--marca-oscuro)}
 .btn.secundario{background:var(--fondo);color:var(--tenue)}
 .btn:disabled{background:#CBD5E1;color:#fff;box-shadow:none;cursor:not-allowed}
 
@@ -253,7 +317,7 @@ select.entrada{cursor:pointer}
    segundo span —el nombre del negocio o de la caja— tambien se metia en
    26 pixeles y salia aplastado en un cuadro verde. */
 .marca > span:first-child{width:26px;height:26px;border-radius:8px;
-  background:var(--verde);display:grid;place-items:center;color:#fff;font-size:14px}
+  background:var(--marca);display:grid;place-items:center;color:var(--marca-sobre);font-size:14px}
 /* El nombre que va al lado puede ser largo: que se acorte con puntos antes
    que desbordar la tarjeta. */
 .marca > span + span{min-width:0;overflow:hidden;text-overflow:ellipsis;
@@ -274,9 +338,10 @@ select.entrada{cursor:pointer}
 .campo-o::placeholder{color:var(--claro)}
 .campo-o:focus{border-color:var(--azul);box-shadow:0 0 0 3px var(--azul-suave)}
 .btn-o{
-  width:100%;height:52px;border-radius:14px;background:var(--verde);color:#fff;
-  font-weight:700;font-size:15px;margin-top:6px;
+  width:100%;height:52px;border-radius:14px;background:var(--marca);color:var(--marca-sobre);
+  font-weight:700;font-size:15px;margin-top:6px;transition:background .15s;
 }
+.btn-o:hover:not(:disabled):not(.fantasma){background:var(--marca-oscuro)}
 .btn-o:disabled{background:var(--linea);color:var(--tenue)}
 .btn-o.fantasma{background:var(--panel);border:1px solid var(--linea);color:var(--tinta)}
 .error-o{min-height:20px;font-size:13px;color:var(--rojo);font-weight:600;margin:8px 0}
@@ -287,10 +352,10 @@ select.entrada{cursor:pointer}
   background:var(--panel);border:1px solid var(--linea);color:var(--tinta);
 }
 .opcion-o:focus{outline:none;border-color:var(--azul);box-shadow:0 0 0 3px var(--azul-suave)}
-.opcion-o.sel{border-color:var(--verde);background:#EAF8F0}
+.opcion-o.sel{border-color:var(--marca);background:var(--marca-suave)}
 .opcion-o b{font-size:14px;font-weight:700;display:block}
 .opcion-o small{font-size:12px;color:var(--tenue)}
-.opcion-o .marca-sel{margin-left:auto;color:var(--verde);font-size:18px}
+.opcion-o .marca-sel{margin-left:auto;color:var(--marca-tinta);font-size:18px}
 /* la tecla que elige esa opción, para quien no usa el mouse */
 .kbd-o{margin-left:auto;font-family:var(--num);font-size:11px;font-weight:800;
   background:var(--fondo);border:1px solid var(--linea);border-radius:6px;padding:2px 7px;
@@ -444,43 +509,58 @@ select.entrada{cursor:pointer}
    ADAPTACIÓN A PANTALLAS
    ========================================================================== */
 
-/* Tablet: el menú arranca angosto para dar aire al contenido */
-@media (max-width:1180px){
-  .menu{width:var(--menu-angosto)}
-  .menu .menu-nombre,.menu .menu-texto,.menu .menu-cuenta,.menu .menu-quien{display:none}
-  .menu .menu-item{justify-content:center;padding:11px 0}
-  .menu .menu-arriba{flex-direction:column;gap:12px;padding:14px 8px}
-  .menu .menu-usuario{justify-content:center;padding:9px 0}
-  .menu .menu-titulo{padding:14px 0 7px;text-align:center;font-size:9px;letter-spacing:.05em}
+/* Tablet: el menú arranca en iconos para dar aire al contenido. Solo de 821
+   para arriba: abajo de eso es el cajón del celular, que va completo. */
+@media (min-width:821px) and (max-width:1180px){
+  .menu:not(.ancho){width:var(--menu-angosto)}
+  .menu:not(.ancho) .menu-nombre,.menu:not(.ancho) .menu-texto,.menu:not(.ancho) .menu-cuenta,
+  .menu:not(.ancho) .menu-quien,.menu:not(.ancho) .menu-salir,.menu:not(.ancho) .menu-desplegar,
+  .menu:not(.ancho) .menu-subtitulo{display:none}
+  .menu:not(.ancho) .menu-titulo{font-size:0;padding:0;height:1px;background:var(--linea);margin:10px 12px}
+  .menu:not(.ancho) .menu-item{justify-content:center;padding:10px 0}
+  .menu:not(.ancho) .menu-hijos{margin:2px 0 6px;padding:0;border:0}
+  .menu:not(.ancho) .menu-nodo.plegado > .menu-hijos{display:block}
+  .menu:not(.ancho) .menu-arriba{flex-direction:column;gap:10px;padding:12px 8px}
+  .menu:not(.ancho) .menu-usuario{justify-content:center;padding:8px 0}
   /* si el usuario lo abre a propósito, se despliega por encima */
   .menu.ancho{
     width:var(--menu-ancho);position:fixed;left:0;top:0;bottom:0;z-index:80;
-    box-shadow:0 0 60px rgba(0,0,0,.4);
+    box-shadow:0 0 60px rgba(15,23,41,.22);
   }
-  .menu.ancho .menu-nombre,.menu.ancho .menu-texto,
-  .menu.ancho .menu-cuenta,.menu.ancho .menu-quien{display:block}
-  .menu.ancho .menu-item{justify-content:flex-start;padding:11px 12px}
-  .menu.ancho .menu-arriba{flex-direction:row;gap:10px;padding:14px 16px}
-  .menu.ancho .menu-usuario{justify-content:flex-start;padding:9px 10px}
-  .menu.ancho .menu-titulo{padding:14px 12px 7px;text-align:left;font-size:10.5px;
-    letter-spacing:.13em}
+  .menu:not(.ancho) .menu-item:hover::after{
+    content:attr(data-nombre);position:fixed;left:calc(var(--menu-angosto) + 8px);
+    background:var(--tinta);color:#fff;padding:7px 11px;border-radius:9px;font-size:12.5px;
+    font-weight:600;white-space:nowrap;z-index:60;pointer-events:none;box-shadow:var(--sombra);
+  }
   .menu.ancho .menu-item:hover::after{display:none}
 }
 
-/* Móvil: cajón que entra desde la izquierda */
+/* Móvil: cajón que entra desde la izquierda, siempre completo */
 @media (max-width:820px){
-  .menu{
-    position:fixed;left:0;top:0;bottom:0;z-index:80;width:var(--menu-ancho);
-    transform:translateX(-100%);transition:transform .24s cubic-bezier(.2,.8,.3,1);
-    box-shadow:0 0 60px rgba(0,0,0,.4);
+  .menu,.menu:not(.ancho){
+    position:fixed;left:0;top:0;bottom:0;z-index:80;width:min(86vw,300px);
+    transform:translateX(-102%);transition:transform .24s cubic-bezier(.2,.8,.3,1);
+    box-shadow:0 0 60px rgba(15,23,41,.25);
   }
   .menu.abierto{transform:none}
-  .menu .menu-nombre,.menu .menu-texto,.menu .menu-cuenta,.menu .menu-quien{display:block}
-  .menu .menu-item{justify-content:flex-start;padding:12px}
-  .menu .menu-arriba{flex-direction:row;gap:10px;padding:14px 16px}
-  .menu .menu-usuario{justify-content:flex-start;padding:9px 10px}
-  .menu .menu-titulo{padding:14px 12px 7px;text-align:left;font-size:10.5px;letter-spacing:.13em}
+  .menu .menu-nombre,.menu .menu-texto,.menu .menu-cuenta,.menu .menu-quien,.menu .menu-salir{display:block}
+  .menu .menu-desplegar{display:grid}
+  .menu .menu-desplegar.oculto{display:none}
+  .menu .menu-subtitulo{display:block}
+  .menu .menu-titulo{font-size:10.5px;padding:14px 12px 6px;height:auto;background:none;margin:0}
+  .menu .menu-item{justify-content:flex-start;padding:10px 12px;min-height:46px}
+  .menu .menu-sub{min-height:42px;padding:8px 10px}
+  .menu .menu-hijos{margin:2px 0 8px 21px;padding-left:9px;border-left:1px solid var(--linea)}
+  .menu .menu-nodo.plegado > .menu-hijos{display:none}
+  .menu .menu-arriba{flex-direction:row;gap:11px;padding:12px 12px 10px 16px}
+  .menu .menu-usuario{justify-content:flex-start;padding:8px 10px}
+  .menu .menu-item:hover::after{display:none}
   .menu-plegar{display:none}
   .hamburguesa{display:grid}
   .barra{padding:10px 14px}
+}
+/* En el celular el nombre del usuario ya está en el menú: la barra de arriba
+   se queda con lo que importa en esa pantalla. */
+@media (max-width:640px){
+  #h-usuario{display:none}
 }

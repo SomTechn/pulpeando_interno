@@ -128,6 +128,7 @@ async function montar(estado){
     ; C.abrirGaveta = abrirGaveta; C.hojaGaveta = hojaGaveta;
     ; C.entrarCaja = entrarCaja; C.pedirCredencial = pedirCredencial;
     ; C.aparato = aparato; C.bloquear = bloquear; C.abrirBuscador = abrirBuscador;
+    ; C.eventosPendientes = eventosPendientes; C.enviarEventos = enviarEventos;
   })()`);
   await new Promise(r => setTimeout(r, 140));
 
@@ -1697,6 +1698,64 @@ const entrada = (extra = {}) => ({ ...base(), entrada:true, sesion:null,
   chk('"Entra otra cajera" cierra la sesion de verdad', e.salio === true);
 }
 
+
+console.log('\n=== LO QUE NO TERMINA EN VENTA SE ANOTA ===');
+{
+  // Sin internet: todo se queda en el navegador.
+  const { w, d, C, estado } = await montar(base());
+  C.S.enLinea = false;
+  try { w.localStorage.removeItem('pulp:eventos'); } catch(e){}
+  C.agregar('p1'); C.agregar('p3'); C.agregar('p3');
+  await esperar();
+  tecla(w, d, 'F4');
+  await esperar();
+  let ev = C.eventosPendientes();
+  chk('F4 anota la línea quitada', ev.length === 1 && ev[0].tipo === 'linea_quitada');
+  chk('con producto, cantidad y monto', ev[0].detalle[0].producto_id === 'p3'
+      && ev[0].unidades === 2 && ev[0].monto > 0);
+  chk('con la caja y el turno', ev[0].caja_id === 'c1' && ev[0].turno_id === 't1');
+  chk('y un id propio', /^[0-9a-f-]{36}$/.test(ev[0].id));
+
+  tecla(w, d, 'F12');
+  await esperar();
+  chk('F12 pide confirmar la cancelación', /Cancelar la venta/.test(d.querySelector('#hoja').textContent));
+  d.querySelector('#cv-motivo').value = 'No traía dinero';
+  tecla(w, d, 'Enter', d.querySelector('#cv-motivo'));
+  await esperar();
+  ev = C.eventosPendientes();
+  chk('cancelar limpia la venta', C.S.ticket.length === 0);
+  chk('y la anota como abortada con su motivo',
+      ev.some(e => e.tipo === 'abortada' && e.motivo === 'No traía dinero' && e.lineas === 1));
+  chk('sin internet no se llamó al servidor',
+      !estado.llamadas.some(l => l.fn === 'fn_eventos_caja'));
+
+  C.agregar('p2');
+  await esperar();
+  tecla(w, d, 'F7');
+  await esperar();
+  chk('suspender también se anota', C.eventosPendientes().some(e => e.tipo === 'suspendida'));
+
+  // Vuelve el internet: se mandan y se borran de la cola.
+  estado.rpc.fn_eventos_caja = a => ({ data:a.p_eventos.length, error:null });
+  C.S.enLinea = true;
+  await C.enviarEventos();
+  await esperar();
+  const envio = estado.llamadas.find(l => l.fn === 'fn_eventos_caja');
+  chk('con internet se mandan en un lote', envio && envio.args.p_eventos.length === 3);
+  chk('y la cola queda vacía', C.eventosPendientes().length === 0);
+}
+
+{
+  // Si el servidor falla, no se pierde nada.
+  const { w, d, C, estado } = await montar(base({
+    fn_eventos_caja:{ data:null, error:{ message:'caído' } } }));
+  try { w.localStorage.removeItem('pulp:eventos'); } catch(e){}
+  C.agregar('p1');
+  await esperar();
+  tecla(w, d, 'F4');
+  await esperar(120);
+  chk('si el servidor falla, el evento sigue en la cola', C.eventosPendientes().length === 1);
+}
 
 console.log(`\n${ok} bien · ${mal} mal`);
 process.exit(mal ? 1 : 0);

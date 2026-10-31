@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" href="icono-192.png">
 <title>Configuración · Pulpeando</title>
 <script src="config.js"></script>
+<script src="tema.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -23,6 +24,29 @@
 .ficha h3{font-size:16px;font-weight:800;margin-bottom:4px}
 /* logo y promociones de la caja bloqueada */
 .img-fila{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+/* el color de la marca */
+.col-sug{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+.col-mu{width:40px;height:40px;border-radius:12px;background:var(--c);position:relative;
+  box-shadow:inset 0 0 0 1px rgba(15,23,41,.08);transition:transform .12s;cursor:pointer}
+.col-mu:hover{transform:scale(1.06)}
+.col-mu.si{box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--c)}
+.col-mu.si::after{content:'';position:absolute;left:50%;top:50%;width:10px;height:6px;
+  border:solid #fff;border-width:0 0 2.5px 2.5px;transform:translate(-50%,-65%) rotate(-45deg)}
+.col-otro{background:conic-gradient(#e11d48,#f59e0b,#16a34a,#0ea5e9,#6366f1,#d946ef,#e11d48);
+  display:grid;place-items:center;overflow:hidden}
+.col-otro span{width:22px;height:22px;border-radius:50%;background:var(--panel);display:grid;
+  place-items:center;font-weight:800;font-size:15px;color:var(--tinta)}
+.col-otro input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.col-fila{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap}
+.col-muestra{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-bottom:4px}
+.col-muestra span{height:38px;display:inline-flex;align-items:center;padding:0 14px;border-radius:10px;
+  font-size:13px;font-weight:700}
+.col-btn{background:var(--marca);color:var(--marca-sobre)}
+.col-sel{background:var(--marca-suave);color:var(--marca-tinta);border:1px solid var(--marca-borde)}
+.col-link{color:var(--marca-tinta);text-decoration:underline}
+.col-aviso{font-size:12.5px;color:var(--tenue);margin-top:10px;min-height:16px}
+.col-acc{display:flex;gap:10px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
+.col-acc .btn{height:44px}
 .img-logo{width:200px;height:90px;border:1px dashed var(--linea);border-radius:var(--r-sm);
   display:grid;place-items:center;background:var(--fondo);overflow:hidden;padding:8px;flex:0 0 auto}
 .img-logo img{max-width:100%;max-height:100%;object-fit:contain}
@@ -58,7 +82,7 @@ textarea.entrada{height:auto;min-height:70px;padding:11px 13px;resize:vertical;f
   transition:background .15s}
 .switch::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;
   background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .15s}
-.switch.on{background:var(--verde)}
+.switch.on{background:var(--marca)}
 .switch.on::after{transform:translateX(20px)}
 
 .segmento{display:inline-flex;background:var(--fondo);border-radius:var(--r-md);padding:3px}
@@ -343,6 +367,14 @@ function pintarNegocio(){
     </div>
 
     <div class="ficha">
+      <h3>Color de la marca</h3>
+      <p class="sub">El color principal de todo el sistema: botones, lo seleccionado, el menú y
+        la caja. Escoja uno de los sugeridos o el de su logo. Si es muy claro, el sistema
+        oscurece el texto solo para que se siga leyendo.</p>
+      <div id="n-color-zona"></div>
+    </div>
+
+    <div class="ficha">
       <h3>La caja bloqueada</h3>
       <p class="sub">Lo que se ve en la caja entre un cliente y otro: el logo del negocio y
         las imágenes de las promociones. PNG, JPG o WEBP, de 2 MB como mucho.</p>
@@ -435,7 +467,94 @@ async function borrarArchivo(ruta){
   try { await sb.storage.from('marca').remove([ruta]); } catch {}
 }
 
+/* ---------- el color de la marca ----------
+   Se ve al instante en toda la pantalla mientras se escoge; se guarda con
+   el botón. Si se sale sin guardar, vuelve el que estaba. */
+function pintarColor(){
+  const T = window.PulpeandoTema;
+  const z = $('#n-color-zona');
+  if (!T || !z) return;
+  const actual = (S.org.config || {}).color_marca;
+  const guardado = T.valido(actual) ? actual.toUpperCase() : T.FABRICA;
+  let elegido = guardado;
+
+  z.innerHTML = `
+    <div class="col-sug" role="radiogroup" aria-label="Colores sugeridos">
+      ${T.SUGERIDOS.map(([c, n]) => `
+        <button class="col-mu" role="radio" data-c="${c}" title="${n}" aria-label="${n}"
+                style="--c:${c}"></button>`).join('')}
+      <label class="col-mu col-otro" title="Otro color">
+        <input type="color" id="n-color-libre" value="${guardado}" aria-label="Otro color">
+        <span>+</span>
+      </label>
+    </div>
+    <div class="col-fila">
+      <div class="campo-g"><label for="n-color-hex">Código del color</label>
+        <input class="entrada num" id="n-color-hex" value="${guardado}" maxlength="7"
+               spellcheck="false" autocomplete="off" style="width:130px;text-align:left"></div>
+      <div class="col-muestra" aria-hidden="true">
+        <span class="col-btn">Cobrar</span>
+        <span class="col-sel">Seleccionado</span>
+        <span class="col-link">Un enlace</span>
+      </div>
+    </div>
+    <div class="col-aviso" id="n-color-aviso"></div>
+    <div class="col-acc">
+      <button class="btn secundario" id="n-color-fabrica">Volver al de fábrica</button>
+      <button class="btn principal-b" id="n-color-guardar" disabled>Guardar color</button>
+    </div>`;
+
+  const marcar = () => {
+    z.querySelectorAll('[data-c]').forEach(b => {
+      const si = b.dataset.c.toUpperCase() === elegido;
+      b.classList.toggle('si', si); b.setAttribute('aria-checked', String(si));
+    });
+    $('#n-color-hex').value = elegido;
+    $('#n-color-libre').value = elegido.toLowerCase();
+    $('#n-color-guardar').disabled = elegido === guardado;
+    const t = T.tonos(elegido);
+    const claro = T.contraste(elegido, '#FFFFFF') < 3;
+    $('#n-color-aviso').textContent = claro
+      ? 'Es un color claro: en botones lleva letra oscura y en textos se usa una versión más oscura.'
+      : '';
+  };
+  const probar = c => {
+    if (!T.valido(c)) return;
+    elegido = c.toUpperCase();
+    T.aplicar(elegido, false);
+    marcar();
+  };
+  marcar();
+
+  z.querySelectorAll('[data-c]').forEach(b => b.addEventListener('click', () => probar(b.dataset.c)));
+  $('#n-color-libre').addEventListener('input', e => probar(e.target.value));
+  $('#n-color-hex').addEventListener('input', e => {
+    let v = e.target.value.trim();
+    if (v && v[0] !== '#') v = '#' + v;
+    if (T.valido(v)) probar(v);
+  });
+  $('#n-color-fabrica').addEventListener('click', () => probar(T.FABRICA));
+  $('#n-color-guardar').addEventListener('click', async () => {
+    const b = $('#n-color-guardar');
+    b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+    try{
+      await anotarImagenes({ color_marca: elegido === T.FABRICA ? null : elegido });
+      T.aplicar(elegido === T.FABRICA ? null : elegido);
+      if (S.ctx?.organizacion) S.ctx.organizacion.color = elegido;
+      pintarColor();
+    }catch(err){
+      b.disabled = false; b.textContent = 'Guardar color';
+      aviso('No se pudo guardar el color', limpiarError(err));
+    }
+  });
+  // Si se va sin guardar, la pantalla no se queda con un color de prueba.
+  window.addEventListener('pagehide', () => {
+    if (elegido !== guardado) T.aplicar(guardado === T.FABRICA ? null : guardado, false);
+  }, { once:true });
+}
+
 function pintarImagenes(){
+  pintarColor();
   const c = S.org.config || {};
   const logo = c.logo_path;
   const promos = Array.isArray(c.promos_caja) ? c.promos_caja : [];
@@ -787,13 +906,13 @@ function hojaSucursal(s){
         <label class="interruptor" style="padding:10px 12px;cursor:pointer">
           <div><b style="font-size:13.5px">Hace domicilio</b></div>
           <input type="checkbox" id="su-dom" ${s?.acepta_domicilio ?? true ? 'checked' : ''}
-                 style="width:20px;height:20px;accent-color:var(--verde)"></label></div>
+                 style="width:20px;height:20px;accent-color:var(--marca)"></label></div>
       <div class="campo-g"><label for="su-env">Costo de envío</label>
         <input class="entrada num" id="su-env" inputmode="decimal" value="${s ? Number(s.costo_envio) : 0}"></div>
       <div class="campo-g"><label for="su-min">Pedido mínimo</label>
         <input class="entrada num" id="su-min" inputmode="decimal" value="${s ? Number(s.pedido_minimo) : 0}"></div>
       ${s && !s.es_principal ? `<label class="ancho-total" style="display:flex;gap:9px;align-items:center;font-size:14px;font-weight:600">
-        <input type="checkbox" id="su-act" ${s.activa ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--verde)">
+        <input type="checkbox" id="su-act" ${s.activa ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--marca)">
         Activa</label>` : ''}
     </div>
     <div class="aviso malo oculto" id="su-err" style="margin-top:12px"></div>
@@ -836,7 +955,7 @@ function hojaCaja(c, sucursalId){
         <input class="entrada num" id="c-cod" maxlength="5" value="${escapar(c?.codigo || 'C' + String(n).padStart(2, '0'))}"
                ${c ? 'disabled' : ''}></div>
       ${c ? `<label class="ancho-total" style="display:flex;gap:9px;align-items:center;font-size:14px;font-weight:600">
-        <input type="checkbox" id="c-act" ${c.activa ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--verde)">
+        <input type="checkbox" id="c-act" ${c.activa ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--marca)">
         Activa (una caja inactiva no se puede abrir)</label>` : ''}
     </div>
     <div class="aviso malo oculto" id="c-err" style="margin-top:12px"></div>
@@ -1090,7 +1209,7 @@ function hojaImpuesto(){
       <div class="campo-g"><label for="i-tasa">Tasa % *</label>
         <input class="entrada num" id="i-tasa" inputmode="decimal" placeholder="18"></div>
       <label class="ancho-total" style="display:flex;gap:9px;align-items:center;font-size:14px;font-weight:600">
-        <input type="checkbox" id="i-inc" checked style="width:20px;height:20px;accent-color:var(--verde)">
+        <input type="checkbox" id="i-inc" checked style="width:20px;height:20px;accent-color:var(--marca)">
         Ya viene incluido en el precio de venta</label>
     </div>
     <div class="aviso malo oculto" id="i-err" style="margin-top:12px"></div>
