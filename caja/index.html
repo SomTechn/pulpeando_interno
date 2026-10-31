@@ -293,40 +293,48 @@
 /* ==========================================================================
    LA CAJA BLOQUEADA
    ========================================================================== */
-.bq-velo{place-items:stretch;padding:0}
-.bq{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,440px);
-  gap:32px;width:100%;max-width:1240px;margin:0 auto;padding:32px;color:var(--tinta);
-  align-items:start;min-height:100%}
-.bq-marca{display:flex;flex-direction:column;gap:18px;min-width:0}
-.bq-logo{display:flex;align-items:center;min-height:72px}
-.bq-logo img{max-height:84px;max-width:min(320px,100%);object-fit:contain}
-.bq-nombre{font-size:clamp(26px,3.4vw,40px);font-weight:800;letter-spacing:-.02em;
-  line-height:1.05}
-.bq-hora{font-size:clamp(56px,8vw,96px);font-weight:700;line-height:1;letter-spacing:-.04em}
-.bq-hora small{font-size:.26em;font-weight:700;letter-spacing:0;margin-left:.35em;color:var(--tenue)}
-.bq-fecha{font-size:16px;color:var(--tenue);margin-top:-8px}
-.bq-datos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.bq-datos div{background:var(--panel);border:1px solid var(--linea);
-  border-radius:var(--r-md);padding:12px 14px;min-width:0}
-.bq-datos small{display:block;font-size:11px;font-weight:800;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--tenue)}
-.bq-datos b{display:block;font-size:17px;font-weight:700;margin-top:3px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bq-velo{display:flex;flex-direction:column;place-items:stretch;padding:0}
+.bq{flex:1 0 auto;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(320px,420px);
+  gap:32px;width:100%;max-width:1320px;margin:0 auto;padding:28px 32px;color:var(--tinta);
+  align-items:stretch}
+.bq-marca{display:flex;flex-direction:column;gap:22px;min-width:0}
+.bq-arriba{display:flex;align-items:center;justify-content:space-between;gap:24px;min-width:0}
+/* El logo manda: es lo primero que ve el cliente desde el otro lado del mostrador. */
+.bq-logo{display:flex;align-items:center;min-height:110px;min-width:0;flex:1 1 auto}
+.bq-logo img{max-height:clamp(110px,19vh,190px);max-width:100%;object-fit:contain;display:block}
+.bq-marca.sin-promos .bq-arriba{flex:1;flex-direction:column;justify-content:center;text-align:center}
+.bq-marca.sin-promos .bq-logo{justify-content:center;flex:0 0 auto}
+.bq-marca.sin-promos .bq-logo img{max-height:clamp(160px,34vh,320px)}
+.bq-marca.sin-promos .bq-reloj{text-align:center}
+.bq-nombre{font-size:clamp(34px,4.6vw,60px);font-weight:800;letter-spacing:-.02em;line-height:1.05}
+.bq-reloj{flex:0 0 auto;text-align:right}
+.bq-hora{font-size:clamp(48px,6.4vw,84px);font-weight:700;line-height:1;letter-spacing:-.04em}
+.bq-hora small{font-size:.28em;font-weight:700;letter-spacing:0;margin-left:.3em;color:var(--tenue)}
+.bq-fecha{font-size:16px;color:var(--tenue);margin-top:6px}
 .bq-tit{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;
   letter-spacing:.08em;text-transform:uppercase;color:var(--tenue);margin-bottom:10px}
 .bq-tit kbd{font-family:var(--num);font-size:10.5px;background:var(--fondo);
   border:1px solid var(--linea);color:var(--tenue);border-radius:5px;padding:2px 6px;letter-spacing:0}
-.bq-promos-lista{position:relative;aspect-ratio:16/9;border-radius:var(--r-lg);overflow:hidden;
-  background:var(--fondo);border:1px solid var(--linea)}
-.bq-promo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
-  transition:opacity .6s}
-.bq-promo.activa{opacity:1}
-.bq-puntos{position:absolute;left:0;right:0;bottom:10px;display:flex;justify-content:center;gap:6px}
-.bq-puntos span{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.55);
-  box-shadow:0 0 0 1px rgba(15,23,41,.2)}
-.bq-puntos span.on{background:#fff;width:22px;border-radius:4px}
-.bq-pie{margin-top:auto;font-size:12px;font-weight:800;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--claro)}
+
+/* el carrusel: las imagenes en fila y la fila se corre */
+.bq-promos{flex:1;display:flex;flex-direction:column;min-height:0}
+.bq-carrusel{position:relative;flex:1;min-height:220px;aspect-ratio:16/9;max-height:62vh;
+  border-radius:var(--r-lg);overflow:hidden;background:var(--fondo);border:1px solid var(--linea);
+  touch-action:pan-y}
+.bq-pista{display:flex;height:100%;transition:transform .7s cubic-bezier(.65,0,.35,1)}
+.bq-promo{flex:0 0 100%;width:100%;height:100%;object-fit:cover;display:block;user-select:none;
+  -webkit-user-drag:none}
+.bq-flecha{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;
+  background:rgba(255,255,255,.86);color:var(--tinta);font-size:26px;line-height:1;display:grid;
+  place-items:center;box-shadow:0 2px 10px rgba(15,23,41,.18);opacity:0;transition:opacity .2s}
+.bq-carrusel:hover .bq-flecha,.bq-flecha:focus-visible{opacity:1}
+.bq-flecha.izq{left:12px}.bq-flecha.der{right:12px}
+@media (hover:none){ .bq-flecha{opacity:.9} }
+.bq-puntos{position:absolute;left:0;right:0;bottom:12px;display:flex;justify-content:center;gap:7px}
+.bq-puntos button{width:9px;height:9px;padding:0;border-radius:5px;background:rgba(255,255,255,.6);
+  box-shadow:0 0 0 1px rgba(15,23,41,.22);transition:width .3s,background .3s}
+.bq-puntos button.on{background:#fff;width:26px}
+
 .bq-lado{display:flex;flex-direction:column;gap:18px;min-width:0}
 .bq-precio{background:var(--panel);border:1px solid var(--linea);
   border-radius:var(--r-lg);padding:16px}
@@ -334,6 +342,18 @@
 .bq-pin{max-width:none;background:var(--panel);border:1px solid var(--linea);
   border-radius:var(--r-lg);padding:22px 20px}
 .bq-pin .sub-o{margin-bottom:16px}
+
+/* la barra de abajo: que caja es y de quien es el turno */
+.bq-barra{position:sticky;bottom:0;flex:0 0 auto;display:flex;align-items:stretch;
+  background:var(--panel);border-top:1px solid var(--linea);
+  box-shadow:0 -4px 18px -10px rgba(15,23,41,.18);padding:0 max(16px,calc((100% - 1320px)/2 + 32px))}
+.bq-barra > div{display:flex;align-items:baseline;gap:10px;padding:14px 22px 14px 0;margin-right:22px;
+  border-right:1px solid var(--linea);min-width:0}
+.bq-barra > div:last-of-type{border-right:0}
+.bq-barra small{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--tenue)}
+.bq-barra b{font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bq-pie{margin-left:auto;align-self:center;font-size:12px;font-weight:800;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--claro);white-space:nowrap}
 
 /* lo que devuelve la consulta de precio */
 .pr-tarjeta{display:grid;grid-template-columns:56px minmax(0,1fr);gap:12px;align-items:center;
@@ -357,12 +377,29 @@
 
 @media (max-width:900px){
   .bq{grid-template-columns:1fr;padding:20px 16px;gap:18px}
-  .bq-hora{font-size:56px}
+  .bq-hora{font-size:52px}
   .bq-lado{order:-1}
   .bq-marca{order:0}
+  .bq-marca.sin-promos .bq-arriba{flex:0 0 auto}
+  .bq-carrusel{min-height:0}
 }
-@media (max-width:520px){
-  .bq-datos{grid-template-columns:1fr 1fr}
+/* Pantallas bajas (laptop de 768): el teclado del PIN se encoge para que
+   todo quepa arriba de la barra sin tener que bajar. */
+@media (max-height:820px) and (min-width:901px){
+  .bq{padding:20px 32px;gap:24px}
+  .bq-pin{padding:14px 18px}
+  .bq-pin .avatar-o{display:none}
+  .bq-pin .sub-o{margin-bottom:8px}
+  .bq-pin .tecla{height:52px}
+  .bq-lado{gap:12px}
+}
+@media (max-width:640px){
+  .bq-arriba{flex-direction:column;align-items:flex-start;gap:10px}
+  .bq-reloj{text-align:left}
+  .bq-barra{flex-wrap:wrap;padding:0 16px}
+  .bq-barra > div{padding:10px 14px 10px 0;margin-right:14px}
+  .bq-barra b{font-size:15px}
+  .bq-pie{display:none}
 }
 
 /* ==========================================================================
@@ -711,20 +748,17 @@
      deja consultar un precio sin abrir la caja. -->
 <div class="oscura oculto bq-velo" id="p-bloqueo">
   <div class="bq">
-    <section class="bq-marca">
-      <div class="bq-logo" id="b-logo"><span class="bq-nombre" id="b-negocio">Pulpeando</span></div>
-      <div class="bq-hora num" id="b-hora">--:--</div>
-      <div class="bq-fecha" id="b-fecha"></div>
-      <div class="bq-datos">
-        <div><small>Caja</small><b id="b-caja">Caja</b></div>
-        <div><small>Cajero</small><b id="b-cajero">—</b></div>
-        <div><small>Código</small><b class="num" id="b-codigo">—</b></div>
+    <section class="bq-marca sin-promos" id="b-marca">
+      <div class="bq-arriba">
+        <div class="bq-logo" id="b-logo"><span class="bq-nombre" id="b-negocio">Pulpeando</span></div>
+        <div class="bq-reloj">
+          <div class="bq-hora num" id="b-hora">--:--</div>
+          <div class="bq-fecha" id="b-fecha"></div>
+        </div>
       </div>
       <div class="bq-promos oculto" id="b-promos-caja">
-        <div class="bq-tit">Promociones</div>
-        <div class="bq-promos-lista" id="b-promos"></div>
+        <div class="bq-carrusel" id="b-promos" aria-roledescription="carrusel" aria-label="Promociones"></div>
       </div>
-      <div class="bq-pie">Pulpeando</div>
     </section>
 
     <section class="bq-lado">
@@ -756,6 +790,12 @@
       </div>
     </section>
   </div>
+  <footer class="bq-barra">
+    <div><small>Caja</small><b id="b-caja">Caja</b></div>
+    <div><small>Cajero</small><b id="b-cajero">—</b></div>
+    <div><small>Código</small><b class="num" id="b-codigo">—</b></div>
+    <span class="bq-pie">Pulpeando</span>
+  </footer>
 </div>
 
 <!-- Buscar producto (F3). Con la caja abierta agrega; bloqueada, solo
@@ -2494,28 +2534,74 @@ function pintarMarca(){
              : (S.ctx?.cajas || []).find(c => c.caja_id === cajaId())?.caja;
   if (caja) $('#b-caja').textContent = caja;
   ver('#b-promos-caja', m.promos.length > 0);
-  $('#b-promos').innerHTML = m.promos.map((u, i) =>
-    `<img class="bq-promo ${i === 0 ? 'activa' : ''}" src="${escapar(u)}" alt="Promoción ${i + 1}">`).join('')
-    + (m.promos.length > 1 ? `<div class="bq-puntos">${m.promos.map((_, i) =>
-        `<span class="${i === 0 ? 'on' : ''}"></span>`).join('')}</div>` : '');
+  $('#b-marca').classList.toggle('sin-promos', m.promos.length === 0);
+  $('#b-promos').innerHTML = `<div class="bq-pista">${m.promos.map((u, i) =>
+    `<img class="bq-promo ${i === 0 ? 'activa' : ''}" src="${escapar(u)}" alt="Promoción ${i + 1}" draggable="false">`).join('')}</div>
+    <button class="bq-flecha izq" data-paso="-1" aria-label="Promoción anterior" tabindex="-1">‹</button>
+    <button class="bq-flecha der" data-paso="1" aria-label="Promoción siguiente" tabindex="-1">›</button>
+    <div class="bq-puntos"></div>`;
   promoActual = 0;
-  // Una imagen que no carga no deja un hueco: se esconde y siguen las demás.
-  $$('#b-promos img').forEach(img => img.onerror = () => img.remove());
+  armarPuntos();
+  // Una imagen que no carga no deja un hueco: se quita y siguen las demás.
+  $$('#b-promos img').forEach(img => img.onerror = () => {
+    img.remove();
+    const n = $$('#b-promos .bq-promo').length;
+    if (!n){ ver('#b-promos-caja', false); $('#b-marca').classList.add('sin-promos'); return; }
+    promoActual = Math.min(promoActual, n - 1);
+    armarPuntos(); irAPromo(promoActual);
+  });
+}
+
+function armarPuntos(){
+  const n = $$('#b-promos .bq-promo').length;
+  const z = $('#b-promos .bq-puntos'); if (!z) return;
+  z.innerHTML = n > 1 ? Array.from({ length:n }, (_, i) =>
+    `<button data-ir="${i}" class="${i === promoActual ? 'on' : ''}" tabindex="-1"
+       aria-label="Promoción ${i + 1}"></button>`).join('') : '';
+  $$('#b-promos .bq-flecha').forEach(b => b.classList.toggle('oculto', n < 2));
 }
 
 /* Las promociones pasan solas, una cada 6 segundos, mientras la caja esté
    bloqueada. Con las flechas también se pasan, para quien las quiera
    enseñar a un cliente. */
 let promoActual = 0;
-function pasarPromo(paso = 1){
-  const imgs = $$('#b-promos .bq-promo'); if (imgs.length < 2) return;
-  promoActual = (promoActual + paso + imgs.length) % imgs.length;
-  imgs.forEach((im, i) => im.classList.toggle('activa', i === promoActual));
-  $$('#b-promos .bq-puntos span').forEach((p, i) => p.classList.toggle('on', i === promoActual));
+let promoTocada = 0;      // si alguien la movio a mano, el turno automatico espera
+function irAPromo(i){
+  const imgs = $$('#b-promos .bq-promo'); if (!imgs.length) return;
+  promoActual = ((i % imgs.length) + imgs.length) % imgs.length;
+  const pista = $('#b-promos .bq-pista');
+  if (pista) pista.style.transform = `translateX(${-100 * promoActual}%)`;
+  imgs.forEach((im, k) => im.classList.toggle('activa', k === promoActual));
+  $$('#b-promos .bq-puntos button').forEach((p, k) => p.classList.toggle('on', k === promoActual));
+}
+function pasarPromo(paso = 1, aMano = false){
+  if ($$('#b-promos .bq-promo').length < 2) return;
+  if (aMano) promoTocada = Date.now();
+  irAPromo(promoActual + paso);
 }
 setInterval(() => {
-  if (!$('#p-bloqueo').classList.contains('oculto')) pasarPromo(1);
+  if ($('#p-bloqueo').classList.contains('oculto')) return;
+  if (Date.now() - promoTocada < 9000) return;
+  pasarPromo(1);
 }, 6000);
+
+/* Flechas, puntos y deslizar con el dedo. */
+$('#b-promos').addEventListener('click', e => {
+  const f = e.target.closest('[data-paso]');
+  if (f){ pasarPromo(Number(f.dataset.paso), true); return; }
+  const p = e.target.closest('[data-ir]');
+  if (p){ promoTocada = Date.now(); irAPromo(Number(p.dataset.ir)); }
+});
+{
+  let x0 = null;
+  $('#b-promos').addEventListener('pointerdown', e => { x0 = e.clientX; });
+  $('#b-promos').addEventListener('pointerup', e => {
+    if (x0 === null) return;
+    const dx = e.clientX - x0; x0 = null;
+    if (Math.abs(dx) > 40) pasarPromo(dx < 0 ? 1 : -1, true);
+  });
+  $('#b-promos').addEventListener('pointercancel', () => { x0 = null; });
+}
 
 /* ---------- consultar precio con la caja bloqueada ---------- */
 function consultarPrecio(q){
@@ -2587,6 +2673,9 @@ document.addEventListener('keydown', e => {
     return;
   }
   if (e.key === 'Enter'){ if (lk.pend){ e.preventDefault(); lkSoltar(); } return; }
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft'){
+    e.preventDefault(); pasarPromo(e.key === 'ArrowRight' ? 1 : -1, true); return;
+  }
   if (e.key.length !== 1 || e.ctrlKey || e.altKey || e.metaKey) return;
 
   e.preventDefault();

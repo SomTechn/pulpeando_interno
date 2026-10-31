@@ -155,11 +155,16 @@ async function montar(estado){
   w.montarMenu = menu.montarMenu; w.escapar = menu.escapar;
   w.escanear = async () => estado.codigo || null;
   w.hayCamara = async () => !!estado.camara;
+  const et = await import(BASE + 'etiqueta.js');
+  estado.impresas = [];
+  w.htmlEtiqueta = et.htmlEtiqueta; w.TAMANOS = et.TAMANOS;
+  w.imprimirEtiquetas = async (datos, op) => { estado.impresas.push({ datos, op }); };
 
   const prep = cuerpo
     .replace(/^import \{ createClient \} from 'https:\/\/esm\.sh\/@supabase\/supabase-js@2';$/m, '')
     .replace(/^import \{ montarMenu, escapar \} from '\.\/menu\.js';$/m, '')
     .replace(/^import \{ escanear, hayCamara \} from '\.\/escaner\.js';$/m, '')
+    .replace(/^import \{ imprimirEtiquetas, htmlEtiqueta, TAMANOS \} from '\.\/etiqueta\.js';$/m, '')
     .replace(/createClient\(SUPABASE_URL, SUPABASE_KEY, \{[\s\S]*?\}\)/, '__sb');
 
   w.__p = {};
@@ -168,10 +173,20 @@ async function montar(estado){
     ; window.__p.hojaMover = hojaMover; window.__p.hojaConteo = hojaConteo;
     ; window.__p.escanearCodigo = escanearCodigo;
     ; window.__p.hojaLugares = hojaLugares; window.__p.hojaPasar = hojaPasar;
+    ; window.__p.hojaEtiqueta = hojaEtiqueta;
   })()`);
   await new Promise(r => setTimeout(r, 160));
   return { w, d:w.document, p:w.__p, estado };
 }
+
+const ETQ = (gerente, oferta = false) => ({
+  producto_id:'p1', nombre:'Leche entera 1 L', sku:'LCH-001', unidad:'unidad',
+  codigo:'7421001234567', negocio:'La Esquina', sucursal_id:'s1',
+  precio: oferta ? 28 : 32, precio_regular:32,
+  oferta: oferta ? { id:'of1', precio:28, desde:'2026-10-30', hasta:'2026-11-06' } : null,
+  ofertas: oferta ? [{ id:'of1', precio:28, desde:'2026-10-30', hasta:'2026-11-06', sucursal:null }] : [],
+  puede_ofertar: gerente, hoy:'2026-10-30'
+});
 
 const esperar = (ms = 80) => new Promise(r => setTimeout(r, ms));
 
@@ -190,6 +205,9 @@ const base = (rol = 'gerente', nivel = 3, extra = {}) => ({
                                  producto:'Leche entera 1 L' }, error:null },
     fn_ajustes:{ data:[], error:null },
     fn_conteos_del_producto:{ data:[], error:null },
+    fn_etiqueta_producto:{ data:ETQ(nivel >= 3), error:null },
+    fn_fijar_oferta:{ data:'of2', error:null },
+    fn_quitar_oferta:{ data:true, error:null },
     fn_estado_bodega:{ data:{ horas:24, bodegas:1, al_dia:true, ubicaciones:[
       { ubicacion_id:'u3', nombre:'Bodega', codigo:'S01-B01',
         auditada_en:new Date(Date.now()-3600000).toISOString(), al_dia:true }] }, error:null },
@@ -1197,6 +1215,65 @@ console.log('\n=== REGISTRAR MERMA DESDE EL PRODUCTO ===');
   d.querySelector('#pa-todo').click();
   chk('y llena con lo que hay en ese lugar',
       d.querySelector('#pa-cant').value === '30');
+}
+
+console.log('\n=== ETIQUETA Y OFERTA ===');
+{
+  const estado = base();
+  estado.rpc.fn_etiqueta_producto = { data:ETQ(true, true), error:null };
+  const { d, p } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  chk('pide la etiqueta al abrir', estado.llamadas.some(l => l.fn === 'fn_etiqueta_producto'));
+  chk('la ficha dice Oferta', !!d.querySelector('.ficha-precio.en-oferta .tag-oferta'));
+  chk('y tacha el precio de antes', /32\.00/.test(d.querySelector('.ficha-precio s')?.textContent || ''));
+  chk('hay botón de imprimir etiqueta', !!d.querySelector('#btn-etiqueta'));
+  d.querySelector('#btn-etiqueta').click();
+  await esperar();
+  chk('abre la hoja de la etiqueta', /Imprimir etiqueta/.test(d.querySelector('#hoja h2').textContent));
+  const vista = d.querySelector('#et-vista iframe')?.getAttribute('srcdoc') || '';
+  chk('la vista previa trae el nombre', /Leche entera 1 L/.test(vista));
+  chk('las barras', /<svg[^>]*shape-rendering="crispEdges"/.test(vista));
+  chk('los dígitos', /7421001234567/.test(vista));
+  chk('el item', /LCH-001/.test(vista));
+  chk('y la oferta con el antes', /OFERTA/.test(vista) && /Antes L 32\.00/.test(vista));
+  chk('tres tamaños', d.querySelectorAll('#et-tams button').length === 3);
+  d.querySelector('#et-mas').click(); d.querySelector('#et-mas').click();
+  chk('copias suben con +', d.querySelector('#et-copias').value === '3');
+  d.querySelector('[data-tam="50x30"]').click();
+  d.querySelector('#et-si').click();
+  await esperar();
+  chk('imprime con tamaño y copias', estado.impresas.length === 1
+      && estado.impresas[0].op.tamano === '50x30' && estado.impresas[0].op.copias === 3);
+  chk('el gerente ve la oferta para quitarla', !!d.querySelector('[data-quitar-oferta="of1"]'));
+
+  d.querySelector('#of-precio').value = '35';
+  d.querySelector('#of-poner').click();
+  await esperar();
+  chk('no deja una oferta más cara que el precio normal',
+      /menor que el precio normal/.test(d.querySelector('#of-error').textContent)
+      && !estado.llamadas.some(l => l.fn === 'fn_fijar_oferta'));
+  d.querySelector('#of-precio').value = '27.50';
+  d.querySelector('#of-poner').click();
+  await esperar(160);
+  const f = estado.llamadas.find(l => l.fn === 'fn_fijar_oferta');
+  chk('pone la oferta con precio y fechas', f && f.args.p_precio === 27.5 && /^\d{4}-\d\d-\d\d$/.test(f.args.p_hasta));
+  d.querySelector('[data-quitar-oferta="of1"]').click();
+  await esperar(160);
+  chk('y la quita', estado.llamadas.some(l => l.fn === 'fn_quitar_oferta' && l.args.p_precio_id === 'of1'));
+}
+
+{
+  // El auxiliar imprime, pero no toca la oferta.
+  const estado = base('auxiliar', 1);
+  const { d, p } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(120);
+  chk('sin oferta no hay etiqueta roja', !d.querySelector('.tag-oferta'));
+  p.hojaEtiqueta();
+  await esperar();
+  chk('el auxiliar no ve cómo poner ofertas', !d.querySelector('#of-poner'));
+  chk('pero sí imprime', !!d.querySelector('#et-si'));
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);

@@ -62,6 +62,35 @@
   font-weight:700;color:var(--tenue)}
 .chip.alerta{background:#FFF4E0;color:#8A5A00}
 .chip.malo{background:#FFEDF1;color:#9F1239}
+.ficha-precio.en-oferta b{color:#C81E3A}
+.ficha-precio s{display:block;font-family:var(--num);font-size:13px;color:var(--tenue);margin-top:2px}
+.tag-oferta{display:inline-block;background:#C81E3A;color:#fff;font-size:10.5px;font-weight:800;
+  letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;margin-bottom:4px}
+
+/* la hoja de la etiqueta */
+.et-vista{display:grid;place-items:center;background:var(--fondo);border-radius:14px;
+  padding:18px 10px;margin:4px 0 14px;overflow:hidden}
+.et-vista iframe{border:0;background:#fff;box-shadow:0 2px 10px rgba(16,32,64,.14);
+  transform-origin:center;display:block}
+.et-tams{display:flex;gap:8px;flex-wrap:wrap}
+.et-tams button{flex:1;min-width:92px;padding:10px 8px;border-radius:12px;border:1.5px solid var(--linea);
+  background:var(--panel);font:inherit;font-size:13px;font-weight:700;color:var(--tinta);cursor:pointer}
+.et-tams button small{display:block;font-size:11px;font-weight:600;color:var(--tenue);margin-top:2px}
+.et-tams button.si{border-color:var(--azul);background:#EEF4FF;color:var(--azul)}
+.et-copias{display:flex;align-items:center;gap:8px}
+.et-copias button{width:44px;height:44px;border-radius:12px;border:1.5px solid var(--linea);
+  background:var(--panel);font-size:20px;font-weight:700;cursor:pointer;color:var(--tinta)}
+.et-copias input{width:80px;text-align:center}
+.et-nota{font-size:12px;color:var(--tenue);margin-top:6px}
+.of-lista{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.of-fila{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;
+  background:#FFF1F3;border:1px solid #FBD5DC}
+.of-fila .of-txt{flex:1;min-width:0}
+.of-fila b{font-family:var(--num);color:#C81E3A}
+.of-fila small{display:block;font-size:12px;color:var(--tenue)}
+.of-fila button{border:0;background:none;color:#9F1239;font:inherit;font-weight:700;font-size:13px;cursor:pointer}
+.of-campos{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+@media (max-width:520px){ .of-campos{grid-template-columns:1fr 1fr} .of-campos .of-p{grid-column:1/-1} }
 
 .titulin{font-size:11.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
   color:#9AA8BC;margin-bottom:9px}
@@ -412,6 +441,7 @@ if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin co
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { montarMenu, escapar } from './menu.js';
 import { escanear, hayCamara } from './escaner.js';
+import { imprimirEtiquetas, htmlEtiqueta, TAMANOS } from './etiqueta.js';
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth:{ persistSession:true, autoRefreshToken:true }
@@ -423,7 +453,8 @@ const S = {
   busqueda:'', resultados:[],
   prod:null, semanas:[], conteos:[], cargando:false,
   pendientes:[], puedeAprobar:false, causas:[],
-  bodega:null, sumados:[]
+  bodega:null, sumados:[],
+  etq:null               // lo de la etiqueta: precio, oferta, codigo
 };
 
 const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
@@ -595,12 +626,13 @@ async function escanearCodigo(){
 async function abrir(id){
   S.cargando = true; S.vista = 'ficha'; pintar();
 
-  const [perfil, semanas, conteos] = await Promise.all([
+  const [perfil, semanas, conteos, etq] = await Promise.all([
     sb.rpc('fn_consultar_producto', { p_producto_id:id, p_sucursal_id:S.sucursal }),
     sb.rpc('fn_ventas_producto_semanas', { p_producto_id:id, p_semanas:5,
                                            p_sucursal_id:S.sucursal }),
     sb.rpc('fn_conteos_del_producto', { p_producto_id:id, p_sucursal_id:S.sucursal,
-                                        p_limite:5 })
+                                        p_limite:5 }),
+    sb.rpc('fn_etiqueta_producto', { p_producto_id:id, p_sucursal_id:S.sucursal })
   ]);
 
   S.cargando = false;
@@ -615,6 +647,7 @@ async function abrir(id){
   S.puedeAprobar = !!perfil.data.puede_aprobar;
   S.semanas = semanas.error ? [] : (semanas.data || []);
   S.conteos = conteos.error ? [] : (conteos.data || []);
+  S.etq = etq?.error ? null : (etq?.data || null);
   await cargarBodega();
   pintar();
   // El campo queda listo para el siguiente escaneo sin tocar nada.
@@ -863,6 +896,8 @@ function pintarFicha(){
         '<div class="pend-espera">El gerente lo aprueba. Mientras tanto el inventario sigue como está.</div>'}
     </div>` : '';
 
+  const oferta = S.etq?.oferta || null;
+
   $('#cuerpo').innerHTML = bloquePend + `
     <div class="ficha">
       <div class="ficha-enc">
@@ -870,9 +905,12 @@ function pintarFicha(){
           <h1>${escapar(p.nombre)}</h1>
           <span class="ficha-cod">${escapar(p.sku)}${codigos ? ' · ' + escapar(codigos) : ''}</span>
         </div>
-        <div class="ficha-precio">
+        <div class="ficha-precio ${oferta ? 'en-oferta' : ''}">
+          ${oferta ? '<span class="tag-oferta">Oferta</span>' : ''}
           <b>${money(p.precio)}</b>
-          <small>por ${escapar(p.unidad)}</small>
+          ${oferta ? `<s>${money(S.etq.precio_regular)}</s>
+          <small>hasta el ${fecha(oferta.hasta)}</small>`
+                   : `<small>por ${escapar(p.unidad)}</small>`}
         </div>
       </div>
       ${chips.length ? `<div class="chips">${chips.join('')}</div>` : ''}
@@ -902,6 +940,7 @@ function pintarFicha(){
       <button class="btn secundario" id="btn-merma">Registrar merma</button>
       <button class="btn secundario" id="btn-mover">Mover de lugar</button>
       <button class="btn secundario" id="btn-conteo">${escapar(textoConteo)}</button>
+      <button class="btn secundario" id="btn-etiqueta">Imprimir etiqueta</button>
     </div>
 
     <div class="ficha">
@@ -920,6 +959,7 @@ function pintarFicha(){
   $('#btn-merma').addEventListener('click', hojaMerma);
   $('#btn-mover').addEventListener('click', hojaMover);
   $('#btn-conteo').addEventListener('click', hojaConteo);
+  $('#btn-etiqueta').addEventListener('click', () => hojaEtiqueta());
   $$('.tiles button.tile').forEach(b =>
     b.addEventListener('click', () => hojaLugares(b.dataset.u || null)));
 }
@@ -1700,6 +1740,168 @@ function hojaConteo(){
       </div>`;
     $('#cf-no').onclick = async () => { cerrarHoja(); await recargarFicha(); };
   };
+}
+
+/* ================= la etiqueta del estante =================
+   Vista previa, tamaño, copias e imprimir. El gerente, además, pone o quita
+   la oferta aquí mismo: es donde está parado cuando cambia la etiqueta. */
+const LLAVE_TAM = 'pulpeando.etiqueta.tamano';
+function tamanoGuardado(){
+  try { const t = localStorage.getItem(LLAVE_TAM); if (TAMANOS[t]) return t; } catch(e){}
+  return '60x40';
+}
+function guardarTamano(t){ try { localStorage.setItem(LLAVE_TAM, t); } catch(e){} }
+
+const hoyISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+const masDias = (iso, n) => {
+  const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+
+function hojaEtiqueta(){
+  const e = S.etq;
+  if (!e){
+    aviso('No se pudo armar la etiqueta', 'Vuelva a abrir el producto e intente de nuevo.');
+    return;
+  }
+  let tam = tamanoGuardado();
+  let copias = 1;
+
+  const ofertas = e.ofertas || [];
+  const bloqueOferta = !e.puede_ofertar ? '' : `
+    <div class="titulin" style="margin-top:18px">Oferta</div>
+    ${ofertas.length ? `<div class="of-lista">${ofertas.map(o => `
+      <div class="of-fila">
+        <div class="of-txt">
+          <b>${money(o.precio)}</b>${e.precio_regular ? ` <span style="color:var(--tenue)">antes ${money(e.precio_regular)}</span>` : ''}
+          <small>${o.desde > e.hoy ? 'Empieza el ' + fecha(o.desde) + ' · ' : ''}Hasta el ${fecha(o.hasta)}${o.sucursal ? ' · solo ' + escapar(o.sucursal) : ''}</small>
+        </div>
+        <button data-quitar-oferta="${o.id}">Quitar</button>
+      </div>`).join('')}</div>` : ''}
+    <div class="of-campos">
+      <div class="campo-g of-p">
+        <label for="of-precio">Precio de oferta</label>
+        <input class="entrada num" id="of-precio" inputmode="decimal" placeholder="0.00">
+      </div>
+      <div class="campo-g">
+        <label for="of-desde">Desde</label>
+        <input class="entrada" id="of-desde" type="date" value="${hoyISO()}">
+      </div>
+      <div class="campo-g">
+        <label for="of-hasta">Hasta</label>
+        <input class="entrada" id="of-hasta" type="date" value="${masDias(hoyISO(), 7)}">
+      </div>
+    </div>
+    <div class="aviso malo oculto" id="of-error" style="margin-top:10px"></div>
+    <button class="btn secundario" id="of-poner" style="width:100%;margin-top:10px">
+      ${ofertas.length ? 'Cambiar la oferta' : 'Poner en oferta'}</button>
+    <div class="et-nota">La caja cobra la oferta sola mientras dure, y la etiqueta la enseña.
+      Si el precio normal ya es más barato, se queda el normal.</div>`;
+
+  $('#hoja').innerHTML = `
+    <h2>Imprimir etiqueta</h2>
+    <p class="sub">${escapar(e.nombre)}</p>
+    <div class="et-vista" id="et-vista"></div>
+    <div class="campo-g">
+      <label>Tamaño</label>
+      <div class="et-tams" id="et-tams">${Object.entries(TAMANOS).map(([k, t]) => `
+        <button data-tam="${k}" class="${k === tam ? 'si' : ''}">${escapar(t.nombre.split(' (')[0])}
+          <small>${t.termica ? 'Térmica' : 'Impresora normal'}</small></button>`).join('')}
+      </div>
+    </div>
+    <div class="campo-g" style="margin-top:12px">
+      <label for="et-copias">Copias</label>
+      <div class="et-copias">
+        <button id="et-menos" aria-label="Una menos">−</button>
+        <input class="entrada num" id="et-copias" inputmode="numeric" value="1">
+        <button id="et-mas" aria-label="Una más">+</button>
+      </div>
+    </div>
+    ${!e.codigo ? `<div class="aviso ojo" style="margin-top:12px">Este producto no tiene código
+      de barras. La etiqueta lleva el item <b>${escapar(e.sku)}</b> en barras, y la caja
+      lo encuentra igual.</div>` : ''}
+    ${bloqueOferta}
+    <div class="acciones">
+      <button class="btn secundario" id="et-no">Cerrar</button>
+      <button class="btn principal-b" id="et-si">Imprimir</button>
+    </div>`;
+  ver('#velo');
+
+  const vista = () => {
+    const t = TAMANOS[tam];
+    const caja = $('#et-vista');
+    // a 3.78 px por mm y agrandada para que se lea en la pantalla
+    const w = t.ancho * 3.78, h = t.alto * 3.78;
+    const ancho = Math.min(caja.clientWidth || 320, 420) - 20;
+    const esc = Math.max(1, Math.min(2.4, ancho / w));
+    caja.style.height = (h * esc + 36) + 'px';
+    caja.innerHTML = `<iframe title="Vista previa" style="width:${w}px;height:${h}px;transform:scale(${esc})"></iframe>`;
+    caja.querySelector('iframe').srcdoc = htmlEtiqueta(e, { tamano:tam, copias:1, vista:true });
+  };
+  vista();
+
+  $('#et-tams').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-tam]');
+    if (!b) return;
+    tam = b.dataset.tam; guardarTamano(tam);
+    $$('#et-tams button').forEach(x => x.classList.toggle('si', x === b));
+    vista();
+  });
+  const fijarCopias = n => {
+    copias = Math.max(1, Math.min(200, Math.floor(Number(n) || 1)));
+    $('#et-copias').value = copias;
+  };
+  $('#et-menos').onclick = () => fijarCopias(copias - 1);
+  $('#et-mas').onclick = () => fijarCopias(copias + 1);
+  $('#et-copias').addEventListener('change', ev => fijarCopias(ev.target.value));
+  $('#et-no').onclick = cerrarHoja;
+  $('#et-si').onclick = async () => {
+    fijarCopias($('#et-copias').value);
+    const b = $('#et-si');
+    b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+    try { await imprimirEtiquetas(e, { tamano:tam, copias }); }
+    finally { b.disabled = false; b.textContent = 'Imprimir'; }
+  };
+
+  if (!e.puede_ofertar) return;
+
+  const error = t => { const x = $('#of-error'); x.textContent = t; x.classList.toggle('oculto', !t); };
+  const recargar = async () => {
+    const { data } = await sb.rpc('fn_etiqueta_producto',
+      { p_producto_id:e.producto_id, p_sucursal_id:S.sucursal });
+    if (data) S.etq = data;
+    await recargarFicha();
+    hojaEtiqueta();
+  };
+
+  $('#of-poner').onclick = async () => {
+    error('');
+    const precio = Number(String($('#of-precio').value).replace(',', '.'));
+    const desde = $('#of-desde').value, hasta = $('#of-hasta').value;
+    if (!(precio > 0)) return error('Escriba el precio de oferta');
+    if (!hasta) return error('Ponga hasta cuándo dura');
+    if (e.precio_regular && precio >= Number(e.precio_regular))
+      return error(`La oferta tiene que ser menor que el precio normal (${money(e.precio_regular)})`);
+    const b = $('#of-poner');
+    const texto = b.textContent;
+    b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+    const { error:err } = await sb.rpc('fn_fijar_oferta', {
+      p_producto_id:e.producto_id, p_precio:precio, p_hasta:hasta,
+      p_desde:desde || null, p_sucursal_id:null });
+    b.disabled = false; b.textContent = texto;
+    if (err) return error(limpiarError(err));
+    await recargar();
+  };
+
+  $$('[data-quitar-oferta]').forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    const { error:err } = await sb.rpc('fn_quitar_oferta', { p_precio_id:b.dataset.quitarOferta });
+    if (err){ b.disabled = false; return error(limpiarError(err)); }
+    await recargar();
+  });
 }
 
 /* ================= clics de la lista ================= */

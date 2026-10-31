@@ -2,7 +2,7 @@
    La cáscara se cachea para que el mostrador abra sin internet. Las llamadas
    a Supabase NUNCA se cachean: un dato viejo en una caja hace más daño que la
    pantalla vacía, y las ventas sin señal ya viajan en su propia cola. */
-const CACHE = 'pulpeando-caja-v4';
+const CACHE = 'pulpeando-caja-v5';
 const CONCHA = [
   './',
   './index.html',
