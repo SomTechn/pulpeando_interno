@@ -106,6 +106,8 @@ async function montar(estado){
 
   const menu = await import(BASE + 'menu.js');
   w.montarMenu = menu.montarMenu; w.escapar = menu.escapar; w.iniciales = menu.iniciales;
+  const promos = await import(BASE + 'promos.js');
+  w.calcularPromos = promos.calcularPromos; w.nombreCorto = promos.nombreCorto;
 
   const prep = cuerpo
     .replace(/^import \{ createClient \} from 'https:\/\/esm\.sh\/@supabase\/supabase-js@2';$/m, '')
@@ -114,6 +116,7 @@ async function montar(estado){
              'const escanear = async () => null; const hayCamara = async () => false;')
     .replace(/^import \{ imprimirTicket \} from '\.\.\/ticket\.js';$/m,
              'const imprimirTicket = async (d, o) => { (window.__impresos = window.__impresos || []).push({ d, o }); };')
+    .replace(/^import \{ calcularPromos, nombreCorto \} from '\.\.\/promos\.js';$/m, '')
     .replace(/createClient\(SUPABASE_URL, SUPABASE_KEY, \{[\s\S]*?\}\)/, '__sb');
 
   w.__c = {};
@@ -1755,6 +1758,73 @@ console.log('\n=== LO QUE NO TERMINA EN VENTA SE ANOTA ===');
   tecla(w, d, 'F4');
   await esperar(120);
   chk('si el servidor falla, el evento sigue en la cola', C.eventosPendientes().length === 1);
+}
+
+console.log('\n=== PROMOCIONES EN LA CAJA ===');
+{
+  const { w, d, C } = await montar(base());
+  C.S.promos = [
+    { id:'pr1', nombre:'Refresco 2x1', tipo:'nxm', lleva:2, paga:1, producto_ids:['p3'] },
+    { id:'pr2', nombre:'Arroz -10%', tipo:'porcentaje', porcentaje:10, producto_ids:['p1'] }];
+  C.agregar('p3');
+  await esperar();
+  chk('con uno solo avisa lo que le falta para la promo', /Refresco 2x1/.test(d.querySelector('.linea-promo.cerca')?.textContent || ''));
+  C.agregar('p3'); C.agregar('p3'); C.agregar('p1');
+  await esperar();
+  const t = C.totales();
+  chk('3 refrescos en 2x1: uno gratis (L 20)', Math.abs(t.ahorro - (20 + 9.8)) < 0.001);
+  chk('el total ya lleva el descuento', Math.abs(t.total - (60 + 98 - 29.8)) < 0.001);
+  chk('la línea enseña la promo y el descuento', /−L 20\.00/.test(d.querySelector('.linea-promo:not(.cerca)')?.textContent || ''));
+  chk('y tacha lo de antes', d.querySelector('.linea-total s'));
+  chk('el ahorro aparece en los totales', !d.querySelector('#t-ahorro-fila').classList.contains('oculto'));
+}
+
+console.log('\n=== EL PERMISO DEL SUPERVISOR ===');
+{
+  const ctx = JSON.parse(JSON.stringify(CTX));
+  ctx.organizacion.caja_autoriza = { quitar:true, cancelar:true, descartar:true };
+  const { w, d, C, estado } = await montar(base({
+    fn_autorizar_caja: a => a.p_pin === '77777'
+      ? { data:{ ok:true, autorizacion_id:'aut-1', nombre:'Don Supervisor' }, error:null }
+      : { data:{ ok:false, mensaje:'Codigo o PIN incorrecto' }, error:null },
+    fn_eventos_caja: a => ({ data:a.p_eventos.length, error:null }) }));
+  C.S.ctx = ctx;
+  try { w.localStorage.removeItem('pulp:eventos'); } catch(e){}
+  C.agregar('p1'); C.agregar('p3');
+  await esperar();
+
+  tecla(w, d, 'F4');
+  await esperar();
+  chk('quitar una línea pide al supervisor', /Autoriza un supervisor/.test(d.querySelector('#hoja').textContent));
+  chk('y la línea sigue ahí mientras tanto', C.S.ticket.length === 2);
+  d.querySelector('#sv-cod').value = 'S1';
+  d.querySelector('#sv-pin').value = '00000';
+  tecla(w, d, 'Enter', d.querySelector('#sv-pin'));
+  await esperar(120);
+  chk('con PIN malo no deja', C.S.ticket.length === 2 && /incorrecto/.test(d.querySelector('#sv-error').textContent));
+  d.querySelector('#sv-pin').value = '77777';
+  tecla(w, d, 'Enter', d.querySelector('#sv-pin'));
+  await esperar(150);
+  chk('con el PIN bueno se quita', C.S.ticket.length === 1);
+  const llamada = estado.llamadas.find(l => l.fn === 'fn_eventos_caja');
+  chk('y el evento lleva la autorización', llamada && llamada.args.p_eventos.some(e => e.autorizacion_id === 'aut-1'));
+
+  tecla(w, d, 'F12');
+  await esperar();
+  tecla(w, d, 'Enter', d.querySelector('#cv-motivo'));
+  await esperar();
+  chk('cancelar también pide al supervisor', /Autoriza un supervisor/.test(d.querySelector('#hoja').textContent));
+  d.querySelector('#sv-no').click();
+  await esperar();
+  chk('si no autoriza, la venta sigue', C.S.ticket.length === 1);
+
+  C.S.enLinea = false;
+  tecla(w, d, 'F12');
+  await esperar();
+  tecla(w, d, 'Enter', d.querySelector('#cv-motivo'));
+  await esperar();
+  chk('sin internet no se puede autorizar y la venta sigue',
+      C.S.ticket.length === 1 && !estado.llamadas.some(l => l.fn === 'fn_autorizar_caja' && l.args.p_accion === 'cancelar'));
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);

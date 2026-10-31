@@ -231,6 +231,16 @@
   box-shadow:0 6px 18px -8px var(--marca-sombra);transition:background .15s;
 }
 .btn-cobrar:hover:not(:disabled){background:var(--marca-oscuro)}
+.linea-total s{display:block;font-size:11.5px;color:var(--tenue);font-weight:500}
+.linea-promo{grid-column:1 / -1;display:flex;justify-content:space-between;gap:10px;align-items:center;
+  margin:4px 0 0 0;padding:4px 10px;border-radius:8px;background:var(--marca-suave);color:var(--marca-tinta);
+  font-size:12px;font-weight:700}
+.linea-promo span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.linea-promo.cerca{background:#FFF4E0;color:#8A5A00;font-weight:600}
+.sup-campos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tot.ahorro{color:var(--marca-tinta);font-weight:700}
+.pr-promo{grid-column:1 / -1;font-size:12.5px;font-weight:700;color:var(--marca-tinta);
+  background:var(--marca-suave);border-radius:8px;padding:6px 10px}
 .btn-cobrar:disabled{background:#CBD5E1;box-shadow:none}
 .btn-cobrar b{font-family:var(--num);font-size:20px}
 .pill.accion{background:var(--azul-suave);color:var(--azul);font-weight:700;
@@ -859,6 +869,7 @@
         <div class="totales">
           <div class="tot"><span>Subtotal</span><b class="num" id="t-sub2">—</b></div>
           <div class="tot"><span>Impuesto</span><b class="num" id="t-isv">—</b></div>
+          <div class="tot ahorro oculto" id="t-ahorro-fila"><span>Ahorro en promociones</span><b class="num" id="t-ahorro">—</b></div>
           <div class="tot grande"><span>Total</span><b class="num" id="t-total">—</b></div>
           <button class="btn-cobrar" id="btn-cobrar" disabled>
             <span>Cobrar</span><b class="num" id="btn-total">—</b>
@@ -1009,6 +1020,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { iniciales, escapar } from '../menu.js';
 import { escanear, hayCamara } from '../escaner.js';
 import { imprimirTicket } from '../ticket.js';
+import { calcularPromos, nombreCorto } from '../promos.js';
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth:{ persistSession:true, autoRefreshToken:true }
@@ -1016,7 +1028,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 const S = {
   ctx:null, sucursal:null, caja:null, turno:null, cajero:null, menu:null,
-  desbloqueo:null, catalogo:[], categorias:[], ticket:[],
+  desbloqueo:null, catalogo:[], categorias:[], ticket:[], promos:[],
   categoria:'todas', busqueda:'', metodo:'efectivo', fiscal:false, recibido:0,
   cliente:null, clientes:[], clientesLeidos:false, buscaCliente:'',
   ventas:0, acumulado:0, pin:'', moneda:'L', enLinea:navigator.onLine,
@@ -1469,12 +1481,43 @@ async function cargarCatalogo(){
     if (!error && data){ S.catalogo = data; await DB.guardarCatalogo(clave, data); }
   }
   if (!S.catalogo.length) S.catalogo = (await DB.leerCatalogo(clave)) || [];
+  await cargarPromos();
 
   S.categorias = [...new Map(S.catalogo.filter(p => p.categoria_id)
     .map(p => [p.categoria_id, p.categoria])).entries()];
 
   pintarMenuCategorias();
   pintar();
+}
+
+/* Las promociones del día. Se guardan en el navegador para que sigan
+   funcionando sin internet; el servidor vuelve a hacer la cuenta al cobrar. */
+async function cargarPromos(){
+  const llave = 'pulp:promos:' + (S.sucursal || '-');
+  if (S.enLinea){
+    try{
+      const { data, error } = await sb.rpc('fn_promociones_activas', { p_sucursal_id:S.sucursal });
+      if (!error && Array.isArray(data)){
+        S.promos = data;
+        try { localStorage.setItem(llave, JSON.stringify({ dia:new Date().toDateString(), data })); } catch(e){}
+        return;
+      }
+    }catch(e){}
+  }
+  try{
+    const g = JSON.parse(localStorage.getItem(llave) || 'null');
+    S.promos = g && g.dia === new Date().toDateString() && Array.isArray(g.data) ? g.data : [];
+  }catch(e){ S.promos = []; }
+}
+const promosDe = id => (S.promos || []).filter(pr => (pr.producto_ids || []).includes(id));
+
+/* La cuenta de las promociones sobre el ticket de ahora. */
+function cuentaPromos(){
+  const lineas = S.ticket.map(l => {
+    const p = S.catalogo.find(x => x.producto_id === l.producto_id) || {};
+    return { producto_id:l.producto_id, cantidad:l.cantidad, precio:Number(p.precio) || 0 };
+  });
+  return calcularPromos(lineas, S.promos || []);
 }
 
 /* La caja ya no lleva el menu del sistema: es una pantalla sola, y lo unico
@@ -1689,11 +1732,28 @@ function fijarCant(id, n){
   pintar();
 }
 
+/* Quitar una línea, o bajarle unidades, puede pedir supervisor (según lo
+   que el negocio escogió en Configuración). */
+const pidePermiso = accion => !!(S.ctx?.organizacion?.caja_autoriza || {})[accion];
+
 function quitarLinea(id){
   const i = S.ticket.findIndex(x => x.producto_id === id);
   if (i < 0) return;
-  anotarEvento('linea_quitada', [S.ticket[i]]);
-  S.ticket.splice(i, 1);
+  // Sin permiso que pedir, se quita en el acto (sin esperar a nadie).
+  if (!pidePermiso('quitar')) return quitarYa(id, null);
+  const l = S.ticket[i];
+  return pedirSupervisor('quitar',
+    `Quitar ${cantTxt(l.cantidad)} × ${nombreDe(l.producto_id)} de la venta.`)
+    .then(aut => { if (aut !== null) quitarYa(id, aut); });
+}
+function quitarYa(id, aut){
+  const j = S.ticket.findIndex(x => x.producto_id === id);
+  if (j < 0) return;
+  anotarEvento('linea_quitada', [S.ticket[j]], null, aut);
+  S.ticket.splice(j, 1);
+  quitada(j);
+}
+function quitada(i){
   // El puesto pasa a la linea que ocupo su lugar, o a la anterior si era la ultima.
   const sig = S.ticket[Math.min(i, S.ticket.length - 1)];
   S.puesto = sig ? sig.producto_id : null;
@@ -1702,9 +1762,18 @@ function quitarLinea(id){
 
 function cambiarCant(id, d){
   const l = S.ticket.find(x => x.producto_id === id); if (!l) return;
+  if (d < 0 && tres(l.cantidad + d) <= 0){ quitarLinea(id); return; }
+  if (d < 0 && pidePermiso('quitar')){
+    return pedirSupervisor('quitar', `Bajar ${nombreDe(id)} de ${cantTxt(l.cantidad)} a ${cantTxt(tres(l.cantidad + d))}.`)
+      .then(aut => { if (aut !== null) cambiarCantYa(id, d, aut); });
+  }
+  cambiarCantYa(id, d, null);
+}
+function cambiarCantYa(id, d, aut){
+  const l = S.ticket.find(x => x.producto_id === id); if (!l) return;
   const p = S.catalogo.find(x => x.producto_id === id);
+  if (d < 0) anotarEvento('linea_quitada', [{ ...l, cantidad:-d }], null, aut);
   l.cantidad = tres(l.cantidad + d);
-  if (l.cantidad <= 0){ quitarLinea(id); return; }
   if (l.cantidad > p.existencia) l.cantidad = Number(p.existencia);
   S.puesto = id;
   pintar();
@@ -1726,14 +1795,18 @@ function lineaPuesto(){
   return S.ticket.find(x => x.producto_id === S.puesto) || null;
 }
 function totales(){
-  let bruto = 0, imp = 0;
-  S.ticket.forEach(l => {
+  let bruto = 0, imp = 0, ahorro = 0;
+  const pr = cuentaPromos();
+  S.ticket.forEach((l, i) => {
     const p = S.catalogo.find(x => x.producto_id === l.producto_id);
-    const linea = p.precio * l.cantidad;
-    bruto += linea;
+    const d = pr.descuentos[i] || 0;
+    const linea = p.precio * l.cantidad - d;
+    bruto += linea; ahorro += d;
     imp += linea - linea / (1 + Number(p.tasa_impuesto || 0));
   });
-  return { sub:bruto - imp, imp, total:bruto };
+  // Al centavo, igual que el servidor: si no, "Pago insuficiente" por medio centavo.
+  const total = Math.round(bruto * 100) / 100;
+  return { sub:total - imp, imp, total, ahorro, promos:pr };
 }
 function pintarTicket(){
   const cont = $('#lineas');
@@ -1746,9 +1819,15 @@ function pintarTicket(){
   } else {
     /* Sin encabezado de columnas: con la fila en dos renglones, "Cant." e
        "Importe" ya no caen encima de lo que nombran. */
+    const pr = cuentaPromos();
     cont.innerHTML =
-      S.ticket.map(l => {
+      S.ticket.map((l, ix) => {
         const p = S.catalogo.find(x => x.producto_id === l.producto_id);
+        const d = pr.descuentos[ix] || 0;
+        const nombresPromo = (pr.porLinea[ix] || []).map(id => (S.promos || []).find(x => x.id === id))
+          .filter(Boolean).map(x => `${escapar(nombreCorto(x))} · ${escapar(x.nombre)}`);
+        // Lo que todavía le falta para ganarse la promo: "lleve 1 más".
+        const cerca = !d && promosDe(p.producto_id).find(x => x.tipo !== 'porcentaje');
         const aqui = l.producto_id === S.puesto;
         // La unidad va con el precio, no junto a la cantidad: ahi hay sitio y
         // de paso explica de que es el precio ("L 60.00 por LB").
@@ -1765,7 +1844,11 @@ function pintarTicket(){
                   title="Cambiar la cantidad">${cantTxt(l.cantidad)}</span>
             <button data-mas="${p.producto_id}" aria-label="Agregar uno">+</button>
           </div>
-          <div class="linea-total">${money(p.precio * l.cantidad)}</div>
+          <div class="linea-total">${d > 0
+            ? `<s class="num">${money(p.precio * l.cantidad)}</s>${money(p.precio * l.cantidad - d)}`
+            : money(p.precio * l.cantidad)}</div>
+          ${d > 0 ? `<div class="linea-promo"><span>${nombresPromo.join(' + ')}</span><b class="num">−${money(d)}</b></div>`
+            : cerca ? `<div class="linea-promo cerca"><span>${escapar(nombreCorto(cerca))} · ${escapar(cerca.nombre)}</span></div>` : ''}
         </div>`;
       }).join('');
   }
@@ -1774,6 +1857,8 @@ function pintarTicket(){
   $('#t-sub2').textContent = money(t.sub);
   $('#t-isv').textContent = money(t.imp);
   $('#t-total').textContent = money(t.total);
+  $('#t-ahorro').textContent = '−' + money(t.ahorro);
+  ver('#t-ahorro-fila', t.ahorro > 0.004);
   $('#btn-total').textContent = money(t.total);
   $('#btn-cobrar').disabled = !S.ticket.length;
   $('#movil-conteo').textContent = cantTxt(S.ticket.reduce((s,l)=>s+l.cantidad,0));
@@ -2242,8 +2327,13 @@ function hojaSuspendidas(){
       b.dataset.seguro = '1'; b.textContent = '¿Seguro? Toque otra vez para borrarlas';
       return;
     }
-    lista.forEach(sp => anotarEvento('descartada', sp.ticket || []));
-    guardar([]); ver('#velo-hoja', false); pintarAtajos(); $('#buscar').focus();
+    ver('#velo-hoja', false);
+    pedirSupervisor('descartar', `Borrar ${lista.length === 1 ? 'la venta' : 'las ' + lista.length + ' ventas'} en espera.`)
+      .then(aut => {
+        if (aut === null){ $('#buscar').focus(); return; }
+        lista.forEach(sp => anotarEvento('descartada', sp.ticket || [], null, aut));
+        guardar([]); pintarAtajos(); $('#buscar').focus();
+      });
   };
   document.querySelectorAll('[data-sp]').forEach(b =>
     b.addEventListener('click', () => retomar(b.dataset.sp)));
@@ -2436,6 +2526,7 @@ function tarjetaPrecio(p, clara){
               : escapar(hay(p).replace(/^h/, 'H'))}</small>
       <b class="num">${p.precio ? money(p.precio) : 'Sin precio'}</b>
     </div>
+    ${promosDe(p.producto_id).map(x => `<div class="pr-promo">${escapar(nombreCorto(x))} · ${escapar(x.nombre)}</div>`).join('')}
   </div>`;
 }
 
@@ -3707,7 +3798,7 @@ const nuevoId = () => (crypto?.randomUUID ? crypto.randomUUID()
   : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
       const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
 
-function anotarEvento(tipo, lineas, motivo = null){
+function anotarEvento(tipo, lineas, motivo = null, aut = null){
   const caja = cajaId();
   if (!caja || !lineas) return;
   const detalle = lineas.map(l => {
@@ -3720,8 +3811,74 @@ function anotarEvento(tipo, lineas, motivo = null){
     lineas:detalle.length,
     unidades:Math.round(detalle.reduce((s, d) => s + d.cantidad, 0) * 1000) / 1000,
     monto:Math.round(detalle.reduce((s, d) => s + d.cantidad * d.precio, 0) * 100) / 100,
-    detalle, motivo, ocurrido_en:new Date().toISOString() }]);
+    detalle, motivo, ocurrido_en:new Date().toISOString(),
+    autorizacion_id:aut?.autorizacion_id || null }]);
   enviarEventos();
+}
+
+const nombreDe = id => (S.catalogo.find(x => x.producto_id === id) || {}).nombre || 'el producto';
+
+/* El permiso del supervisor. Devuelve:
+     {}                            si el negocio no pide permiso para eso
+     { autorizacion_id, nombre }   si un supervisor lo autorizó
+     null                          si no se autorizó (se canceló)
+   Necesita internet: el PIN lo revisa el servidor. Sin internet se avisa y
+   no se hace la acción. */
+function pedirSupervisor(accion, que){
+  const reglas = S.ctx?.organizacion?.caja_autoriza || {};
+  if (!reglas[accion]) return Promise.resolve({});
+  if (!S.enLinea){
+    avisoCaja('Sin internet no se puede pedir el permiso del supervisor. Deje la venta en espera (F7) y siga.');
+    return Promise.resolve(null);
+  }
+  return new Promise(resolver => {
+    $('#hoja').innerHTML = `
+      <h2>Autoriza un supervisor</h2>
+      <p class="sub">${escapar(que)}</p>
+      <div class="sup-campos">
+        <div class="campo-g"><label for="sv-cod">Código</label>
+          <input class="entrada" id="sv-cod" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
+        <div class="campo-g"><label for="sv-pin">PIN</label>
+          <input class="entrada num" id="sv-pin" type="password" inputmode="numeric" maxlength="8" autocomplete="off"></div>
+      </div>
+      <div class="aviso malo oculto" id="sv-error" style="margin-top:12px"></div>
+      <div class="acciones" style="margin-top:14px">
+        <button class="btn secundario" id="sv-no">Volver <kbd>Esc</kbd></button>
+        <button class="btn principal-b" id="sv-si">Autorizar <kbd>Enter</kbd></button>
+      </div>`;
+    ver('#velo-hoja');
+    setTimeout(() => $('#sv-cod').focus(), 40);
+    let listo = false;
+    const fin = v => { if (listo) return; listo = true; ver('#velo-hoja', false); resolver(v); };
+    const mal = t => {
+      $('#sv-error').textContent = t; ver('#sv-error');
+      $('#hoja').classList.remove('sacudir'); void $('#hoja').offsetWidth; $('#hoja').classList.add('sacudir');
+      $('#sv-pin').value = ''; $('#sv-pin').focus();
+    };
+    const probar = async () => {
+      const cod = $('#sv-cod').value.trim(), pin = $('#sv-pin').value.trim();
+      if (!cod){ $('#sv-cod').focus(); return; }
+      if (!pin){ $('#sv-pin').focus(); return; }
+      const b = $('#sv-si'); b.disabled = true;
+      try{
+        const { data, error } = await sb.rpc('fn_autorizar_caja', { p_codigo:cod, p_pin:pin, p_accion:accion });
+        b.disabled = false;
+        if (error) return mal(limpiarError(error));
+        if (!data?.ok) return mal(data?.mensaje || 'Código o PIN incorrecto');
+        fin({ autorizacion_id:data.autorizacion_id, nombre:data.nombre });
+      }catch(e){ b.disabled = false; mal('Sin conexión con el servidor'); }
+    };
+    $('#sv-no').onclick = () => fin(null);
+    $('#sv-si').onclick = probar;
+    $('#sv-cod').addEventListener('keydown', e => {
+      if (e.key === 'Enter'){ e.preventDefault(); $('#sv-pin').focus(); }
+      if (e.key === 'Escape'){ e.preventDefault(); fin(null); }
+    });
+    $('#sv-pin').addEventListener('keydown', e => {
+      if (e.key === 'Enter'){ e.preventDefault(); probar(); }
+      if (e.key === 'Escape'){ e.preventDefault(); fin(null); }
+    });
+  });
 }
 
 let enviandoEventos = false;
@@ -3762,8 +3919,13 @@ function hojaCancelarVenta(){
   ver('#velo-hoja');
   setTimeout(() => $('#cv-motivo').focus(), 40);
   const volver = () => { ver('#velo-hoja', false); $('#buscar').focus(); };
-  const confirmar = () => {
-    anotarEvento('abortada', S.ticket, $('#cv-motivo').value.trim() || null);
+  const confirmar = async () => {
+    const motivo = $('#cv-motivo').value.trim() || null;
+    const total = money(totales().total);
+    ver('#velo-hoja', false);
+    const aut = await pedirSupervisor('cancelar', `Cancelar la venta de ${total}.`);
+    if (aut === null){ $('#buscar').focus(); return; }
+    anotarEvento('abortada', S.ticket, motivo, aut);
     S.ticket = []; S.puesto = null; S.multi = null; S.cliente = null;
     pintarCliente(); pintarMulti(); pintar();
     volver();

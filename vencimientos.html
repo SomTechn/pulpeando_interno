@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12805C">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="icono-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icono-192.png">
+<title>Vencimientos · Pulpeando</title>
+<script src="config.js"></script>
+<script src="tema.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ui.css">
+<style>
+/* ==========================================================================
+   Vencimientos.
+   Todo lo que hay en existencia con fecha de vencimiento cerca, de lo más
+   urgente a lo menos. Desde aquí mismo se le pone oferta (para venderlo
+   antes) o se da de baja (cuando ya no se puede vender).
+   ========================================================================== */
+:root{ --mal:#B4123A; --mal-f:#FFEDF1; --ojo:#8A5A00; --ojo-f:#FFF4E0 }
+.vz{flex:1;overflow-y:auto;min-height:0}
+.vz-in{max-width:1180px;margin:0 auto;padding:18px 20px 44px}
+.resumen{display:grid;gap:12px;grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:16px}
+.res{text-align:left;background:var(--panel);border:1.5px solid var(--linea);border-radius:var(--r-md);
+  padding:14px 16px;min-width:0;transition:border-color .15s}
+.res small{display:block;font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--tenue)}
+.res b{display:block;font-family:var(--num);font-size:24px;font-weight:600;margin-top:4px}
+.res span{display:block;font-size:12.5px;color:var(--tenue);margin-top:2px;font-family:var(--num)}
+.res.si{border-color:var(--marca);background:var(--marca-suave)}
+.res.mal b{color:var(--mal)}
+.res.ojo b{color:var(--ojo)}
+
+.filtros{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.filtros .campo{flex:1;min-width:220px;height:44px;box-shadow:none}
+.filtros select{height:44px;border:1px solid var(--linea);border-radius:12px;background:var(--panel);
+  padding:0 12px;font:inherit;font-size:13.5px;min-width:0}
+.btn-chico{height:44px;padding:0 14px;border-radius:12px;font-size:13px;font-weight:700;
+  background:var(--panel);border:1px solid var(--linea);color:var(--texto-2);white-space:nowrap}
+
+.lista{display:flex;flex-direction:column;gap:10px}
+.lt{display:grid;grid-template-columns:6px minmax(0,1fr) auto;gap:0 14px;background:var(--panel);
+  border:1px solid var(--linea);border-radius:14px;overflow:hidden}
+.lt .barra-c{background:var(--linea)}
+.lt.vencido .barra-c{background:var(--mal)}
+.lt.semana .barra-c{background:#E4A11B}
+.lt.mes .barra-c{background:var(--marca)}
+.lt-txt{padding:12px 0;min-width:0}
+.lt-txt b{display:block;font-size:14.5px;font-weight:700}
+.lt-txt small{display:block;font-size:12.5px;color:var(--tenue);margin-top:3px}
+.vchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.vchip{font-size:11.5px;font-weight:800;padding:2px 9px;border-radius:999px;background:var(--fondo);color:var(--tenue)}
+.vchip.mal{background:var(--mal-f);color:var(--mal)}
+.vchip.ojo{background:var(--ojo-f);color:var(--ojo)}
+.vchip.marca{background:var(--marca-suave);color:var(--marca-tinta)}
+.lt-fin{padding:12px 14px 12px 0;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;gap:8px}
+.lt-fin .cant{font-family:var(--num);font-size:18px;font-weight:600;text-align:right}
+.lt-fin .cant small{display:block;font-size:11.5px;color:var(--tenue);font-family:var(--ui);font-weight:600}
+.lt-acc{display:flex;gap:6px}
+.lt-acc button{height:34px;padding:0 11px;border-radius:9px;font-size:12.5px;font-weight:700;
+  border:1px solid var(--linea);background:var(--panel);color:var(--texto-2);white-space:nowrap}
+.lt-acc button.of{border-color:var(--marca-borde);color:var(--marca-tinta);background:var(--marca-suave)}
+.lt-acc button:disabled{opacity:.5}
+.grupo-t{font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--tenue);
+  margin:14px 0 2px}
+.cargando{display:grid;place-items:center;padding:80px 0}
+.cargando .girando{border-color:var(--linea);border-top-color:var(--marca)}
+.hoja .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+@media (max-width:720px){
+  .resumen{grid-template-columns:1fr 1fr}
+  .resumen .res:last-child{grid-column:1 / -1}
+}
+@media (max-width:560px){
+  .vz-in{padding:14px 16px 32px}
+  .lt{grid-template-columns:6px minmax(0,1fr)}
+  .lt-fin{grid-column:2;flex-direction:row;align-items:center;padding:0 14px 12px 0}
+  .lt-fin .cant{text-align:left}
+  .filtros{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .filtros .campo{grid-column:1 / -1;min-width:0}
+  .filtros .btn-chico{grid-column:1 / -1}
+  .filtros select{width:100%}
+}
+@media print{
+  #menu,.barra,.filtros,.lt-acc{display:none!important}
+  .vz{overflow:visible}
+}
+</style>
+</head>
+<body>
+<div class="oscura oculto" id="p-config"><div class="tarjeta-oscura">
+  <div class="marca"><span>◧</span> Configuración</div>
+  <div class="titulo-o">Falta conectar el proyecto</div></div></div>
+<div class="oscura oculto" id="p-sesion"><div class="tarjeta-oscura">
+  <div class="marca"><span>◧</span> Pulpeando</div>
+  <div class="titulo-o">Iniciar sesión</div>
+  <input class="campo-o" id="s-email" type="email" placeholder="correo@negocio.hn" autocomplete="username">
+  <input class="campo-o" id="s-clave" type="password" placeholder="Contraseña" autocomplete="current-password">
+  <div class="error-o" id="s-error"></div>
+  <button class="btn-o" id="s-entrar">Entrar</button></div></div>
+
+<div class="armazon oculto" id="app">
+  <aside id="menu"></aside>
+  <div class="principal">
+    <header class="barra">
+      <button class="hamburguesa" id="abrir-menu" aria-label="Menú">
+        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="barra-titulo"><b>Vencimientos</b><small id="h-sub">—</small></div>
+      <div class="barra-fin"><span class="pill" id="h-usuario">—</span></div>
+    </header>
+    <main class="vz"><div class="vz-in">
+      <div class="resumen" id="resumen"></div>
+      <div class="filtros">
+        <label class="campo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="buscar" placeholder="Buscar producto, lote o proveedor" autocomplete="off"></label>
+        <select id="f-sucursal" class="oculto" aria-label="Sucursal"></select>
+        <select id="f-dias" aria-label="Hasta cuándo">
+          <option value="30">Próximos 30 días</option>
+          <option value="60" selected>Próximos 60 días</option>
+          <option value="90">Próximos 90 días</option>
+          <option value="180">Próximos 6 meses</option>
+        </select>
+        <button class="btn-chico" id="b-imprimir">Imprimir</button>
+      </div>
+      <div id="contenido"><div class="cargando"><span class="girando"></span></div></div>
+    </div></main>
+  </div>
+</div>
+<div class="velo oculto" id="velo"><div class="hoja" id="hoja" role="dialog" aria-modal="true"></div></div>
+
+<script type="module">
+const CFG = window.SUPABASE_CONFIG || {};
+const SUPABASE_URL = CFG.url || 'PEGUE_AQUI_LA_URL';
+const SUPABASE_KEY = CFG.key || 'PEGUE_AQUI_LA_LLAVE';
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const ver = (id, si = true) => $(id).classList.toggle('oculto', !si);
+if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin configurar'); }
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { montarMenu, escapar } from './menu.js';
+
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth:{ persistSession:true, autoRefreshToken:true } });
+
+const S = { ctx:null, menu:null, moneda:'L', datos:null, filtro:'todo', sucursal:'', dias:60, busqueda:'', causa:null };
+const n2 = v => (Number(v) || 0).toLocaleString('es-HN', { minimumFractionDigits:2, maximumFractionDigits:2 });
+const money = v => S.moneda + ' ' + n2(v);
+const cant = v => (Number(v) || 0).toLocaleString('es-HN', { maximumFractionDigits:3 });
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const fecha = s => { const [a, m, d] = String(s).slice(0, 10).split('-').map(Number); return `${d} ${MESES[m - 1]} ${a}`; };
+const cuando = d => d < 0 ? `venció hace ${-d} ${d === -1 ? 'día' : 'días'}` : d === 0 ? 'vence hoy'
+  : d === 1 ? 'vence mañana' : `vence en ${d} días`;
+const grupo = d => d < 0 ? 'vencido' : d <= 7 ? 'semana' : d <= 30 ? 'mes' : 'despues';
+const GRUPOS = { vencido:'Vencido', semana:'Vence esta semana', mes:'Vence este mes', despues:'Más adelante' };
+function limpiarError(e){
+  const m = (e?.message || String(e)).replace(/^(?:[0-9A-Z]{5}|error|Error|ERROR):\s*/, '');
+  if (/JWT|token/i.test(m)) return 'La sesión venció. Vuelva a entrar.';
+  if (/Failed to fetch|NetworkError/i.test(m)) return 'Sin conexión con el servidor';
+  return m;
+}
+
+$('#s-entrar').addEventListener('click', async () => {
+  const { error } = await sb.auth.signInWithPassword({ email:$('#s-email').value.trim(), password:$('#s-clave').value });
+  if (error){ $('#s-error').textContent = 'Correo o contraseña incorrectos'; return; }
+  arrancar();
+});
+
+async function arrancar(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session){ ver('#p-sesion'); return; }
+  ver('#p-sesion', false);
+  const { data, error } = await sb.rpc('fn_pos_contexto');
+  if (error){ ver('#p-sesion'); return; }
+  S.ctx = data;
+  S.moneda = !data.organizacion?.moneda || data.organizacion.moneda === 'HNL' ? 'L' : data.organizacion.moneda;
+  $('#h-usuario').textContent = data.usuario.nombre;
+  $('#h-sub').textContent = data.organizacion?.nombre || '';
+  ver('#app');
+  S.menu = montarMenu({ contenedor:'#menu', modulo:'vencimientos', ctx:S.ctx,
+    alSalir: async () => { await sb.auth.signOut(); location.reload(); } });
+  $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
+  const sucs = data.sucursales || [];
+  if (sucs.length > 1){
+    $('#f-sucursal').innerHTML = '<option value="">Todas las sucursales</option>' +
+      sucs.map(s => `<option value="${s.id}">${escapar(s.nombre)}</option>`).join('');
+    ver('#f-sucursal');
+  }
+  await cargar();
+}
+
+async function cargar(){
+  const { data, error } = await sb.rpc('fn_vencimientos', { p_sucursal_id:S.sucursal || null, p_dias:S.dias });
+  if (error){ $('#contenido').innerHTML = `<div class="vacio"><p>${escapar(limpiarError(error))}</p></div>`; return; }
+  S.datos = data;
+  pintar();
+}
+
+function pintar(){
+  const lotes = S.datos.lotes || [];
+  const ve = S.datos.puede_ver_costos;
+  const suma = l => l.reduce((s, x) => s + (Number(x.valor) || 0), 0);
+  const de = g => lotes.filter(x => grupo(x.dias) === g);
+  const venc = de('vencido'), sem = de('semana'), mes = de('mes');
+  const R = [
+    ['vencido', 'Vencido', venc, 'mal'], ['semana', 'Esta semana', sem, 'ojo'], ['mes', 'Este mes', mes, '']];
+  $('#resumen').innerHTML = R.map(([k, t, l, c]) => `
+    <button class="res ${c} ${S.filtro === k ? 'si' : ''}" data-f="${k}" aria-pressed="${S.filtro === k}">
+      <small>${t}</small><b>${l.length}</b>
+      <span>${l.length ? cant(l.reduce((s, x) => s + Number(x.cantidad), 0)) + ' u.' : '—'}${ve && l.length ? ' · ' + money(suma(l)) : ''}</span>
+    </button>`).join('');
+  $$('#resumen [data-f]').forEach(b => b.onclick = () => {
+    S.filtro = S.filtro === b.dataset.f ? 'todo' : b.dataset.f; pintar();
+  });
+
+  const q = S.busqueda.trim().toLowerCase();
+  const vis = lotes.filter(x => (S.filtro === 'todo' || grupo(x.dias) === S.filtro) &&
+    (!q || [x.nombre, x.lote, x.proveedor, x.sku, x.categoria].some(v => String(v || '').toLowerCase().includes(q))));
+  if (!vis.length){
+    $('#contenido').innerHTML = `<div class="vacio"><div>✓</div><p>${lotes.length
+      ? 'Nada con ese filtro.' : 'No hay nada por vencer en este período.'}</p></div>`;
+    return;
+  }
+  let actual = null;
+  const ofertar = S.datos.puede_ofertar;
+  $('#contenido').innerHTML = '<div class="lista">' + vis.map(x => {
+    const g = grupo(x.dias);
+    const titulo = g !== actual ? `<div class="grupo-t">${GRUPOS[g]}</div>` : '';
+    actual = g;
+    return `${titulo}<div class="lt ${g}">
+      <span class="barra-c"></span>
+      <div class="lt-txt">
+        <b>${escapar(x.nombre)}</b>
+        <small>Lote ${escapar(x.lote || '—')} · ${fecha(x.vence)}${S.ctx.sucursales.length > 1 ? ' · ' + escapar(x.sucursal) : ''}${x.proveedor ? ' · ' + escapar(x.proveedor) : ''}</small>
+        <div class="vchips">
+          <span class="vchip ${g === 'vencido' ? 'mal' : g === 'semana' ? 'ojo' : ''}">${cuando(x.dias)}</span>
+          ${x.en_oferta ? '<span class="vchip marca">En oferta</span>' : ''}
+          ${x.merma_pendiente ? '<span class="vchip">Baja por aprobar</span>' : ''}
+        </div>
+      </div>
+      <div class="lt-fin">
+        <div class="cant">${cant(x.cantidad)} <small>${escapar(x.unidad || 'u.')}${ve && x.valor != null ? ' · ' + money(x.valor) : ''}</small></div>
+        <div class="lt-acc">
+          ${ofertar && g !== 'vencido' && !x.en_oferta ? `<button class="of" data-oferta="${x.lote_id}">Poner oferta</button>` : ''}
+          <button data-baja="${x.lote_id}" ${x.merma_pendiente ? 'disabled' : ''}>Dar de baja</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('') + '</div>';
+  $$('[data-oferta]').forEach(b => b.onclick = () => hojaOferta(b.dataset.oferta));
+  $$('[data-baja]').forEach(b => b.onclick = () => hojaBaja(b.dataset.baja));
+}
+
+const lote = id => (S.datos.lotes || []).find(x => x.lote_id === id);
+const cerrar = () => ver('#velo', false);
+$('#velo').addEventListener('click', e => { if (e.target === $('#velo')) cerrar(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrar(); });
+
+/* Poner oferta: hasta el día que vence, con el precio que el gerente diga. */
+function hojaOferta(id){
+  const x = lote(id); if (!x) return;
+  const sugerido = Math.floor(Number(x.precio) * 0.8 * 2) / 2;
+  $('#hoja').innerHTML = `
+    <h2>Poner en oferta</h2>
+    <p class="sub">${escapar(x.nombre)} · precio de hoy ${money(x.precio)}. ${cant(x.cantidad)} por vender antes del ${fecha(x.vence)}.</p>
+    <div class="grid2">
+      <div class="campo-g"><label for="of-p">Precio de oferta</label>
+        <input class="entrada num" id="of-p" inputmode="decimal" value="${sugerido.toFixed(2)}"></div>
+      <div class="campo-g"><label for="of-h">Hasta</label>
+        <input class="entrada" id="of-h" type="date" value="${x.vence}"></div>
+    </div>
+    <p class="sub" id="of-md" style="margin-top:8px"></p>
+    <div class="aviso malo oculto" id="of-e"></div>
+    <div class="acciones"><button class="btn secundario" id="of-no">Cancelar</button>
+      <button class="btn principal-b" id="of-si">Poner oferta</button></div>`;
+  ver('#velo');
+  const md = () => {
+    const p = Number($('#of-p').value.replace(',', '.'));
+    $('#of-md').textContent = p > 0 && p < x.precio ? `Rebaja (markdown) de ${Math.round((x.precio - p) / x.precio * 100)}%.` : '';
+  };
+  $('#of-p').addEventListener('input', md); md();
+  $('#of-no').onclick = cerrar;
+  $('#of-si').onclick = async () => {
+    const p = Number($('#of-p').value.replace(',', '.'));
+    if (!(p > 0) || p >= x.precio){ $('#of-e').textContent = 'La oferta tiene que ser menor que el precio de hoy'; ver('#of-e'); return; }
+    const { error } = await sb.rpc('fn_fijar_oferta', { p_producto_id:x.producto_id, p_precio:p,
+      p_hasta:$('#of-h').value, p_desde:null, p_sucursal_id:null });
+    if (error){ $('#of-e').textContent = limpiarError(error); ver('#of-e'); return; }
+    cerrar(); cargar();
+  };
+}
+
+/* Dar de baja: es una merma por vencimiento, que aprueba el gerente. */
+async function hojaBaja(id){
+  const x = lote(id); if (!x) return;
+  if (!S.causa){
+    const { data } = await sb.rpc('fn_causas_merma', { p_solo_activas:true });
+    const lista = Array.isArray(data) ? data : (data?.causas || []);
+    S.causa = lista.find(c => /venc/i.test(c.nombre)) || lista.find(c => c.clase === 'dano') || null;
+  }
+  $('#hoja').innerHTML = `
+    <h2>Dar de baja</h2>
+    <p class="sub">${escapar(x.nombre)} · lote ${escapar(x.lote || '—')} · ${cuando(x.dias)}.</p>
+    <div class="campo-g"><label for="bj-c">¿Cuántos?</label>
+      <input class="entrada num" id="bj-c" inputmode="decimal" value="${cant(x.cantidad)}"></div>
+    <div class="aviso ojo" style="margin-top:12px">Se registra como merma por
+      <b>${escapar(S.causa?.nombre || 'vencimiento')}</b> y la aprueba el gerente. Hasta entonces el inventario no cambia.</div>
+    <div class="aviso malo oculto" id="bj-e"></div>
+    <div class="acciones"><button class="btn secundario" id="bj-no">Cancelar</button>
+      <button class="btn principal-b" id="bj-si">Dar de baja</button></div>`;
+  ver('#velo');
+  $('#bj-no').onclick = cerrar;
+  $('#bj-si').onclick = async () => {
+    const c = Number(String($('#bj-c').value).replace(/,/g, ''));
+    const e = t => { $('#bj-e').textContent = t; ver('#bj-e'); };
+    if (!(c > 0)) return e('Escriba cuántos');
+    if (c > Number(x.cantidad)) return e(`De ese lote solo hay ${cant(x.cantidad)}`);
+    if (!S.causa) return e('No hay una causa de merma por vencimiento. Créela en Merma.');
+    const { error } = await sb.rpc('fn_registrar_merma', { p_producto_id:x.producto_id, p_cantidad:c,
+      p_causa_id:S.causa.causa_id || S.causa.id, p_ubicacion_id:null, p_lote_id:x.lote_id,
+      p_notas:'Vencido · desde Vencimientos' });
+    if (error) return e(limpiarError(error));
+    cerrar(); cargar();
+  };
+}
+
+$('#buscar').addEventListener('input', e => { S.busqueda = e.target.value; pintar(); });
+$('#f-sucursal').addEventListener('change', e => { S.sucursal = e.target.value; cargar(); });
+$('#f-dias').addEventListener('change', e => { S.dias = Number(e.target.value); cargar(); });
+$('#b-imprimir').addEventListener('click', () => window.print());
+
+window.__venc = { S, grupo, cuando };
+arrancar();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>

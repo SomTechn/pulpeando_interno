@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12805C">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="icono-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icono-192.png">
+<title>Promociones · Pulpeando</title>
+<script src="config.js"></script>
+<script src="tema.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ui.css">
+<style>
+/* ==========================================================================
+   Promociones: 2x1, "3 por L 100" y descuento %, por producto, categoría o
+   marca, con fechas y días. La caja las aplica sola y el servidor las cobra.
+   ========================================================================== */
+.pz{flex:1;overflow-y:auto;min-height:0}
+.pz-in{max-width:1100px;margin:0 auto;padding:18px 20px 44px}
+.enc{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px}
+.enc h1{font-size:clamp(20px,2.4vw,26px);font-weight:800;letter-spacing:-.02em}
+.enc p{font-size:13px;color:var(--tenue);margin-top:3px}
+.enc .fin{margin-left:auto}
+.btn-chico{height:44px;padding:0 16px;border-radius:12px;font-size:13.5px;font-weight:700;white-space:nowrap}
+.btn-chico.prin{background:var(--marca);color:var(--marca-sobre)}
+.btn-chico.prin:hover{background:var(--marca-oscuro)}
+.btn-chico.sec{background:var(--panel);border:1px solid var(--linea);color:var(--texto-2)}
+.pestañas{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.pestañas button{height:36px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:700;color:var(--tenue);
+  background:var(--panel);border:1px solid var(--linea)}
+.pestañas button.si{background:var(--marca);color:var(--marca-sobre);border-color:var(--marca)}
+.lista{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.pc{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);padding:16px;display:flex;
+  flex-direction:column;gap:8px;min-width:0}
+.pc-top{display:flex;gap:10px;align-items:flex-start}
+.pc-tipo{flex:0 0 auto;min-width:58px;max-width:112px;min-height:46px;padding:6px 10px;text-align:center;line-height:1.15;border-radius:12px;background:var(--marca);
+  color:var(--marca-sobre);display:grid;place-items:center;font-weight:800;font-size:15px;font-family:var(--num);letter-spacing:-.02em}
+.pc-nom{flex:1;min-width:0}
+.pc-nom b{display:block;font-size:15px;font-weight:800;line-height:1.25}
+.pc-frase{margin:0;font-size:13px;color:var(--tenue);line-height:1.45}
+.estado{font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.estado.vigente{background:#E7F7EE;color:#0e7a3a}
+.estado.programada{background:#FFF4E0;color:#8A5A00}
+.estado.terminada,.estado.apagada{background:var(--fondo);color:var(--tenue)}
+.pc-datos{display:flex;gap:14px;font-size:12.5px;color:var(--tenue);flex-wrap:wrap}
+.pc-datos b{color:var(--tinta);font-family:var(--num);font-weight:600}
+.pc-acc{display:flex;gap:8px;margin-top:auto;padding-top:6px}
+.pc-acc button{flex:1;height:38px;border-radius:10px;font-size:13px;font-weight:700;border:1px solid var(--linea);
+  background:var(--panel);color:var(--texto-2)}
+.pc.apagada,.pc.terminada{opacity:.72}
+.hoja.ancha{max-width:600px}
+.form{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+.form .ancho{grid-column:1 / -1}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1;min-width:110px;min-height:44px;padding:6px 8px;border-radius:10px;border:1.5px solid var(--linea);
+  font-size:13px;font-weight:700;color:var(--texto-2);background:var(--panel);line-height:1.2}
+.seg button small{display:block;font-size:11px;font-weight:600;color:var(--tenue)}
+.seg button.si{border-color:var(--marca);background:var(--marca-suave);color:var(--marca-tinta)}
+.dias{display:flex;gap:6px;flex-wrap:wrap}
+.dias button{width:44px;height:40px;border-radius:10px;border:1.5px solid var(--linea);font-size:12.5px;font-weight:700;
+  color:var(--texto-2);background:var(--panel)}
+.dias button.si{border-color:var(--marca);background:var(--marca-suave);color:var(--marca-tinta)}
+.prods{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.prods span{display:inline-flex;align-items:center;gap:6px;background:var(--marca-suave);color:var(--marca-tinta);
+  border-radius:999px;padding:4px 6px 4px 11px;font-size:12.5px;font-weight:700}
+.prods span button{width:22px;height:22px;border-radius:50%;background:var(--panel);font-size:13px;line-height:1}
+.res-busq{border:1px solid var(--linea);border-radius:10px;margin-top:6px;max-height:190px;overflow:auto}
+.res-busq button{display:flex;justify-content:space-between;width:100%;text-align:left;padding:9px 12px;font-size:13px;
+  border-bottom:1px solid var(--linea)}
+.res-busq button:hover,.res-busq button:focus{background:var(--fondo);outline:none}
+.res-busq button small{color:var(--tenue);font-family:var(--num)}
+.leyenda{background:var(--fondo);border-radius:12px;padding:12px 14px;font-size:13.5px;line-height:1.5;margin-top:12px}
+.leyenda b{color:var(--marca-tinta)}
+.cargando{display:grid;place-items:center;padding:80px 0}
+.cargando .girando{border-color:var(--linea);border-top-color:var(--marca)}
+@media (max-width:560px){
+  .pz-in{padding:14px 16px 32px}
+  .form{grid-template-columns:1fr}
+  .enc .fin{margin-left:0;width:100%}
+  .enc .fin .btn-chico{width:100%}
+}
+</style>
+</head>
+<body>
+<div class="oscura oculto" id="p-config"><div class="tarjeta-oscura">
+  <div class="marca"><span>◧</span> Configuración</div><div class="titulo-o">Falta conectar el proyecto</div></div></div>
+<div class="oscura oculto" id="p-sesion"><div class="tarjeta-oscura">
+  <div class="marca"><span>◧</span> Pulpeando</div><div class="titulo-o">Iniciar sesión</div>
+  <input class="campo-o" id="s-email" type="email" placeholder="correo@negocio.hn" autocomplete="username">
+  <input class="campo-o" id="s-clave" type="password" placeholder="Contraseña" autocomplete="current-password">
+  <div class="error-o" id="s-error"></div><button class="btn-o" id="s-entrar">Entrar</button></div></div>
+<div class="oscura oculto" id="p-bloqueado"><div class="tarjeta-oscura">
+  <div class="marca"><span>◧</span> Pulpeando</div><div class="titulo-o">Promociones no es para su rol</div>
+  <a class="btn-o" href="index.html" style="display:grid;place-items:center">Volver al inicio</a></div></div>
+
+<div class="armazon oculto" id="app">
+  <aside id="menu"></aside>
+  <div class="principal">
+    <header class="barra">
+      <button class="hamburguesa" id="abrir-menu" aria-label="Menú">
+        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="barra-titulo"><b>Promociones</b><small id="h-sub">—</small></div>
+      <div class="barra-fin"><span class="pill" id="h-usuario">—</span></div>
+    </header>
+    <main class="pz"><div class="pz-in">
+      <div class="enc">
+        <div><h1>Promociones</h1><p>La caja las aplica sola mientras estén vigentes. El precio de oferta de un producto se pone en Consultar.</p></div>
+        <div class="fin" id="enc-acc"></div>
+      </div>
+      <div class="pestañas" id="pest">
+        <button data-e="vigente" class="si">Vigentes</button><button data-e="programada">Programadas</button>
+        <button data-e="fin">Terminadas o apagadas</button></div>
+      <div id="contenido"><div class="cargando"><span class="girando"></span></div></div>
+    </div></main>
+  </div>
+</div>
+<div class="velo oculto" id="velo"><div class="hoja ancha" id="hoja" role="dialog" aria-modal="true"></div></div>
+
+<script type="module">
+const CFG = window.SUPABASE_CONFIG || {};
+const SUPABASE_URL = CFG.url || 'PEGUE_AQUI_LA_URL';
+const SUPABASE_KEY = CFG.key || 'PEGUE_AQUI_LA_LLAVE';
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const ver = (id, si = true) => $(id).classList.toggle('oculto', !si);
+if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin configurar'); }
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { montarMenu, escapar } from './menu.js';
+import { nombreCorto } from './promos.js';
+
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth:{ persistSession:true, autoRefreshToken:true } });
+
+const S = { ctx:null, menu:null, moneda:'L', nivel:0, lista:[], pest:'vigente', listas:null };
+const n2 = v => (Number(v) || 0).toLocaleString('es-HN', { minimumFractionDigits:2, maximumFractionDigits:2 });
+const money = v => S.moneda + ' ' + n2(v);
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const fecha = s => { if (!s) return ''; const [a, m, d] = String(s).slice(0, 10).split('-').map(Number); return `${d} ${MESES[m - 1]}`; };
+const DIAS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const DIAS_L = ['domingos','lunes','martes','miércoles','jueves','viernes','sábados'];
+const hoyISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+function limpiarError(e){
+  const m = (e?.message || String(e)).replace(/^(?:[0-9A-Z]{5}|error|Error|ERROR):\s*/, '');
+  if (/JWT|token/i.test(m)) return 'La sesión venció. Vuelva a entrar.';
+  if (/Failed to fetch|NetworkError/i.test(m)) return 'Sin conexión con el servidor';
+  return m;
+}
+
+/* La promoción en una frase, para la tarjeta y para la vista previa. */
+function frase(p){
+  const que = p.alcance === 'categoria' ? `toda la categoría ${p.categoria || ''}`
+    : p.alcance === 'marca' ? `toda la marca ${p.marca || ''}`
+    : (p.productos || []).length === 1 ? p.productos[0].nombre
+    : `${(p.productos || []).length} productos`;
+  const como = p.tipo === 'nxm' ? `Lleva ${p.lleva} y paga ${p.paga}`
+    : p.tipo === 'paquete' ? `${p.lleva} por ${money(p.precio_paquete)}`
+    : `${Number(p.porcentaje).toLocaleString('es-HN', { maximumFractionDigits:2 })}% de descuento`;
+  const mezcla = p.tipo !== 'porcentaje' && p.alcance !== 'productos' || (p.productos || []).length > 1
+    ? ' (se pueden mezclar)' : '';
+  const cuando = p.vigente_hasta ? `del ${fecha(p.vigente_desde)} al ${fecha(p.vigente_hasta)}` : `desde el ${fecha(p.vigente_desde)}`;
+  const dias = p.dias_semana?.length ? `, solo ${p.dias_semana.map(d => DIAS_L[d]).join(', ')}` : '';
+  return `${como} en ${que}${p.tipo !== 'porcentaje' ? mezcla : ''}, ${cuando}${dias}${p.sucursal ? ' · solo ' + p.sucursal : ''}.`;
+}
+
+$('#s-entrar').addEventListener('click', async () => {
+  const { error } = await sb.auth.signInWithPassword({ email:$('#s-email').value.trim(), password:$('#s-clave').value });
+  if (error){ $('#s-error').textContent = 'Correo o contraseña incorrectos'; return; }
+  arrancar();
+});
+
+async function arrancar(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session){ ver('#p-sesion'); return; }
+  ver('#p-sesion', false);
+  const { data, error } = await sb.rpc('fn_pos_contexto');
+  if (error){ ver('#p-sesion'); return; }
+  S.ctx = data; S.nivel = data.usuario?.nivel ?? 0;
+  S.moneda = !data.organizacion?.moneda || data.organizacion.moneda === 'HNL' ? 'L' : data.organizacion.moneda;
+  if (S.nivel < 2){ ver('#p-bloqueado'); return; }
+  $('#h-usuario').textContent = data.usuario.nombre;
+  $('#h-sub').textContent = data.organizacion?.nombre || '';
+  ver('#app');
+  S.menu = montarMenu({ contenedor:'#menu', modulo:'promociones', ctx:S.ctx,
+    alSalir: async () => { await sb.auth.signOut(); location.reload(); } });
+  $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
+  if (S.nivel >= 3) $('#enc-acc').innerHTML = '<button class="btn-chico prin" id="b-nueva">+ Nueva promoción</button>';
+  $('#b-nueva')?.addEventListener('click', () => hojaPromo());
+  await cargar();
+}
+
+async function cargar(){
+  const { data, error } = await sb.rpc('fn_promociones');
+  if (error){ $('#contenido').innerHTML = `<div class="vacio"><p>${escapar(limpiarError(error))}</p></div>`; return; }
+  S.lista = data || [];
+  pintar();
+}
+
+function pintar(){
+  const de = e => S.lista.filter(p => e === 'fin' ? ['terminada','apagada'].includes(p.estado) : p.estado === e);
+  $$('#pest button').forEach(b => {
+    b.classList.toggle('si', b.dataset.e === S.pest);
+    const n = de(b.dataset.e).length;
+    b.textContent = { vigente:'Vigentes', programada:'Programadas', fin:'Terminadas o apagadas' }[b.dataset.e] + (n ? ` · ${n}` : '');
+  });
+  const l = de(S.pest);
+  if (!l.length){
+    $('#contenido').innerHTML = `<div class="vacio"><div>🏷️</div><p>${S.pest === 'vigente'
+      ? 'No hay promociones vigentes.' + (S.nivel >= 3 ? '<br>Toque «Nueva promoción» para crear la primera.' : '') : 'Nada aquí.'}</p></div>`;
+    return;
+  }
+  $('#contenido').innerHTML = `<div class="lista">${l.map(p => `
+    <article class="pc ${p.estado}">
+      <div class="pc-top">
+        <span class="pc-tipo">${escapar(nombreCorto(p))}</span>
+        <div class="pc-nom"><b>${escapar(p.nombre)}</b></div>
+        <span class="estado ${p.estado}">${{ vigente:'Vigente', programada:'Programada', terminada:'Terminada', apagada:'Apagada' }[p.estado]}</span>
+      </div>
+      <p class="pc-frase">${escapar(frase(p))}</p>
+      <div class="pc-datos"><span>Ventas en 30 días <b>${Number(p.usos_30d) || 0}</b></span>
+        <span>Descuento dado <b>${money(p.descuento_30d)}</b></span></div>
+      ${S.nivel >= 3 ? `<div class="pc-acc">
+        <button data-editar="${p.id}">Editar</button>
+        <button data-prender="${p.id}">${p.activa ? 'Apagar' : 'Encender'}</button></div>` : ''}
+    </article>`).join('')}</div>`;
+  $$('[data-editar]').forEach(b => b.onclick = () => hojaPromo(S.lista.find(x => x.id === b.dataset.editar)));
+  $$('[data-prender]').forEach(b => b.onclick = async () => {
+    const p = S.lista.find(x => x.id === b.dataset.prender);
+    b.disabled = true;
+    const { error } = await sb.rpc('fn_guardar_promocion', { p:{ ...aGuardar(p), activa:!p.activa } });
+    if (error){ b.disabled = false; alert(limpiarError(error)); return; }
+    cargar();
+  });
+}
+$('#pest').addEventListener('click', e => { const b = e.target.closest('[data-e]'); if (!b) return; S.pest = b.dataset.e; pintar(); });
+
+const aGuardar = p => ({ id:p.id, nombre:p.nombre, tipo:p.tipo, lleva:p.lleva, paga:p.paga,
+  precio_paquete:p.precio_paquete, porcentaje:p.porcentaje, alcance:p.alcance,
+  producto_ids:p.producto_ids || (p.productos || []).map(x => x.id), categoria_id:p.categoria_id, marca_id:p.marca_id,
+  sucursal_id:p.sucursal_id, vigente_desde:p.vigente_desde, vigente_hasta:p.vigente_hasta,
+  dias_semana:p.dias_semana || null, activa:p.activa });
+
+async function listas(){
+  if (S.listas) return S.listas;
+  const [c, m] = await Promise.all([sb.from('categorias').select('id,nombre').order('nombre'),
+                                    sb.from('marcas').select('id,nombre').order('nombre')]);
+  S.listas = { categoria:c.data || [], marca:m.data || [] };
+  return S.listas;
+}
+
+const cerrar = () => ver('#velo', false);
+$('#velo').addEventListener('click', e => { if (e.target === $('#velo')) cerrar(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrar(); });
+
+async function hojaPromo(p = null){
+  const L = await listas();
+  const f = p ? { ...p, productos:[...(p.productos || [])] } : { tipo:'nxm', lleva:2, paga:1, alcance:'productos', productos:[],
+    vigente_desde:hoyISO(), vigente_hasta:'', dias_semana:[], sucursal_id:null, activa:true };
+  const sucs = S.ctx.sucursales || [];
+  $('#hoja').innerHTML = `
+    <h2>${p ? 'Editar promoción' : 'Nueva promoción'}</h2>
+    <p class="sub">La caja la aplica sola; la cajera no tiene que hacer nada.</p>
+    <div class="form">
+      <div class="campo-g ancho"><label>¿Qué tipo?</label>
+        <div class="seg" id="f-tipo">
+          <button data-t="nxm">Lleva y paga<small>2x1, 3x2</small></button>
+          <button data-t="paquete">Paquete<small>3 por L 100</small></button>
+          <button data-t="porcentaje">Descuento<small>10% menos</small></button></div></div>
+      <div class="campo-g" id="g-lleva"><label for="f-lleva">Lleva</label><input class="entrada num" id="f-lleva" inputmode="numeric"></div>
+      <div class="campo-g" id="g-paga"><label for="f-paga">Paga</label><input class="entrada num" id="f-paga" inputmode="numeric"></div>
+      <div class="campo-g" id="g-paquete"><label for="f-paquete">Precio del paquete</label><input class="entrada num" id="f-paquete" inputmode="decimal"></div>
+      <div class="campo-g" id="g-pct"><label for="f-pct">Descuento %</label><input class="entrada num" id="f-pct" inputmode="decimal"></div>
+      <div class="campo-g ancho"><label>¿A qué?</label>
+        <div class="seg" id="f-alc">
+          <button data-a="productos">Productos</button><button data-a="categoria">Una categoría</button><button data-a="marca">Una marca</button></div></div>
+      <div class="campo-g ancho" id="g-prod"><label for="f-busca">Productos</label>
+        <input class="entrada" id="f-busca" placeholder="Busque por nombre o código" autocomplete="off">
+        <div class="res-busq oculto" id="f-res"></div><div class="prods" id="f-prods"></div></div>
+      <div class="campo-g ancho" id="g-cat"><label for="f-cat">Categoría</label><select class="entrada" id="f-cat">
+        ${L.categoria.map(x => `<option value="${x.id}">${escapar(x.nombre)}</option>`).join('')}</select></div>
+      <div class="campo-g ancho" id="g-mar"><label for="f-mar">Marca</label><select class="entrada" id="f-mar">
+        ${L.marca.map(x => `<option value="${x.id}">${escapar(x.nombre)}</option>`).join('')}</select></div>
+      <div class="campo-g"><label for="f-desde">Desde</label><input class="entrada" id="f-desde" type="date"></div>
+      <div class="campo-g"><label for="f-hasta">Hasta (opcional)</label><input class="entrada" id="f-hasta" type="date"></div>
+      <div class="campo-g ancho"><label>Días (ninguno marcado = todos)</label>
+        <div class="dias" id="f-dias">${[1,2,3,4,5,6,0].map(d => `<button data-d="${d}">${DIAS[d]}</button>`).join('')}</div></div>
+      ${sucs.length > 1 ? `<div class="campo-g ancho"><label for="f-suc">Sucursal</label><select class="entrada" id="f-suc">
+        <option value="">Todas</option>${sucs.map(s => `<option value="${s.id}">${escapar(s.nombre)}</option>`).join('')}</select></div>` : ''}
+      <div class="campo-g ancho"><label for="f-nombre">Nombre (como la ve la cajera)</label>
+        <input class="entrada" id="f-nombre" placeholder="2x1 en Coca-Cola 3 L"></div>
+    </div>
+    <div class="leyenda" id="f-ley"></div>
+    <div class="aviso malo oculto" id="f-err" style="margin-top:12px"></div>
+    <div class="acciones" style="margin-top:14px"><button class="btn secundario" id="f-no">Cancelar</button>
+      <button class="btn principal-b" id="f-si">Guardar</button></div>`;
+  ver('#velo');
+
+  $('#f-lleva').value = f.lleva ?? ''; $('#f-paga').value = f.paga ?? '';
+  $('#f-paquete').value = f.precio_paquete ?? ''; $('#f-pct').value = f.porcentaje ?? '';
+  $('#f-desde').value = f.vigente_desde || hoyISO(); $('#f-hasta').value = f.vigente_hasta || '';
+  $('#f-nombre').value = f.nombre || '';
+  if (f.categoria_id) $('#f-cat').value = f.categoria_id;
+  if (f.marca_id) $('#f-mar').value = f.marca_id;
+  if ($('#f-suc')) $('#f-suc').value = f.sucursal_id || '';
+  let nombreTocado = !!p;
+
+  const leer = () => {
+    f.lleva = parseInt($('#f-lleva').value) || null; f.paga = parseInt($('#f-paga').value);
+    if (isNaN(f.paga)) f.paga = null;
+    f.precio_paquete = Number(String($('#f-paquete').value).replace(',', '.')) || null;
+    f.porcentaje = Number(String($('#f-pct').value).replace(',', '.')) || null;
+    f.categoria_id = $('#f-cat').value || null; f.marca_id = $('#f-mar').value || null;
+    f.categoria = L.categoria.find(x => x.id === f.categoria_id)?.nombre;
+    f.marca = L.marca.find(x => x.id === f.marca_id)?.nombre;
+    f.vigente_desde = $('#f-desde').value; f.vigente_hasta = $('#f-hasta').value || null;
+    f.sucursal_id = $('#f-suc')?.value || null;
+    f.sucursal = sucs.find(s => s.id === f.sucursal_id)?.nombre;
+  };
+  const pintarF = () => {
+    $$('#f-tipo button').forEach(b => b.classList.toggle('si', b.dataset.t === f.tipo));
+    $$('#f-alc button').forEach(b => b.classList.toggle('si', b.dataset.a === f.alcance));
+    $$('#f-dias button').forEach(b => b.classList.toggle('si', (f.dias_semana || []).includes(Number(b.dataset.d))));
+    ver('#g-lleva', f.tipo !== 'porcentaje'); ver('#g-paga', f.tipo === 'nxm');
+    ver('#g-paquete', f.tipo === 'paquete'); ver('#g-pct', f.tipo === 'porcentaje');
+    ver('#g-prod', f.alcance === 'productos'); ver('#g-cat', f.alcance === 'categoria'); ver('#g-mar', f.alcance === 'marca');
+    $('#f-prods').innerHTML = f.productos.map(x => `<span>${escapar(x.nombre)}<button data-quita="${x.id}" aria-label="Quitar">×</button></span>`).join('');
+    $$('[data-quita]').forEach(b => b.onclick = () => { f.productos = f.productos.filter(x => x.id !== b.dataset.quita); pintarF(); });
+    leer();
+    const lista = f.tipo !== 'porcentaje' ? f.lleva : 1;
+    const listo = (f.tipo === 'nxm' ? f.lleva >= 2 && f.paga >= 0 && f.paga < f.lleva
+      : f.tipo === 'paquete' ? f.lleva >= 2 && f.precio_paquete > 0 : f.porcentaje > 0 && f.porcentaje < 100)
+      && (f.alcance !== 'productos' || f.productos.length);
+    if (!nombreTocado && listo){
+      const que = f.alcance === 'productos' ? (f.productos.length === 1 ? f.productos[0].nombre : 'productos escogidos')
+        : f.alcance === 'categoria' ? f.categoria : f.marca;
+      $('#f-nombre').value = `${nombreCorto(f)} ${que || ''}`.trim();
+    }
+    $('#f-ley').innerHTML = listo ? `<b>${escapar(nombreCorto(f))}</b> · ${escapar(frase(f))}` : 'Complete los datos para ver cómo queda.';
+  };
+  pintarF();
+
+  $('#f-tipo').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (!b) return;
+    f.tipo = b.dataset.t;
+    // Valores de partida comunes: 2x1, y paquetes de 3. Si ya escribió otro, se respeta.
+    if (f.tipo === 'nxm' && (!$('#f-lleva').value || (!llevaTocado && $('#f-lleva').value === '3'))){ $('#f-lleva').value = 2; $('#f-paga').value = 1; }
+    if (f.tipo === 'paquete' && (!$('#f-lleva').value || (!llevaTocado && $('#f-lleva').value === '2'))) $('#f-lleva').value = 3;
+    pintarF(); });
+  $('#f-alc').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return; f.alcance = b.dataset.a; pintarF(); });
+  $('#f-dias').addEventListener('click', e => { const b = e.target.closest('[data-d]'); if (!b) return;
+    const d = Number(b.dataset.d); f.dias_semana = (f.dias_semana || []).includes(d)
+      ? f.dias_semana.filter(x => x !== d) : [...(f.dias_semana || []), d];
+    if (f.dias_semana.length === 7) f.dias_semana = [];
+    pintarF(); });
+  ['#f-lleva','#f-paga','#f-paquete','#f-pct','#f-desde','#f-hasta','#f-cat','#f-mar','#f-suc'].forEach(id =>
+    $(id)?.addEventListener(id.startsWith('#f-c') || id.startsWith('#f-m') || id === '#f-suc' ? 'change' : 'input', pintarF));
+  $('#f-nombre').addEventListener('input', () => { nombreTocado = true; });
+  let llevaTocado = !!p;
+  $('#f-lleva').addEventListener('input', () => { llevaTocado = true; });
+
+  let t = null;
+  $('#f-busca').addEventListener('input', e => {
+    clearTimeout(t);
+    const q = e.target.value.trim();
+    if (q.length < 2){ ver('#f-res', false); return; }
+    t = setTimeout(async () => {
+      const { data } = await sb.from('productos').select('id,nombre,sku').eq('activo', true)
+        .or(`nombre.ilike.%${q.replace(/[%,()]/g, ' ')}%,sku.ilike.%${q.replace(/[%,()]/g, ' ')}%`).order('nombre').limit(12);
+      const r = (data || []).filter(x => !f.productos.some(y => y.id === x.id));
+      $('#f-res').innerHTML = r.length ? r.map(x => `<button data-agrega="${x.id}">${escapar(x.nombre)}<small>${escapar(x.sku || '')}</small></button>`).join('')
+        : '<div style="padding:10px 12px;font-size:13px;color:var(--tenue)">Nada con ese nombre</div>';
+      ver('#f-res');
+      $$('[data-agrega]').forEach(b => b.onclick = () => {
+        const x = r.find(y => y.id === b.dataset.agrega);
+        f.productos.push({ id:x.id, nombre:x.nombre });
+        $('#f-busca').value = ''; ver('#f-res', false); pintarF(); $('#f-busca').focus();
+      });
+    }, 220);
+  });
+
+  $('#f-no').onclick = cerrar;
+  $('#f-si').onclick = async () => {
+    leer();
+    const err = m => { $('#f-err').textContent = m; ver('#f-err'); };
+    if (f.tipo === 'nxm' && !(f.lleva >= 2 && f.paga >= 0 && f.paga < f.lleva)) return err('En "lleva y paga", paga tiene que ser menos que lleva (por ejemplo lleva 2, paga 1)');
+    if (f.tipo === 'paquete' && !(f.lleva >= 2 && f.precio_paquete > 0)) return err('Ponga cuántos lleva y el precio del paquete');
+    if (f.tipo === 'porcentaje' && !(f.porcentaje > 0 && f.porcentaje < 100)) return err('El descuento tiene que estar entre 0 y 100%');
+    if (f.alcance === 'productos' && !f.productos.length) return err('Escoja al menos un producto');
+    if (!$('#f-nombre').value.trim()) return err('Póngale un nombre');
+    f.nombre = $('#f-nombre').value.trim();
+    const b = $('#f-si'); b.disabled = true;
+    const { error } = await sb.rpc('fn_guardar_promocion', { p:{ ...aGuardar(f), producto_ids:f.productos.map(x => x.id),
+      dias_semana:f.dias_semana?.length ? f.dias_semana : null } });
+    b.disabled = false;
+    if (error) return err(limpiarError(error));
+    cerrar(); cargar();
+  };
+}
+
+window.__promos = { S, frase };
+arrancar();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>

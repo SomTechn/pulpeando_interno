@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12805C">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="icono-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icono-192.png">
+<title>Importar y precios · Pulpeando</title>
+<script src="config.js"></script>
+<script src="tema.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ui.css">
+<style>
+/* ==========================================================================
+   Importar el catálogo y cambiar precios en lote.
+   Pensado para el primer día de un negocio grande: miles de productos que
+   ya están en un Excel. Y para el día que sube el proveedor: subir 5% a
+   toda una categoría sin tocar producto por producto.
+   ========================================================================== */
+:root{ --mal:#B4123A; --mal-f:#FFEDF1; --ojo:#8A5A00; --ojo-f:#FFF4E0; --bien:#0e7a3a; --bien-f:#E7F7EE }
+.im{flex:1;overflow-y:auto;min-height:0}
+.im-in{max-width:1100px;margin:0 auto;padding:18px 20px 44px}
+.im-in h1{font-size:clamp(20px,2.4vw,26px);font-weight:800;letter-spacing:-.02em}
+.im-in > p.sub{font-size:13.5px;color:var(--tenue);margin:4px 0 18px;line-height:1.5;max-width:720px}
+.tj{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);padding:18px;margin-bottom:14px;min-width:0}
+.tj h2{font-size:15px;font-weight:800;margin-bottom:4px;display:flex;align-items:center;gap:10px}
+.tj h2 .paso{width:24px;height:24px;border-radius:50%;background:var(--marca);color:var(--marca-sobre);
+  display:grid;place-items:center;font-size:12px;flex:0 0 auto}
+.tj > p{font-size:13px;color:var(--tenue);margin-bottom:12px;line-height:1.5}
+.fila{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn-chico{height:44px;padding:0 16px;border-radius:12px;font-size:13.5px;font-weight:700;display:inline-flex;
+  align-items:center;gap:8px;white-space:nowrap;cursor:pointer}
+.btn-chico.prin{background:var(--marca);color:var(--marca-sobre)}
+.btn-chico.prin:hover:not(:disabled){background:var(--marca-oscuro)}
+.btn-chico.sec{background:var(--panel);border:1px solid var(--linea);color:var(--texto-2)}
+.btn-chico:disabled{opacity:.5;cursor:not-allowed}
+.soltar{border:2px dashed var(--linea);border-radius:14px;padding:26px 18px;text-align:center;transition:border-color .15s,background .15s}
+.soltar.encima{border-color:var(--marca);background:var(--marca-suave)}
+.soltar b{display:block;font-size:15px;margin-bottom:4px}
+.soltar small{display:block;color:var(--tenue);font-size:12.5px;margin-bottom:12px}
+.mapa{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.mapa .campo-g select{height:40px}
+.mapa .campo-g label{display:flex;justify-content:space-between}
+.mapa .campo-g label i{font-style:normal;color:var(--mal)}
+.cuentas{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.cta{font-size:12.5px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--fondo);color:var(--texto-2)}
+.cta.mal{background:var(--mal-f);color:var(--mal)}
+.cta.bien{background:var(--bien-f);color:var(--bien)}
+.cta.ojo{background:var(--ojo-f);color:var(--ojo)}
+.tabla-env{overflow:auto;max-height:420px;border:1px solid var(--linea);border-radius:12px}
+.tabla{width:100%;border-collapse:collapse;font-size:12.5px}
+.tabla th{position:sticky;top:0;background:var(--fondo);text-align:left;font-size:11px;font-weight:800;
+  letter-spacing:.04em;text-transform:uppercase;color:var(--tenue);padding:8px;white-space:nowrap;z-index:1}
+.tabla td{padding:7px 8px;border-top:1px solid var(--linea);white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+.tabla .n{text-align:right;font-family:var(--num)}
+.tabla tr.mal td{background:#FFF7F9}
+.tabla td.err{color:var(--mal);font-weight:600;white-space:normal}
+.tabla .sube{color:var(--bien);font-weight:700}
+.tabla .baja{color:var(--mal);font-weight:700}
+.opciones{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:12px 0}
+.opciones label{display:flex;gap:8px;align-items:center;font-size:13.5px;font-weight:600}
+.opciones input[type=checkbox]{width:18px;height:18px;accent-color:var(--marca)}
+.opciones select{height:40px;border:1px solid var(--linea);border-radius:10px;padding:0 10px;font:inherit;font-size:13px;background:var(--panel)}
+.progreso{height:10px;border-radius:5px;background:var(--fondo);overflow:hidden;margin:12px 0 6px}
+.progreso i{display:block;height:100%;background:var(--marca);width:0;transition:width .2s}
+.resultado{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:10px 0 14px}
+.resultado div{border:1px solid var(--linea);border-radius:12px;padding:12px}
+.resultado small{display:block;font-size:12px;font-weight:700;color:var(--tenue)}
+.resultado b{display:block;font-family:var(--num);font-size:22px;font-weight:600;margin-top:2px}
+.form-p{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:end}
+.form-p .campo-g select,.form-p .campo-g input{height:44px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1;min-width:120px;height:44px;border-radius:10px;border:1.5px solid var(--linea);font-size:13px;
+  font-weight:700;color:var(--texto-2);background:var(--panel)}
+.seg button.si{border-color:var(--marca);background:var(--marca-suave);color:var(--marca-tinta)}
+.explica{font-size:12.5px;color:var(--tenue);margin-top:8px;line-height:1.5}
+@media (max-width:820px){ .form-p{grid-template-columns:1fr 1fr} }
+@media (max-width:560px){
+  .im-in{padding:14px 16px 32px}
+  .form-p{grid-template-columns:1fr}
+  .fila .btn-chico{flex:1;justify-content:center}
+}
+</style>
+</head>
+<body>
+<div class="oscura oculto" id="p-config"><div class="tarjeta-oscura">
+  <div class="marca"><span>◧</span> Configuración</div><div class="titulo-o">Falta conectar el proyecto</div></div></div>
+<div class="oscura oculto" id="p-sesion"><div class="tarjeta-oscura">
+  <div class="marca"><span>◧</span> Pulpeando</div><div class="titulo-o">Iniciar sesión</div>
+  <input class="campo-o" id="s-email" type="email" placeholder="correo@negocio.hn" autocomplete="username">
+  <input class="campo-o" id="s-clave" type="password" placeholder="Contraseña" autocomplete="current-password">
+  <div class="error-o" id="s-error"></div><button class="btn-o" id="s-entrar">Entrar</button></div></div>
+<div class="oscura oculto" id="p-bloqueado"><div class="tarjeta-oscura">
+  <div class="marca"><span>◧</span> Pulpeando</div><div class="titulo-o">Esto es para el gerente</div>
+  <p class="sub-o">Importar el catálogo y cambiar precios lo hace el gerente o el dueño.</p>
+  <a class="btn-o" href="index.html" style="display:grid;place-items:center">Volver al inicio</a></div></div>
+
+<div class="armazon oculto" id="app">
+  <aside id="menu"></aside>
+  <div class="principal">
+    <header class="barra">
+      <button class="hamburguesa" id="abrir-menu" aria-label="Menú">
+        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="barra-titulo"><b id="h-titulo">Importar productos</b><small id="h-sub">—</small></div>
+      <div class="barra-fin"><span class="pill" id="h-usuario">—</span></div>
+    </header>
+    <main class="im"><div class="im-in" id="contenido"></div></main>
+  </div>
+</div>
+<div class="velo oculto" id="velo"><div class="hoja" id="hoja" role="dialog" aria-modal="true"></div></div>
+
+<script type="module">
+const CFG = window.SUPABASE_CONFIG || {};
+const SUPABASE_URL = CFG.url || 'PEGUE_AQUI_LA_URL';
+const SUPABASE_KEY = CFG.key || 'PEGUE_AQUI_LA_LLAVE';
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const ver = (id, si = true) => $(id).classList.toggle('oculto', !si);
+if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin configurar'); }
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { montarMenu, escapar } from './menu.js';
+
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth:{ persistSession:true, autoRefreshToken:true } });
+
+const S = { ctx:null, menu:null, moneda:'L', seccion:'importar',
+  archivo:null, encabezados:[], filas:[], mapa:{}, listas:null, vista:null };
+const n2 = v => (Number(v) || 0).toLocaleString('es-HN', { minimumFractionDigits:2, maximumFractionDigits:2 });
+const money = v => S.moneda + ' ' + n2(v);
+function limpiarError(e){
+  const m = (e?.message || String(e)).replace(/^(?:[0-9A-Z]{5}|error|Error|ERROR):\s*/, '');
+  if (/JWT|token/i.test(m)) return 'La sesión venció. Vuelva a entrar.';
+  if (/Failed to fetch|NetworkError/i.test(m)) return 'Sin conexión con el servidor';
+  return m;
+}
+
+/* ================= las columnas que se entienden =================
+   El Excel de cada negocio llama distinto a lo mismo. Se reconoce por el
+   encabezado, sin tildes ni mayúsculas; lo que no se reconozca se escoge a
+   mano. */
+const CAMPOS = [
+  ['sku',        'Item / código interno', ['sku','item','codigo interno','cod interno','codigo producto','id producto','referencia','ref']],
+  ['nombre',     'Nombre',                ['nombre','descripcion','producto','articulo','nombre producto','descripcion producto']],
+  ['codigo',     'Código de barras',      ['codigo de barras','codigo barras','barras','ean','upc','barcode','cod barras','codigo']],
+  ['categoria',  'Categoría',             ['categoria','familia','departamento','linea','grupo']],
+  ['marca',      'Marca',                 ['marca','fabricante']],
+  ['proveedor',  'Proveedor',             ['proveedor','distribuidor']],
+  ['precio',     'Precio de venta',       ['precio','precio venta','precio de venta','pvp','precio publico','venta']],
+  ['costo',      'Costo',                 ['costo','costo unitario','precio compra','precio de compra','compra','costo promedio']],
+  ['existencia', 'Existencia inicial',    ['existencia','existencias','stock','cantidad','inventario','unidades']],
+  ['unidad',     'Unidad',                ['unidad','um','u m','medida','unidad de medida']],
+  ['tipo',       'Se vende por',          ['tipo','se vende por']],
+  ['impuesto',   'Impuesto',              ['impuesto','isv','iva','tasa']],
+  ['minimo',     'Mínimo',                ['minimo','stock minimo','existencia minima']],
+  ['maximo',     'Máximo',                ['maximo','stock maximo','existencia maxima']],
+  ['empaque',    'Unidades por caja',     ['empaque','unidades por caja','unidades caja','fardo','caja']],
+  ['vence',      'Lleva vencimiento',     ['vence','perecedero','controla vencimiento','vencimiento']]
+];
+const normal = t => String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+function mapear(encabezados){
+  const libres = encabezados.map((h, i) => ({ h:normal(h), i }));
+  const mapa = {};
+  // Primero lo exacto, después lo que lo contiene; un encabezado sirve una vez.
+  for (const pasada of ['exacto', 'parecido']){
+    for (const [k, , sinon] of CAMPOS){
+      if (mapa[k] !== undefined) continue;
+      const hit = libres.find(x => !Object.values(mapa).includes(x.i) &&
+        sinon.some(s => pasada === 'exacto' ? x.h === s : (x.h.startsWith(s + ' ') || x.h.endsWith(' ' + s))));
+      if (hit) mapa[k] = hit.i;
+    }
+  }
+  return mapa;
+}
+
+/* "L 1,250.50", "1.250,50", "15%": a número. */
+function numero(v){
+  if (v === null || v === undefined || v === '') return null;
+  if (typeof v === 'number') return isFinite(v) ? v : null;
+  let t = String(v).trim().replace(/[^\d.,-]/g, '');
+  if (!t || t === '-') return null;
+  if (t.includes(',') && t.includes('.')){
+    t = t.lastIndexOf(',') > t.lastIndexOf('.') ? t.replace(/\./g, '').replace(',', '.') : t.replace(/,/g, '');
+  } else if (t.includes(',')){
+    t = /,\d{1,2}$/.test(t) ? t.replace(',', '.') : t.replace(/,/g, '');
+  }
+  const n = Number(t);
+  return isFinite(n) ? n : null;
+}
+
+/* CSV propio (coma o punto y coma, con comillas). El Excel de verdad se lee
+   con SheetJS, que se baja solo si hace falta. */
+function leerCSV(texto){
+  texto = texto.replace(/^﻿/, '');
+  const primera = texto.split(/\r?\n/)[0] || '';
+  const sep = (primera.match(/;/g) || []).length > (primera.match(/,/g) || []).length ? ';'
+            : (primera.match(/\t/g) || []).length > (primera.match(/,/g) || []).length ? '\t' : ',';
+  const filas = []; let fila = [], campo = '', comillas = false;
+  for (let i = 0; i < texto.length; i++){
+    const c = texto[i];
+    if (comillas){
+      if (c === '"' && texto[i + 1] === '"'){ campo += '"'; i++; }
+      else if (c === '"') comillas = false;
+      else campo += c;
+    } else if (c === '"') comillas = true;
+    else if (c === sep){ fila.push(campo); campo = ''; }
+    else if (c === '\n' || c === '\r'){
+      if (c === '\r' && texto[i + 1] === '\n') i++;
+      fila.push(campo); filas.push(fila); fila = []; campo = '';
+    } else campo += c;
+  }
+  if (campo !== '' || fila.length){ fila.push(campo); filas.push(fila); }
+  return filas.filter(f => f.some(x => String(x).trim() !== ''));
+}
+
+async function leerArchivo(archivo){
+  const nombre = archivo.name.toLowerCase();
+  if (nombre.endsWith('.csv') || nombre.endsWith('.txt')) return leerCSV(await archivo.text());
+  if (!window.XLSX){
+    await new Promise((ok, mal) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      s.onload = ok; s.onerror = () => mal(new Error('No se pudo cargar el lector de Excel. Guárdelo como CSV e inténtelo otra vez.'));
+      document.head.appendChild(s);
+    });
+  }
+  const libro = window.XLSX.read(await archivo.arrayBuffer(), { type:'array' });
+  const hoja = libro.Sheets[libro.SheetNames[0]];
+  return window.XLSX.utils.sheet_to_json(hoja, { header:1, raw:true, defval:'' })
+    .filter(f => f.some(x => String(x).trim() !== ''));
+}
+
+/* Una fila del archivo, ya en los campos del sistema. */
+function filaSistema(f){
+  const o = {};
+  for (const [k] of CAMPOS){
+    const i = S.mapa[k];
+    if (i === undefined || i === '' || i === null) continue;
+    let v = f[i];
+    if (['precio','costo','existencia','minimo','maximo','empaque'].includes(k)){
+      const n = numero(v); if (n !== null) o[k] = String(n);
+      else if (String(v ?? '').trim() !== '') o['_mal_' + k] = String(v);
+    } else if (k === 'impuesto'){
+      const t = String(v ?? '').trim(); if (t) o[k] = t;
+    } else {
+      const t = String(v ?? '').trim(); if (t) o[k] = k === 'codigo' ? t.replace(/\.0+$/, '') : t;
+    }
+  }
+  return o;
+}
+function revisar(o){
+  const malos = [];
+  if (!o.nombre && !o.sku && !o.codigo) malos.push('Sin nombre ni código');
+  for (const k of ['precio','costo','existencia']) if (o['_mal_' + k]) malos.push(`${k} no es número`);
+  if (o.precio !== undefined && Number(o.precio) < 0) malos.push('precio negativo');
+  if (o.existencia && Number(o.existencia) > 0 && o.costo === undefined) malos.push('existencia sin costo');
+  return malos;
+}
+
+/* ================= sesión ================= */
+$('#s-entrar').addEventListener('click', async () => {
+  const { error } = await sb.auth.signInWithPassword({ email:$('#s-email').value.trim(), password:$('#s-clave').value });
+  if (error){ $('#s-error').textContent = 'Correo o contraseña incorrectos'; return; }
+  arrancar();
+});
+
+async function arrancar(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session){ ver('#p-sesion'); return; }
+  ver('#p-sesion', false);
+  const { data, error } = await sb.rpc('fn_pos_contexto');
+  if (error){ ver('#p-sesion'); return; }
+  S.ctx = data;
+  S.moneda = !data.organizacion?.moneda || data.organizacion.moneda === 'HNL' ? 'L' : data.organizacion.moneda;
+  if ((data.usuario?.nivel ?? 0) < 3){ ver('#p-bloqueado'); return; }
+  $('#h-usuario').textContent = data.usuario.nombre;
+  $('#h-sub').textContent = data.organizacion?.nombre || '';
+  ver('#app');
+  S.seccion = location.hash === '#precios' ? 'precios' : 'importar';
+  S.menu = montarMenu({ contenedor:'#menu', modulo:'importar', ctx:S.ctx,
+    alSalir: async () => { await sb.auth.signOut(); location.reload(); },
+    secciones:[{ id:'importar', titulo:'Importar y precios', items:[
+      { valor:'importar', nombre:'Importar productos', icono:'importar', activo:S.seccion === 'importar' },
+      { valor:'precios',  nombre:'Cambiar precios',    icono:'etiqueta',   activo:S.seccion === 'precios' } ] }] });
+  S.menu.alElegir(v => { S.seccion = v; try { history.replaceState(null, '', '#' + v); } catch(e){} pintar(); });
+  $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
+  pintar();
+}
+
+function pintar(){ S.seccion === 'precios' ? pintarPrecios() : pintarImportar(); }
+
+/* ================= importar ================= */
+function plantillaCSV(){
+  const enc = ['Item','Nombre','Código de barras','Categoría','Marca','Proveedor','Precio','Costo','Existencia','Unidad','Impuesto','Mínimo','Unidades por caja','Vence'];
+  const ej = [
+    ['ARR5','Arroz Progreso 5 lb','7421000100015','Granos básicos','Progreso','Distribuidora del Norte','98.00','78.50','40','UND','15','10','10','no'],
+    ['QUE1','Queso fresco','','Lácteos','','Lácteos Sula','78.00','60.00','12.5','LB','0','2','','sí']];
+  const fila = v => v.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',');
+  const blob = new Blob(['﻿' + [enc, ...ej].map(fila).join('\r\n')], { type:'text/csv;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'plantilla_productos.csv';
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 400);
+}
+
+function pintarImportar(){
+  $('#h-titulo').textContent = 'Importar productos';
+  const sucs = S.ctx.sucursales || [];
+  $('#contenido').innerHTML = `
+    <h1>Importar productos desde Excel</h1>
+    <p class="sub">Suba su lista de productos con códigos, precios, costos y existencias. Lo que ya existe
+      (por item o por código de barras) se actualiza; lo nuevo se crea. Las categorías, marcas y
+      proveedores que no existan se crean solos.</p>
+    <section class="tj">
+      <h2><span class="paso">1</span>El archivo</h2>
+      <p>Excel (.xlsx, .xls) o CSV. La primera fila tiene que ser la de los títulos. Si no tiene uno,
+        baje la plantilla y llénela.</p>
+      <div class="soltar" id="soltar">
+        <b id="arch-nombre">Arrastre aquí el archivo</b>
+        <small id="arch-sub">o búsquelo en su computadora</small>
+        <div class="fila" style="justify-content:center">
+          <label class="btn-chico prin">Escoger archivo
+            <input type="file" id="arch" accept=".xlsx,.xls,.csv,.txt" hidden></label>
+          <button class="btn-chico sec" id="b-plantilla">Bajar la plantilla</button>
+        </div>
+      </div>
+      <div class="aviso malo oculto" id="arch-error" style="margin-top:12px"></div>
+    </section>
+    <div id="paso2"></div>`;
+  $('#b-plantilla').onclick = plantillaCSV;
+  $('#arch').addEventListener('change', e => e.target.files[0] && cargarArchivo(e.target.files[0]));
+  const z = $('#soltar');
+  ['dragenter','dragover'].forEach(t => z.addEventListener(t, e => { e.preventDefault(); z.classList.add('encima'); }));
+  ['dragleave','drop'].forEach(t => z.addEventListener(t, e => { e.preventDefault(); z.classList.remove('encima'); }));
+  z.addEventListener('drop', e => e.dataTransfer.files[0] && cargarArchivo(e.dataTransfer.files[0]));
+  if (S.filas.length) pintarPaso2();
+}
+
+async function cargarArchivo(archivo){
+  ver('#arch-error', false);
+  $('#arch-nombre').textContent = archivo.name;
+  $('#arch-sub').textContent = 'Leyendo…';
+  try{
+    const datos = await leerArchivo(archivo);
+    if (datos.length < 2) throw new Error('El archivo no tiene filas debajo de los títulos');
+    S.archivo = archivo.name;
+    S.encabezados = datos[0].map(x => String(x ?? '').trim());
+    S.filas = datos.slice(1);
+    S.mapa = mapear(S.encabezados);
+    $('#arch-sub').textContent = `${S.filas.length.toLocaleString('es-HN')} filas · ${S.encabezados.length} columnas`;
+    pintarPaso2();
+  }catch(err){
+    $('#arch-sub').textContent = 'o búsquelo en su computadora';
+    $('#arch-error').textContent = limpiarError(err); ver('#arch-error');
+  }
+}
+
+function pintarPaso2(){
+  const sucs = S.ctx.sucursales || [];
+  const conv = S.filas.map(f => filaSistema(f));
+  const probl = conv.map(revisar);
+  const malas = probl.filter(p => p.length).length;
+  const sinSistema = !S.mapa.nombre && !S.mapa.sku && !S.mapa.codigo;
+  const vistas = Object.keys(S.mapa).length;
+  $('#paso2').innerHTML = `
+    <section class="tj">
+      <h2><span class="paso">2</span>Las columnas</h2>
+      <p>Se reconocieron ${vistas} de ${S.encabezados.length} columnas. Revise que cada dato salga de la columna correcta.</p>
+      <div class="mapa">${CAMPOS.map(([k, t]) => `
+        <div class="campo-g"><label for="m-${k}">${t}${k === 'nombre' ? ' <i>*</i>' : ''}</label>
+          <select class="entrada" id="m-${k}" data-campo="${k}">
+            <option value="">— No viene —</option>
+            ${S.encabezados.map((h, i) => `<option value="${i}" ${S.mapa[k] === i ? 'selected' : ''}>${escapar(h || 'Columna ' + (i + 1))}</option>`).join('')}
+          </select></div>`).join('')}</div>
+    </section>
+    <section class="tj">
+      <h2><span class="paso">3</span>Así va a quedar</h2>
+      <div class="cuentas">
+        <span class="cta">${S.filas.length.toLocaleString('es-HN')} filas</span>
+        ${malas ? `<span class="cta mal">${malas} con problemas</span>` : '<span class="cta bien">Sin problemas</span>'}
+      </div>
+      <div class="tabla-env"><table class="tabla">
+        <thead><tr><th>#</th>${CAMPOS.filter(([k]) => S.mapa[k] !== undefined).map(([, t]) => `<th>${t}</th>`).join('')}<th>Revisión</th></tr></thead>
+        <tbody>${conv.slice(0, 50).map((o, i) => `<tr class="${probl[i].length ? 'mal' : ''}"><td class="n">${i + 2}</td>${
+          CAMPOS.filter(([k]) => S.mapa[k] !== undefined).map(([k]) => `<td class="${['precio','costo','existencia','minimo','maximo','empaque'].includes(k) ? 'n' : ''}">${escapar(o[k] ?? o['_mal_' + k] ?? '')}</td>`).join('')
+        }<td class="${probl[i].length ? 'err' : ''}">${escapar(probl[i].join(', ') || '✓')}</td></tr>`).join('')}</tbody>
+      </table></div>
+      ${S.filas.length > 50 ? `<p class="explica">Se enseñan las primeras 50 de ${S.filas.length.toLocaleString('es-HN')}.</p>` : ''}
+      <div class="opciones">
+        <label><input type="checkbox" id="o-act" checked> Actualizar los productos que ya existen</label>
+        ${sucs.length > 1 ? `<label>Existencia inicial en <select id="o-suc">${sucs.map(s => `<option value="${s.id}">${escapar(s.nombre)}</option>`).join('')}</select></label>` : ''}
+      </div>
+      <p class="explica">La existencia solo se carga en productos que todavía no tienen existencia en esa sucursal,
+        y necesita el costo. Lo que ya está contado se corrige con un conteo.</p>
+      <div class="fila" style="margin-top:12px">
+        <button class="btn-chico prin" id="b-importar" ${sinSistema ? 'disabled' : ''}>Importar ${(S.filas.length - malas).toLocaleString('es-HN')} productos</button>
+        ${sinSistema ? '<span class="cta mal">Falta escoger la columna del nombre o del código</span>' : ''}
+      </div>
+    </section>
+    <div id="paso4"></div>`;
+  $$('[data-campo]').forEach(s => s.addEventListener('change', e => {
+    const k = e.target.dataset.campo, v = e.target.value;
+    if (v === '') delete S.mapa[k]; else S.mapa[k] = Number(v);
+    pintarPaso2();
+  }));
+  $('#b-importar').onclick = () => importar(conv, probl);
+}
+
+async function importar(conv, probl){
+  const buenas = conv.map((o, i) => ({ o, fila:i + 2 })).filter((x, i) => !probl[i].length);
+  if (!buenas.length) return;
+  const act = $('#o-act').checked, suc = $('#o-suc')?.value || null;
+  $('#b-importar').disabled = true;
+  $('#paso4').innerHTML = `<section class="tj"><h2><span class="paso">4</span>Importando</h2>
+    <div class="progreso"><i id="prog"></i></div><p class="explica" id="prog-t">Empezando…</p></section>`;
+  const T = { creados:0, actualizados:0, existencias:0, omitidos:0, errores:[], avisos:[] };
+  const LOTE = 200;
+  for (let i = 0; i < buenas.length; i += LOTE){
+    const parte = buenas.slice(i, i + LOTE);
+    const filas = parte.map(x => { const o = { ...x.o }; Object.keys(o).forEach(k => k.startsWith('_') && delete o[k]); return o; });
+    const { data, error } = await sb.rpc('fn_importar_productos', { p_filas:filas, p_sucursal_id:suc, p_actualizar:act });
+    if (error){
+      T.errores.push({ fila:`${parte[0].fila}–${parte[parte.length - 1].fila}`, mensaje:limpiarError(error) });
+    } else {
+      T.creados += data.creados; T.actualizados += data.actualizados;
+      T.existencias += data.existencias; T.omitidos += data.omitidos;
+      (data.errores || []).forEach(e => T.errores.push({ ...e, fila:parte[e.fila - 1]?.fila ?? e.fila }));
+      (data.avisos || []).forEach(e => T.avisos.push({ ...e, fila:parte[e.fila - 1]?.fila ?? e.fila }));
+    }
+    const hecho = Math.min(i + LOTE, buenas.length);
+    $('#prog').style.width = (hecho / buenas.length * 100) + '%';
+    $('#prog-t').textContent = `${hecho.toLocaleString('es-HN')} de ${buenas.length.toLocaleString('es-HN')}`;
+  }
+  const saltadas = conv.length - buenas.length;
+  $('#paso4').innerHTML = `<section class="tj">
+    <h2><span class="paso">✓</span>Listo</h2>
+    <div class="resultado">
+      <div><small>Productos nuevos</small><b>${T.creados}</b></div>
+      <div><small>Actualizados</small><b>${T.actualizados}</b></div>
+      <div><small>Con existencia inicial</small><b>${T.existencias}</b></div>
+      <div><small>Con error</small><b style="color:${T.errores.length ? 'var(--mal)' : 'inherit'}">${T.errores.length + saltadas}</b></div>
+    </div>
+    ${T.errores.length || T.avisos.length ? `<div class="tabla-env"><table class="tabla">
+      <thead><tr><th>Fila</th><th>Qué pasó</th></tr></thead>
+      <tbody>${[...T.errores.map(e => ({ ...e, mal:true })), ...T.avisos].map(e =>
+        `<tr class="${e.mal ? 'mal' : ''}"><td class="n">${escapar(e.fila)}</td><td class="${e.mal ? 'err' : ''}">${escapar(e.mensaje)}</td></tr>`).join('')}</tbody>
+    </table></div>` : ''}
+    <div class="fila" style="margin-top:12px">
+      <a class="btn-chico sec" href="catalogo.html">Ver el catálogo</a>
+      <button class="btn-chico sec" id="b-otro">Importar otro archivo</button>
+    </div></section>`;
+  $('#b-otro').onclick = () => { S.filas = []; S.encabezados = []; pintarImportar(); };
+}
+
+/* ================= cambiar precios ================= */
+async function listas(){
+  if (S.listas) return S.listas;
+  const [c, m, p] = await Promise.all([
+    sb.from('categorias').select('id,nombre').order('nombre'),
+    sb.from('marcas').select('id,nombre').order('nombre'),
+    sb.from('proveedores').select('id,nombre').order('nombre')]);
+  S.listas = { categoria:c.data || [], marca:m.data || [], proveedor:p.data || [] };
+  return S.listas;
+}
+
+async function pintarPrecios(){
+  $('#h-titulo').textContent = 'Cambiar precios';
+  const L = await listas();
+  let modo = 'porcentaje', por = 'categoria';
+  $('#contenido').innerHTML = `
+    <h1>Cambiar precios en lote</h1>
+    <p class="sub">Para cuando sube el proveedor o quiere ajustar el margen de una línea entera.
+      Primero se ve cómo quedan; nada cambia hasta que lo confirme.</p>
+    <section class="tj">
+      <div class="campo-g" style="margin-bottom:14px"><label>¿Cómo se calcula el precio nuevo?</label>
+        <div class="seg" id="modo">
+          <button data-m="porcentaje" class="si">Subir o bajar %</button>
+          <button data-m="margen">Margen deseado</button>
+          <button data-m="markup">Markup sobre el costo</button>
+        </div>
+        <p class="explica" id="modo-txt"></p></div>
+      <div class="form-p">
+        <div class="campo-g"><label for="p-por">¿A cuáles?</label>
+          <select class="entrada" id="p-por">
+            <option value="categoria">Una categoría</option><option value="marca">Una marca</option>
+            <option value="proveedor">Un proveedor</option><option value="todos">Todos los productos</option></select></div>
+        <div class="campo-g" id="p-cual-g"><label for="p-cual">Cuál</label><select class="entrada" id="p-cual"></select></div>
+        <div class="campo-g"><label for="p-valor" id="p-valor-l">Porcentaje</label>
+          <input class="entrada num" id="p-valor" inputmode="decimal" placeholder="5"></div>
+        <div class="campo-g"><label for="p-red">Redondear hacia arriba a</label>
+          <select class="entrada" id="p-red">
+            <option value="0">No redondear</option><option value="0.25">L 0.25</option><option value="0.5" selected>L 0.50</option>
+            <option value="1">L 1.00</option><option value="5">L 5.00</option></select></div>
+      </div>
+      <div class="aviso malo oculto" id="p-error" style="margin-top:12px"></div>
+      <div class="fila" style="margin-top:14px"><button class="btn-chico prin" id="b-ver">Ver cómo quedan</button></div>
+    </section>
+    <div id="p-vista"></div>`;
+  const TXT = {
+    porcentaje:'Sobre el precio de hoy. Use un número negativo para bajar (−5).',
+    margen:'Lo que quiere ganar sobre el precio sin ISV. Ejemplo: 25% de margen sobre un costo de L 75 da L 100 + ISV.',
+    markup:'Cuánto se le sube al costo. 33% de markup es lo mismo que 25% de margen.' };
+  const llenarCual = () => {
+    const l = L[por] || [];
+    ver('#p-cual-g', por !== 'todos');
+    $('#p-cual').innerHTML = l.length ? l.map(x => `<option value="${x.id}">${escapar(x.nombre)}</option>`).join('')
+      : '<option value="">— No hay —</option>';
+  };
+  const pintarModo = () => {
+    $$('#modo button').forEach(b => b.classList.toggle('si', b.dataset.m === modo));
+    $('#modo-txt').textContent = TXT[modo];
+    $('#p-valor-l').textContent = modo === 'porcentaje' ? 'Porcentaje (+ o −)' : modo === 'margen' ? 'Margen %' : 'Markup %';
+  };
+  llenarCual(); pintarModo();
+  $('#modo').addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (!b) return; modo = b.dataset.m; pintarModo(); });
+  $('#p-por').addEventListener('change', e => { por = e.target.value; llenarCual(); });
+
+  const pedir = async aplicar => {
+    const err = t => { $('#p-error').textContent = t; ver('#p-error', !!t); };
+    err('');
+    const valor = Number(String($('#p-valor').value).replace(',', '.'));
+    if (!isFinite(valor) || $('#p-valor').value.trim() === '') return err('Escriba el porcentaje') || null;
+    const filtro = por === 'todos' ? { todos:true } : { [por + '_id']:$('#p-cual').value };
+    if (por !== 'todos' && !$('#p-cual').value) return err('Escoja cuál') || null;
+    const { data, error } = await sb.rpc('fn_cambiar_precios', { p_filtro:filtro, p_modo:modo, p_valor:valor,
+      p_redondeo:Number($('#p-red').value), p_aplicar:aplicar });
+    if (error){ err(limpiarError(error)); return null; }
+    return data;
+  };
+  $('#b-ver').onclick = async () => {
+    const b = $('#b-ver'); b.disabled = true;
+    const d = await pedir(false);
+    b.disabled = false;
+    if (!d) return;
+    const cambian = d.lista.filter(x => Number(x.nuevo) !== Number(x.actual));
+    $('#p-vista').innerHTML = `<section class="tj">
+      <div class="cuentas"><span class="cta">${d.productos} productos</span>
+        <span class="cta ${cambian.length ? 'ojo' : ''}">${cambian.length} cambian de precio</span>
+        ${d.sin_costo ? `<span class="cta mal">${d.sin_costo} sin costo: se dejan como están</span>` : ''}</div>
+      ${d.lista.length ? `<div class="tabla-env"><table class="tabla">
+        <thead><tr><th>Producto</th><th class="n">Costo</th><th class="n">Hoy</th><th class="n">Nuevo</th><th class="n">Margen</th></tr></thead>
+        <tbody>${d.lista.map(x => `<tr><td>${escapar(x.nombre)}</td><td class="n">${Number(x.costo) ? money(x.costo) : '—'}</td>
+          <td class="n">${money(x.actual)}</td>
+          <td class="n ${Number(x.nuevo) > Number(x.actual) ? 'sube' : Number(x.nuevo) < Number(x.actual) ? 'baja' : ''}">${money(x.nuevo)}</td>
+          <td class="n">${x.margen != null ? x.margen + '%' : '—'}</td></tr>`).join('')}</tbody></table></div>` : ''}
+      <div class="fila" style="margin-top:12px">
+        <button class="btn-chico prin" id="b-aplicar" ${cambian.length ? '' : 'disabled'}>Cambiar ${cambian.length} precios</button>
+      </div></section>`;
+    $('#b-aplicar')?.addEventListener('click', async () => {
+      const b2 = $('#b-aplicar');
+      if (b2.dataset.seguro !== '1'){ b2.dataset.seguro = '1'; b2.textContent = `¿Seguro? Toque otra vez para cambiar ${cambian.length} precios`; return; }
+      b2.disabled = true;
+      const r = await pedir(true);
+      if (!r){ b2.disabled = false; return; }
+      $('#p-vista').innerHTML = `<section class="tj"><div class="aviso bueno">Listo: ${cambian.length} precios cambiados.
+        La caja los toma la próxima vez que se abra o se actualice.</div></section>`;
+    });
+  };
+}
+
+window.__importar = { S, mapear, numero, leerCSV, filaSistema, revisar };
+arrancar();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>

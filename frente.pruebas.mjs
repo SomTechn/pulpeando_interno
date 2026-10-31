@@ -96,6 +96,7 @@ async function montar(archivo, estado){
        dejaban pasar el import crudo, que revienta fuera de un módulo. */
     .replace(/^import \{([^}]*)\} from '\.{1,2}\/menu\.js';$/m, '')
     .replace(/^import \{([^}]*)\} from '\.{1,2}\/escaner\.js';$/m, '')
+    .replace(/^import \{ calcularPromos, nombreCorto \} from '\.{1,2}\/promos\.js';$/m, '')
     .replace(/^import \{ imprimirTicket \} from '\.{1,2}\/ticket\.js';$/m,
              'const imprimirTicket = async (d, o) => { (window.__impresos = window.__impresos || []).push({ d, o }); };')
     .replace(/createClient\(SUPABASE_URL, SUPABASE_KEY, \{[\s\S]*?\}\)/, '__sb');
@@ -109,6 +110,8 @@ async function montar(archivo, estado){
   const ctx = w;
   ctx.__sb = hacerSb(estado);
   ctx.montarMenu = menu.montarMenu;
+  const promos = await import(BASE + 'promos.js');
+  ctx.calcularPromos = promos.calcularPromos; ctx.nombreCorto = promos.nombreCorto;
   ctx.escapar = menu.escapar;
   ctx.iniciales = menu.iniciales;
   ctx.escanear = async () => null;

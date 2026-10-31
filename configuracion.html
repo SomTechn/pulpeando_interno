@@ -25,6 +25,9 @@
 /* logo y promociones de la caja bloqueada */
 .img-fila{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
 /* el color de la marca */
+.perm{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:10px 0;
+  border-bottom:1px solid var(--linea);font-size:14px;font-weight:600;cursor:pointer}
+.perm:last-of-type{border-bottom:0}
 .col-sug{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
 .col-mu{width:40px;height:40px;border-radius:12px;background:var(--c);position:relative;
   box-shadow:inset 0 0 0 1px rgba(15,23,41,.08);transition:transform .12s;cursor:pointer}
@@ -375,6 +378,13 @@ function pintarNegocio(){
     </div>
 
     <div class="ficha">
+      <h3>Permisos en la caja</h3>
+      <p class="sub">Lo que la cajera no puede hacer sola: pide el código y el PIN de un supervisor o del
+        gerente. Queda anotado quién autorizó, y se ve en Finanzas.</p>
+      <div id="n-permisos"></div>
+    </div>
+
+    <div class="ficha">
       <h3>La caja bloqueada</h3>
       <p class="sub">Lo que se ve en la caja entre un cliente y otro: el logo del negocio y
         las imágenes de las promociones. PNG, JPG o WEBP, de 2 MB como mucho.</p>
@@ -553,8 +563,32 @@ function pintarColor(){
   }, { once:true });
 }
 
+/* ---------- qué pide permiso en la caja ---------- */
+const PERMISOS = [
+  ['cancelar',  'Cancelar una venta con productos ya marcados (F12)', true],
+  ['descartar', 'Borrar ventas que están en espera', true],
+  ['quitar',    'Quitar o bajar productos ya marcados (F4 y −)', false]];
+function pintarPermisos(){
+  const z = $('#n-permisos'); if (!z) return;
+  const c = (S.org.config || {}).caja_autoriza || {};
+  z.innerHTML = PERMISOS.map(([k, t, def]) => {
+    const on = c[k] === undefined ? def : !!c[k];
+    return `<label class="perm"><span>${t}</span>
+      <button class="switch ${on ? 'on' : ''}" role="switch" aria-checked="${on}" data-perm="${k}"><i></i></button></label>`;
+  }).join('') + `<p class="sub" style="margin:10px 0 0">En una pulpería chica conviene dejar libre quitar productos;
+    en un negocio con varias cajas, conviene pedirlo todo.</p>`;
+  z.querySelectorAll('[data-perm]').forEach(b => b.addEventListener('click', async () => {
+    const actual = { ...Object.fromEntries(PERMISOS.map(([k, , d]) => [k, c[k] === undefined ? d : !!c[k]])) };
+    actual[b.dataset.perm] = !actual[b.dataset.perm];
+    b.disabled = true;
+    try{ await anotarImagenes({ caja_autoriza:actual }); pintarPermisos(); }
+    catch(err){ b.disabled = false; aviso('No se pudo guardar', limpiarError(err)); }
+  }));
+}
+
 function pintarImagenes(){
   pintarColor();
+  pintarPermisos();
   const c = S.org.config || {};
   const logo = c.logo_path;
   const promos = Array.isArray(c.promos_caja) ? c.promos_caja : [];
