@@ -4,12 +4,12 @@
 #   ./pruebas.sh            todas
 #   ./pruebas.sh consultar  solo esa
 #
-# Necesita jsdom una sola vez:  npm install jsdom
+# Necesita jsdom y jspdf una sola vez:  npm install jsdom jspdf
 set -e
 cd "$(dirname "$0")"
 
 if [ ! -d node_modules/jsdom ]; then
-  echo "Falta jsdom. Corra:  npm install jsdom"
+  echo "Faltan jsdom y jspdf. Corra:  npm install jsdom jspdf"
   exit 1
 fi
 

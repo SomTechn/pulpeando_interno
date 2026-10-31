@@ -27,7 +27,7 @@ console.log('\n=== COMPROBANTE ===');
 {
   const t = texto(htmlTicket(base({ documento:'ticket' })));
   chk('dice COMPROBANTE', /COMPROBANTE/.test(t));
-  chk('aclara que no es factura', /No es factura/.test(t));
+  chk('sin la leyenda de «comprobante interno»', !/Comprobante interno|No es factura/.test(t));
   chk('muestra el cambio', /Cambio 85\.00/.test(t));
   chk('el mensaje del negocio', /Vuelva pronto/.test(t));
 }

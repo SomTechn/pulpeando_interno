@@ -27,6 +27,9 @@
      menu.alElegir(valor => ...);
    ========================================================================== */
 
+// Formularios y detalles como pantallas, no como ventanas flotantes
+import './vistas.js';
+
 const ICONOS = {
   caja:      '<path d="M3 10h18M7 15h4M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
   compras:   '<path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.2"/><circle cx="18" cy="20" r="1.2"/>',

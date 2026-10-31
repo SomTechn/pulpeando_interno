@@ -44,9 +44,9 @@ import { modulosCode128, barrasSVG } from './etiqueta.js';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-const n2 = v => (Number(v) || 0).toLocaleString('es-HN',
+export const n2 = v => (Number(v) || 0).toLocaleString('es-HN',
   { minimumFractionDigits:2, maximumFractionDigits:2 });
-const cant = v => (Number(v) || 0).toLocaleString('es-HN', { maximumFractionDigits:3 });
+export const cant = v => (Number(v) || 0).toLocaleString('es-HN', { maximumFractionDigits:3 });
 
 /* ---------- total en letras ---------- */
 const UNI = ['', 'UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE',
@@ -94,16 +94,16 @@ export function numeroALetras(valor, moneda = 'LEMPIRAS'){
 }
 
 /* ---------- el comprobante ---------- */
-const METODO = { efectivo:'Efectivo', tarjeta:'Tarjeta', transferencia:'Transferencia',
+export const METODO = { efectivo:'Efectivo', tarjeta:'Tarjeta', transferencia:'Transferencia',
                  credito:'Crédito (fiado)', otro:'Otro' };
 
-function fechaHora(v){
+export function fechaHora(v){
   const d = new Date(v);
   const f = d.toLocaleDateString('es-HN', { day:'2-digit', month:'2-digit', year:'numeric' });
   const h = d.toLocaleTimeString('es-HN', { hour:'2-digit', minute:'2-digit' });
   return `${f} ${h}`;
 }
-function fecha(v){
+export function fecha(v){
   if (!v) return '';
   const [a, m, d] = String(v).slice(0, 10).split('-');
   return `${d}/${m}/${a}`;
@@ -217,7 +217,7 @@ ${d.rango ? `<div class="chico">Rango autorizado: ${esc(d.rango.desde)} al ${esc
 ` : `
 <div class="c b g">${titulo}</div>
 <div class="c b">${esc(v.numero)}</div>
-<div class="c chico">${dev ? 'Devolución interna. No es nota de crédito.' : 'Comprobante interno. No es factura.'}</div>
+${dev ? '<div class="c chico">Devolución interna. No es nota de crédito.</div>' : ''}
 `}
 <hr>
 ${fila('Fecha:', esc(fechaHora(v.creada_en)))}

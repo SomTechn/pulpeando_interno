@@ -404,6 +404,71 @@ select.entrada{cursor:pointer}
 .aviso.ojo{background:#FFF4E0;color:#8A5A00}
 .acciones{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
 
+/* ==========================================================================
+   VISTAS (vistas.js)
+   Lo que antes flotaba encima ahora es una pantalla propia dentro de
+   .principal: «← Volver» arriba y el contenido a lo ancho, centrado en una
+   columna cómoda de leer. Los selectores llevan .principal > para ganarle a
+   los estilos de cada pantalla, que vienen después.
+   ========================================================================== */
+.principal{position:relative}
+.principal > .vista.velo,
+.principal > .vista.form-velo{
+  position:absolute;inset:0;z-index:40;display:block;padding:0;place-items:initial;
+  background:var(--fondo);backdrop-filter:none;overflow-y:auto;
+  animation:vista-entra .18s cubic-bezier(.2,.8,.3,1);
+}
+.principal > .vista.velo{z-index:41}
+.principal > .vista.oculto{display:none!important}
+@keyframes vista-entra{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+.vista-barra{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:12px;
+  min-height:62px;padding:0 max(16px, calc((100% - 760px) / 2));
+  background:var(--panel);border-bottom:1px solid var(--linea)}
+.vista-volver{height:42px;padding:0 16px 0 12px;border-radius:12px;background:var(--fondo);
+  font-weight:700;font-size:14px;color:var(--tinta);display:inline-flex;align-items:center;gap:6px}
+.vista-volver:hover{background:var(--marca-suave)}
+.principal > .vista > .hoja{
+  max-width:none;width:100%;min-height:calc(100% - 62px);margin:0;border-radius:0;
+  box-shadow:none;background:transparent;max-height:none;overflow:visible;animation:none;
+  padding:24px max(18px, calc((100% - 760px) / 2)) 48px;
+}
+.principal > .vista > .hoja h2{font-size:22px}
+.principal > .vista.form-velo .cajon{
+  width:100%;max-width:none;height:100%;box-shadow:none;animation:none;background:var(--fondo)}
+.principal > .vista.form-velo .cajon-enc{background:var(--panel);min-height:62px;
+  padding:10px max(16px, calc((100% - 760px) / 2))}
+.principal > .vista.form-velo .cajon-cuerpo{padding:20px max(16px, calc((100% - 760px) / 2)) 28px}
+.principal > .vista.form-velo .cajon-pie{background:var(--panel);
+  padding:14px max(16px, calc((100% - 760px) / 2)) calc(14px + env(safe-area-inset-bottom))}
+.principal > .vista.form-velo .cerrar-x{order:-1;width:auto;height:42px;padding:0 16px 0 12px;
+  border-radius:12px;font-size:0;background:var(--fondo)}
+.principal > .vista.form-velo .cerrar-x::before{content:'← Volver';font-size:14px;font-weight:700;color:var(--tinta)}
+.principal > .vista.form-velo .cerrar-x:hover{background:var(--marca-suave)}
+
+/* El aviso de arriba: lo que antes era un «Guardado · Entendido». Arriba, para no tapar Guardar */
+.aviso-flotante{position:fixed;left:50%;top:calc(74px + env(safe-area-inset-top));z-index:120;
+  transform:translateX(-50%);width:min(520px, calc(100% - 28px));display:flex;align-items:center;gap:12px;
+  background:var(--tinta);color:#fff;border-radius:16px;padding:14px 12px 14px 18px;
+  box-shadow:0 18px 40px -12px rgba(15,23,41,.55);animation:af-entra .22s cubic-bezier(.2,.8,.3,1)}
+.aviso-flotante.malo{background:#9F1239}
+.aviso-flotante.saliendo{opacity:0;transform:translate(-50%, -10px);transition:opacity .18s,transform .18s}
+@keyframes af-entra{from{opacity:0;transform:translate(-50%, -14px)}to{opacity:1;transform:translateX(-50%)}}
+.af-txt{flex:1;min-width:0;font-size:13.5px;line-height:1.4}
+.af-txt b{display:block;font-size:14.5px;margin-bottom:1px}
+.af-txt span{opacity:.88}
+.af-accion{height:40px;padding:0 14px;border-radius:10px;background:rgba(255,255,255,.16);
+  color:#fff;font-weight:800;font-size:13px;flex:0 0 auto}
+.af-x{width:40px;height:40px;border-radius:10px;color:rgba(255,255,255,.8);font-size:15px;flex:0 0 auto}
+.af-x:hover,.af-accion:hover{background:rgba(255,255,255,.24)}
+
+/* Botón flotante (Editar en una vista de detalle) */
+.fab{position:fixed;right:calc(22px + env(safe-area-inset-right));bottom:calc(22px + env(safe-area-inset-bottom));
+  z-index:60;height:56px;padding:0 22px 0 18px;border-radius:18px;background:var(--marca);color:var(--marca-sobre);
+  font-weight:800;font-size:15px;display:inline-flex;align-items:center;gap:9px;
+  box-shadow:0 14px 30px -10px var(--marca-sombra), 0 4px 10px rgba(15,23,41,.12)}
+.fab:hover{background:var(--marca-oscuro)}
+.fab svg{flex:0 0 auto}
+
 /* paso final de una operación: venta cobrada, abono recibido */
 .listo{text-align:center}
 .marca-ok{width:66px;height:66px;border-radius:50%;background:#E7F7EE;color:var(--verde);

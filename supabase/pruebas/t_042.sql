@@ -75,11 +75,11 @@ select r ->> 'creados' as creados, r ->> 'actualizados' as act, r ->> 'existenci
     {"nombre":"Sin sku ni nada","precio":"10"}
   ]$j$) r;
 \echo '--- esperado: 3 creados, 1 actualizado (P1), 2 existencias, 1 error (precio negativo), 1 aviso (P1 ya tenía) ---'
-select p.sku, c.nombre as cat, m.nombre as marca, fn_precio_vigente(p.id, 'bbbbbbbb-0000-0000-0000-000000000001', 1) as precio,
+select (select string_agg(codigo, ',' order by codigo) from producto_codigos pc where pc.producto_id = p.id and codigo !~ '^[0-9]+$') as sku_viejo, p.sku ~ '^[0-9]{5}$' as item5, c.nombre as cat, m.nombre as marca, fn_precio_vigente(p.id, 'bbbbbbbb-0000-0000-0000-000000000001', 1) as precio,
        (select sum(cantidad) from existencias e where e.producto_id = p.id) as exis,
        (select count(*) from producto_codigos pc where pc.producto_id = p.id) as codigos
   from productos p left join categorias c on c.id = p.categoria_id left join marcas m on m.id = p.marca_id
- where p.organizacion_id = 'aaaaaaaa-0000-0000-0000-000000000001' order by p.sku;
+ where p.organizacion_id = 'aaaaaaaa-0000-0000-0000-000000000001' order by p.nombre;
 \echo '--- esperado: una sola categoría Bebidas (no Bebidas y bebidas), P1 a 62, COC3 24 u, PEP3 2 códigos ---'
 select count(*) as categorias_bebidas from categorias where lower(nombre) = 'bebidas';
 \echo '--- esperado: 1 ---'
@@ -91,7 +91,7 @@ select r ->> 'productos' as n, r -> 'lista' -> 0 ->> 'nombre' as prod, r -> 'lis
   from fn_cambiar_precios(jsonb_build_object('categoria_id', (select id from categorias where nombre = 'Bebidas')),
                           'porcentaje', 10, 0.5, false) r;
 \echo '--- esperado: 2 productos; Coca 75 -> 82.50; no aplicado ---'
-select fn_precio_vigente((select id from productos where sku = 'COC3'), 'bbbbbbbb-0000-0000-0000-000000000001', 1) as sigue;
+select fn_precio_vigente((select producto_id from producto_codigos where codigo = 'COC3'), 'bbbbbbbb-0000-0000-0000-000000000001', 1) as sigue;
 \echo '--- esperado: 75 (era solo la vista previa) ---'
 select (fn_cambiar_precios(jsonb_build_object('categoria_id', (select id from categorias where nombre = 'Bebidas')),
                            'margen', 25, 1, true)) -> 'lista' -> 0 ->> 'nuevo' as con_margen;
@@ -105,8 +105,8 @@ select fn_cambiar_precios('{}', 'porcentaje', 10, 0, true);
 \echo '=================== 4. PROMOCIONES ==================='
 -- precios simples para que las cuentas se vean
 set role postgres;
-update precios set precio = 50 where producto_id = (select id from productos where sku = 'COC3') and not es_oferta;
-update precios set precio = 40 where producto_id = (select id from productos where sku = 'PEP3') and not es_oferta;
+update precios set precio = 50 where producto_id = (select producto_id from producto_codigos where codigo = 'COC3') and not es_oferta;
+update precios set precio = 40 where producto_id = (select producto_id from producto_codigos where codigo = 'PEP3') and not es_oferta;
 set role authenticated;
 set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
 \set ON_ERROR_STOP off
@@ -116,10 +116,10 @@ select fn_guardar_promocion('{"nombre":"x","tipo":"nxm","lleva":2,"paga":1,"alca
 set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
 
 select fn_guardar_promocion(jsonb_build_object('nombre','2x1 Coca','tipo','nxm','lleva',2,'paga',1,
-  'alcance','productos','producto_ids', jsonb_build_array((select id from productos where sku='COC3')))) is not null as p1;
+  'alcance','productos','producto_ids', jsonb_build_array((select producto_id from producto_codigos where codigo = 'COC3')))) is not null as p1;
 select r -> 'descuentos' as desc, r -> 'aplicadas' -> 0 ->> 'descuento' as total
   from fn_calcular_promos(jsonb_build_array(
-    jsonb_build_object('producto_id', (select id from productos where sku='COC3'), 'cantidad', 5))) r;
+    jsonb_build_object('producto_id', (select producto_id from producto_codigos where codigo = 'COC3'), 'cantidad', 5))) r;
 \echo '--- esperado: [100.0] (5 cocas: 2 grupos de 2 -> 2 gratis) ---'
 
 set role postgres; update promociones set activa = false; set role authenticated;
@@ -127,8 +127,8 @@ select fn_guardar_promocion(jsonb_build_object('nombre','3 refrescos por 120','t
   'alcance','categoria','categoria_id', (select id from categorias where nombre='Bebidas'))) is not null as p2;
 select r -> 'descuentos' as desc
   from fn_calcular_promos(jsonb_build_array(
-    jsonb_build_object('producto_id', (select id from productos where sku='COC3'), 'cantidad', 2),
-    jsonb_build_object('producto_id', (select id from productos where sku='PEP3'), 'cantidad', 2))) r;
+    jsonb_build_object('producto_id', (select producto_id from producto_codigos where codigo = 'COC3'), 'cantidad', 2),
+    jsonb_build_object('producto_id', (select producto_id from producto_codigos where codigo = 'PEP3'), 'cantidad', 2))) r;
 \echo '--- esperado: grupo = 50,50,40 = 140 -> 20 de descuento: coca 7.14+7.14, pepsi 5.72; la 2a pepsi sin promo ---'
 
 set role postgres; update promociones set activa = false; set role authenticated;
@@ -136,7 +136,7 @@ select fn_guardar_promocion(jsonb_build_object('nombre','Pepsi -12.5%','tipo','p
   'alcance','marca','marca_id', (select id from marcas where nombre='Pepsi'))) is not null as p3;
 select r -> 'descuentos' as desc
   from fn_calcular_promos(jsonb_build_array(
-    jsonb_build_object('producto_id', (select id from productos where sku='PEP3'), 'cantidad', 1.5))) r;
+    jsonb_build_object('producto_id', (select producto_id from producto_codigos where codigo = 'PEP3'), 'cantidad', 1.5))) r;
 \echo '--- esperado: [7.5] (1.5 x 40 x 12.5%) ---'
 
 \echo ''
@@ -146,13 +146,13 @@ select fn_abrir_turno('aaaa0000-0000-0000-0000-0000000000c1','22222222-2222-2222
 select fn_desbloquear_caja(:'t'::uuid,'22222') as d \gset
 select r ->> 'total' as total, r ->> 'descuento' as descuento, r -> 'promociones' -> 0 ->> 'nombre' as promo
   from fn_registrar_venta(:'d'::uuid,
-    jsonb_build_array(jsonb_build_object('producto_id', (select id from productos where sku='PEP3'),
+    jsonb_build_array(jsonb_build_object('producto_id', (select producto_id from producto_codigos where codigo = 'PEP3'),
                                          'cantidad', 2, 'descuento', 999)),
     '[{"metodo":"efectivo","monto":70,"recibido":70}]'::jsonb, null) r;
 \echo '--- esperado: total 70.00 (80 - 10), descuento 10.00, Pepsi -12.5%. El 999 de la caja no se tomó ---'
 set role postgres;
 select descuento, total, promociones -> 0 ->> 'nombre' as promo from venta_detalle
- where producto_id = (select id from productos where sku='PEP3');
+ where producto_id = (select producto_id from producto_codigos where codigo = 'PEP3');
 \echo '--- esperado: 10.0000 | 70 | Pepsi -12.5% ---'
 
 \echo ''

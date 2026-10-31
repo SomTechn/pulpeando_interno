@@ -113,7 +113,7 @@ async function montar(estado){
 
 const esperar = (ms = 60) => new Promise(r => setTimeout(r, ms));
 
-const baseEstado = (extra = {}) => ({
+const baseEstado = (extra = {}) => conBuscar({
   alertas:[], impresiones:0,
   rpc:{
     fn_pos_contexto:{ data:CTX, error:null },
@@ -123,6 +123,19 @@ const baseEstado = (extra = {}) => ({
     fn_venta_completa:{ data:TICKET, error:null },
     fn_anular_venta:{ data:null, error:null }
   }, ...extra });
+
+function conBuscar(e){
+  e.rpc.fn_buscar_ventas = args => {
+    const f = args.p_filtros || {};
+    e.llamadas.push({ fn:'fn_historial_ventas', args:{ p_desde:f.desde ?? null, p_hasta:f.hasta ?? null,
+      p_sucursal_id:f.sucursal_id ?? null, p_buscar:f.buscar ?? null, p_estado:f.estado ?? null } });
+    const h = e.rpc.fn_historial_ventas;
+    const r = typeof h === 'function' ? h(args) : h;
+    if (!r || r.error) return r || { data:null, error:{ message:'sin simular' } };
+    return { data:{ filas:r.data || [], resumen:e.resumenFiltrado || null }, error:null };
+  };
+  return e;
+}
 
 /* ===================================================================== */
 console.log('\n=== LA LISTA ===');
@@ -601,6 +614,52 @@ console.log('\n=== ESCANEAR EL TICKET PARA DEVOLVER ===');
   b.dispatchEvent(new w.KeyboardEvent('keydown', { key:'Enter', bubbles:true }));
   await esperar(80);
   chk('sin la 043 en la base, lo dice', /043/.test(d.querySelector('#hoja').textContent));
+}
+
+console.log('\n=== FILTROS AVANZADOS (DESCUADRES) ===');
+{
+  const estado = baseEstado();
+  estado.resumenFiltrado = { ventas:1, total:180, recibido:500, cambio:320, ganancia:40, anuladas:0 };
+  const { w, d } = await montar(estado);
+  const ultimaBusqueda = () => [...estado.llamadas].reverse().find(l => l.fn === 'fn_buscar_ventas');
+  chk('el panel arranca cerrado', d.querySelector('#filtros-av').classList.contains('oculto'));
+  d.querySelector('#btn-filtros').click();
+  chk('Filtros lo abre en la misma pantalla', !d.querySelector('#filtros-av').classList.contains('oculto'));
+  const poner = (k, v) => { d.querySelector(`[data-fa="${k}"]`).value = v; };
+  poner('efectivo_min', '500'); poner('efectivo_max', '500'); poner('cambio_min', '100');
+  poner('hora_desde', '18:00'); poner('producto', 'arroz'); poner('metodo', 'efectivo');
+  d.querySelector('#fa-aplicar').click();
+  await esperar(80);
+  const f = ultimaBusqueda()?.args?.p_filtros || {};
+  chk('manda el efectivo entregado', f.efectivo_min === 500 && f.efectivo_max === 500);
+  chk('y el cambio, la hora, el producto y la forma de pago',
+      f.cambio_min === 100 && f.hora_desde === '18:00' && f.producto === 'arroz' && f.metodo === 'efectivo');
+  chk('sin mandar lo que quedó vacío', !('monto_min' in f) && !('cliente' in f));
+  chk('respeta las fechas de arriba', f.desde === hoyISO);
+  chk('el panel se cierra al buscar', d.querySelector('#filtros-av').classList.contains('oculto'));
+  chk('el botón cuenta los filtros', d.querySelector('#fa-cuenta').textContent === '5');
+  const chips = d.querySelector('#fa-chips').textContent;
+  chk('quedan a la vista como etiquetas', /Efectivo entregado L 500\.00/.test(chips) && /Cambio desde L 100\.00/.test(chips));
+  const tj = d.querySelector('#tarjetas').textContent.replace(/\s+/g, ' ');
+  chk('las tarjetas cuentan solo lo que coincide', /Coinciden\s*1/.test(tj) && /Cambio dado\s*L 320\.00/.test(tj)
+      && /Efectivo entregado\s*L 500\.00/.test(tj));
+  d.querySelector('[data-quitar-fa="cambio"]').click();
+  await esperar(80);
+  const f2 = ultimaBusqueda()?.args?.p_filtros || {};
+  chk('quitar una etiqueta vuelve a buscar sin ese filtro', !('cambio_min' in f2) && f2.efectivo_min === 500);
+  d.querySelector('#fa-limpiar').click();
+  await esperar(80);
+  const f3 = ultimaBusqueda()?.args?.p_filtros || {};
+  chk('Limpiar los quita todos', !('efectivo_min' in f3) && !('producto' in f3));
+  chk('y las tarjetas vuelven a las de siempre', !/Coinciden/.test(d.querySelector('#tarjetas').textContent));
+}
+{
+  const estado = baseEstado();
+  estado.rpc.fn_historial_ventas = { data:[{ ...VENTAS[0], efectivo_recibido:500, cambio:345 }], error:null };
+  const { d } = await montar(estado);
+  chk('la venta en efectivo dice cuánto entregó y el cambio',
+      /Entregó L 500\.00 · cambio L 345\.00/.test(d.querySelector('#lista').textContent));
+  chk('el detalle trae el botón PDF', !!d.querySelector('#btn-pdf'));
 }
 
 console.log('\n' + ok + ' bien, ' + mal + ' mal');

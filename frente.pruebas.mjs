@@ -618,7 +618,6 @@ console.log('\n=== CATÁLOGOS: productos, empaque y máximo ===');
 
   // guardar sin tocarlos
   d.querySelector('[data-k="nombre"]').value = 'Arroz de primera 5 lb';
-  d.querySelector('[data-k="sku"]').value = 'ARR5LB';
   d.querySelector('[data-k="precio"]').value = '98';
   d.querySelector('#form-guardar').click();
   await new Promise(r => setTimeout(r, 120));
@@ -644,7 +643,6 @@ console.log('\n=== CATÁLOGOS: productos, empaque y máximo ===');
   await new Promise(r => setTimeout(r, 40));
 
   d.querySelector('[data-k="nombre"]').value = 'Refresco 600 ml';
-  d.querySelector('[data-k="sku"]').value = 'COCA';
   d.querySelector('[data-k="precio"]').value = '20';
   d.querySelector('[data-k="unidades_empaque"]').value = '24';
   d.querySelector('[data-k="stock_maximo"]').value = '120';
@@ -677,7 +675,6 @@ console.log('\n=== CATÁLOGOS: productos, empaque y máximo ===');
       /tarjeta de la caja/i.test(foto?.closest('.campo-g')?.nextElementSibling?.textContent || ''));
 
   d.querySelector('[data-k="nombre"]').value = 'Arroz de primera 5 lb';
-  d.querySelector('[data-k="sku"]').value = 'ARR5LB';
   d.querySelector('[data-k="precio"]').value = '98';
   foto.value = 'https://ejemplo.hn/arroz.jpg';
   d.querySelector('#form-guardar').click();
@@ -730,6 +727,8 @@ const estadoCat = extra => ({
   await new Promise(r => setTimeout(r, 60));
   d.querySelector('[data-id="c1"]').click();
   await new Promise(r => setTimeout(r, 40));
+  d.querySelector('#btn-editar').click();
+  await new Promise(r => setTimeout(r, 40));
   const ops = [...d.querySelectorAll('[data-k="padre_id"] option')].map(o => o.textContent.trim());
   chk('una categoría no puede ser su propio departamento', !ops.includes('Abarrotes'));
 }
@@ -741,6 +740,8 @@ const estadoCat = extra => ({
   await new Promise(r => setTimeout(r, 60));
   chk('la lista dice cuándo viene', /Viene mar, vie · 15 días/.test(d.querySelector('#lista').textContent));
   d.querySelector('[data-id="pv1"]').click();
+  await new Promise(r => setTimeout(r, 40));
+  d.querySelector('#btn-editar').click();
   await new Promise(r => setTimeout(r, 40));
   const dias = [...d.querySelectorAll('[data-dias="dia_visita"] input')];
   chk('siete días para marcar', dias.length === 7);
@@ -758,6 +759,8 @@ const estadoCat = extra => ({
   d.querySelector('[data-valor="proveedores"]').click();
   await new Promise(r => setTimeout(r, 60));
   d.querySelector('[data-id="pv1"]').click();
+  await new Promise(r => setTimeout(r, 40));
+  d.querySelector('#btn-editar').click();
   await new Promise(r => setTimeout(r, 40));
   d.querySelector('[data-dias="dia_visita"] input:checked').checked = false;
   d.querySelector('#form-guardar').click();
@@ -787,7 +790,6 @@ const estadoCat = extra => ({
   filas[1].querySelector('[data-p="factor"]').value = '1';
 
   d.querySelector('[data-k="nombre"]').value = 'Refresco 600 ml';
-  d.querySelector('[data-k="sku"]').value = 'REF600';
   d.querySelector('[data-k="precio"]').value = '20';
   d.querySelector('#form-guardar').click();
   await new Promise(r => setTimeout(r, 120));
@@ -813,6 +815,8 @@ const estadoCat = extra => ({
   d.querySelector('[data-valor="productos"]').click();
   await new Promise(r => setTimeout(r, 60));
   d.querySelector('[data-id="p1"]').click();
+  await new Promise(r => setTimeout(r, 80));
+  d.querySelector('#btn-editar').click();
   await new Promise(r => setTimeout(r, 80));
   const filas = d.querySelectorAll('#lista-pres .pres');
   chk('al editar trae sus presentaciones', filas.length === 2 &&
@@ -846,6 +850,8 @@ for (const [rol, nivel] of [['supervisor', 2], ['auxiliar', 1]]){
   await new Promise(r => setTimeout(r, 60));
   d.querySelector('[data-id="k1"]').click();
   await new Promise(r => setTimeout(r, 80));
+  d.querySelector('#btn-editar').click();
+  await new Promise(r => setTimeout(r, 80));
   chk(rol + ': trae sus días de pago (viernes)',
       d.querySelector('#dp-tipo .activo')?.dataset.t === 'semana' &&
       d.querySelector('#dp-semana input[value="5"]').checked);
@@ -865,6 +871,66 @@ for (const [rol, nivel] of [['supervisor', 2], ['auxiliar', 1]]){
   const f = estado.llamadas.find(l => l.fn === 'fn_fijar_dias_pago');
   chk('guarda la quincena y fin de mes', f && f.args.p_cliente_id === 'k1' &&
       JSON.stringify(f.args.p_dias_pago) === '{"tipo":"mes","dias":[15,30]}');
+}
+
+console.log('\n=== CATÁLOGOS: abrir es ver, no editar ===');
+{
+  const estado = estadoCat({
+    productos:[{ id:'p1', sku:'51089', nombre:'Refresco 600 ml', activo:true, se_vende:true, se_compra:true,
+                 categoria_id:'c2', unidades_empaque:24, tipo:'unidad', unidad_base:'UND' }],
+    producto_codigos:[{ codigo:'7400000000017' }, { codigo:'REF600' }],
+    presentaciones:[{ id:'pr1', nombre:'Fardo', factor:24, es_compra:true, es_base:false }] });
+  const { d } = await montar('catalogo.html', estado);
+  d.querySelector('[data-valor="productos"]').click();
+  await new Promise(r => setTimeout(r, 60));
+  chk('la lista enseña el item', /Item 51089/.test(d.querySelector('#lista').textContent));
+  d.querySelector('[data-id="p1"]').click();
+  await new Promise(r => setTimeout(r, 80));
+  const cuerpo = d.querySelector('#form-cuerpo');
+  chk('abre el detalle: sin campos para escribir', !cuerpo.querySelector('input, select'));
+  chk('con el item en la cabecera', /Item\s*51089/.test(cuerpo.querySelector('.det-cab').textContent));
+  chk('los códigos de barras listados', /7400000000017/.test(cuerpo.textContent) && /REF600/.test(cuerpo.textContent));
+  chk('las presentaciones en palabras', /Fardo de 24/.test(cuerpo.textContent));
+  chk('el botón flotante Editar a la vista', !d.querySelector('#btn-editar').classList.contains('oculto'));
+  chk('sin Guardar en el detalle', d.querySelector('#form-pie').classList.contains('oculto'));
+  d.querySelector('#btn-editar').click();
+  await new Promise(r => setTimeout(r, 60));
+  chk('Editar abre el formulario', !!cuerpo.querySelector('[data-k="nombre"]'));
+  chk('el item no se escribe: solo se enseña', !cuerpo.querySelector('[data-k="sku"]') &&
+      /Item\s*51089/.test(cuerpo.querySelector('.item-auto').textContent));
+  chk('en el formulario no está el botón flotante', d.querySelector('#btn-editar').classList.contains('oculto'));
+  d.querySelector('#form-cancelar').click();
+  await new Promise(r => setTimeout(r, 40));
+  chk('Cancelar regresa al detalle, no a la lista',
+      !d.querySelector('#form-velo').classList.contains('oculto') && !cuerpo.querySelector('input'));
+}
+{
+  const estado = estadoCat();
+  const { d } = await montar('catalogo.html', estado);
+  d.querySelector('[data-valor="productos"]').click();
+  await new Promise(r => setTimeout(r, 60));
+  d.querySelector('#btn-nuevo').click();
+  await new Promise(r => setTimeout(r, 60));
+  chk('uno nuevo dice que el item se asigna solo', /se asigna solo al guardar/.test(d.querySelector('.item-auto').textContent));
+  d.querySelector('[data-k="nombre"]').value = 'Galleta María';
+  d.querySelector('[data-k="precio"]').value = '12';
+  d.querySelector('#form-guardar').click();
+  await new Promise(r => setTimeout(r, 160));
+  const esc = estado.escrituras.find(e => e.tabla === 'productos');
+  chk('al guardar no manda item: lo pone la base', esc && !('sku' in esc.datos));
+}
+{
+  const estado = estadoCat({ proveedores:[{ id:'pv1', numero:1007, nombre:'La Ceiba', dias_credito:15,
+    dias_entrega:2, dia_visita:[2,5], activo:true }] });
+  const { d } = await montar('catalogo.html', estado);
+  d.querySelector('[data-valor="proveedores"]').click();
+  await new Promise(r => setTimeout(r, 60));
+  chk('el proveedor con su número en la lista', /#1007/.test(d.querySelector('#lista').textContent));
+  d.querySelector('[data-id="pv1"]').click();
+  await new Promise(r => setTimeout(r, 60));
+  const t = d.querySelector('#form-cuerpo').textContent.replace(/\s+/g, ' ');
+  chk('el detalle dice su número', /N\.º 1007/.test(t));
+  chk('y los días en palabras', /martes, viernes/.test(t) && /15 días/.test(t));
 }
 
 console.log('\n' + ok + ' bien, ' + mal + ' mal');

@@ -46,6 +46,37 @@
   font-size:13px;font-weight:700;color:var(--tenue);white-space:nowrap;flex:0 0 auto}
 .fl.activo{border-color:var(--azul);background:var(--azul-suave);color:var(--azul)}
 
+.btn-filtros{height:50px;padding:0 16px;border-radius:var(--r-md);border:1.5px solid var(--linea);
+  background:var(--panel);font-weight:700;font-size:14px;color:var(--texto-2);display:inline-flex;
+  align-items:center;gap:8px;flex:0 0 auto}
+.btn-filtros.activo{border-color:var(--marca);background:var(--marca-suave);color:var(--marca-oscuro)}
+.btn-filtros .cuenta{min-width:22px;height:22px;border-radius:11px;background:var(--marca);color:var(--marca-sobre);
+  font-size:12px;font-weight:800;display:grid;place-items:center;padding:0 6px}
+/* filtros avanzados: se abren en la misma pantalla, no encima */
+.filtros-av{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-lg);
+  padding:16px;margin-bottom:12px;flex:0 0 auto}
+.fa-rejilla{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 14px}
+.fa-campo{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fa-campo > span{font-size:11.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#9AA8BC}
+.fa-campo input,.fa-campo select{height:44px;border:1.5px solid var(--linea);border-radius:var(--r-sm);
+  padding:0 11px;font-size:14px;background:var(--panel);outline:none;min-width:0;width:100%;font-family:inherit}
+.fa-campo input:focus,.fa-campo select:focus{border-color:var(--azul)}
+.fa-par{display:flex;gap:6px;align-items:center;min-width:0}
+.fa-par input{flex:1}
+.fa-par em{font-style:normal;color:var(--tenue);font-size:12px;flex:0 0 auto}
+.fa-ayuda{font-size:12px;color:var(--tenue);margin-top:10px;line-height:1.45}
+.fa-pie{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
+.fa-pie .btn{height:44px;padding:0 20px;flex:0 0 auto}
+.fa-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;flex:0 0 auto}
+.fa-chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 6px 0 12px;border-radius:999px;
+  background:var(--marca-suave);color:var(--marca-oscuro);font-size:12.5px;font-weight:700}
+.fa-chip button{width:22px;height:22px;border-radius:11px;color:var(--marca-oscuro);font-size:12px}
+.fa-chip button:hover{background:rgba(0,0,0,.08)}
+.venta-pago{display:block;font-size:11.5px;color:var(--tenue);font-family:var(--num)}
+@media (max-width:1100px){ .fa-rejilla{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:560px){ .fa-rejilla{grid-template-columns:1fr} .etq-filtros,.barra-busca .etq-camara{display:none}
+  .barra-busca .btn-camara{padding:0 14px} }
+
 .lista{flex:1;overflow-y:auto;min-height:0;padding-bottom:24px}
 .conteo{font-size:12.5px;color:var(--tenue);margin-bottom:10px;flex:0 0 auto}
 
@@ -229,12 +260,54 @@
           </svg>
           <span class="etq-camara">Escanear</span>
         </button>
+        <button class="btn-filtros" id="btn-filtros" type="button" aria-expanded="false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+               stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+          <span class="etq-filtros">Filtros</span><span class="cuenta oculto" id="fa-cuenta">0</span>
+        </button>
         <div class="fechas">
           <input type="date" id="f-desde" aria-label="Desde">
           <span>a</span>
           <input type="date" id="f-hasta" aria-label="Hasta">
         </div>
       </div>
+
+      <div class="filtros-av oculto" id="filtros-av">
+        <div class="fa-rejilla">
+          <label class="fa-campo"><span>Monto de la venta</span>
+            <div class="fa-par"><input data-fa="monto_min" inputmode="decimal" placeholder="Desde"><em>a</em>
+              <input data-fa="monto_max" inputmode="decimal" placeholder="Hasta"></div></label>
+          <label class="fa-campo"><span>Hora</span>
+            <div class="fa-par"><input data-fa="hora_desde" type="time"><em>a</em>
+              <input data-fa="hora_hasta" type="time"></div></label>
+          <label class="fa-campo"><span>Efectivo que entregó</span>
+            <div class="fa-par"><input data-fa="efectivo_min" inputmode="decimal" placeholder="Desde"><em>a</em>
+              <input data-fa="efectivo_max" inputmode="decimal" placeholder="Hasta"></div></label>
+          <label class="fa-campo"><span>Cambio que se le dio</span>
+            <div class="fa-par"><input data-fa="cambio_min" inputmode="decimal" placeholder="Desde"><em>a</em>
+              <input data-fa="cambio_max" inputmode="decimal" placeholder="Hasta"></div></label>
+          <label class="fa-campo"><span>Producto</span>
+            <input data-fa="producto" placeholder="Nombre, item o código" autocomplete="off"></label>
+          <label class="fa-campo"><span>Cliente</span>
+            <input data-fa="cliente" placeholder="Nombre, teléfono o número" autocomplete="off"></label>
+          <label class="fa-campo"><span>Caja</span>
+            <select data-fa="caja_id"><option value="">Todas</option></select></label>
+          <label class="fa-campo"><span>Cajero</span>
+            <select data-fa="cajero_id"><option value="">Todos</option></select></label>
+          <label class="fa-campo"><span>Forma de pago</span>
+            <select data-fa="metodo"><option value="">Todas</option>
+              <option value="efectivo">Efectivo</option><option value="tarjeta">Tarjeta</option>
+              <option value="transferencia">Transferencia</option><option value="credito">Fiado</option>
+              <option value="otro">Otro</option></select></label>
+        </div>
+        <div class="fa-ayuda">Para un descuadre de caja: ponga el billete en «Efectivo que entregó»
+          (por ejemplo de 500 a 500) y vea a quién se le dio cambio de un billete que no era.</div>
+        <div class="fa-pie">
+          <button class="btn secundario" id="fa-limpiar" type="button">Limpiar</button>
+          <button class="btn principal-b" id="fa-aplicar" type="button">Buscar</button>
+        </div>
+      </div>
+      <div class="fa-chips oculto" id="fa-chips"></div>
 
       <div class="filtros" id="filtros">
         <button class="fl activo" data-p="hoy">Hoy</button>
@@ -260,6 +333,7 @@
     <div class="cajon-cuerpo" id="cajon-cuerpo"></div>
     <div class="cajon-pie">
       <button class="btn secundario" id="btn-imprimir">Imprimir</button>
+      <button class="btn secundario" id="btn-pdf">PDF</button>
       <button class="btn secundario oculto" id="btn-devolver">Devolver</button>
       <button class="btn secundario oculto" id="btn-anular"
               style="color:var(--rojo)">Anular</button>
@@ -291,7 +365,8 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
 const S = {
   ctx:null, sucursal:null, moneda:'L', menu:null, nivel:0,
   ventas:[], resumen:{}, busqueda:'', estado:null, soloFiadas:false,
-  desde:null, hasta:null, periodo:'hoy', venta:null
+  desde:null, hasta:null, periodo:'hoy', venta:null,
+  av:{}, listasAv:false, resumenFiltrado:false, sinBuscarVentas:false
 };
 
 const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
@@ -469,22 +544,145 @@ $('#btn-camara').addEventListener('click', async () => {
 async function cargar(){
   $('#lista').innerHTML = '<div class="vacio"><span class="girando"></span></div>';
   const args = { p_desde:S.desde, p_hasta:S.hasta, p_sucursal_id:S.sucursal };
+  const avanzados = Object.keys(S.av).length > 0;
 
-  const [hist, res] = await Promise.all([
-    sb.rpc('fn_historial_ventas', { ...args, p_buscar:S.busqueda || null,
-                                    p_estado:S.estado, p_limite:300 }),
-    sb.rpc('fn_ventas_resumen', args)
-  ]);
+  // fn_buscar_ventas (044) lleva todos los filtros. Si la base todavía no la
+  // tiene se usa la de antes, que solo sabe de fechas y texto.
+  const filtros = Object.fromEntries(Object.entries({
+    desde:S.desde, hasta:S.hasta, sucursal_id:S.sucursal, buscar:S.busqueda || null,
+    estado:S.estado, limite:300, ...S.av }).filter(([, v]) => v !== null && v !== undefined && v !== ''));
 
+  let hist = S.sinBuscarVentas ? null : await sb.rpc('fn_buscar_ventas', { p_filtros:filtros });
+  if (hist?.error && /fn_buscar_ventas|Could not find|does not exist/i.test(hist.error.message || '')){
+    S.sinBuscarVentas = true; hist = null;
+  }
+  if (!hist){
+    if (avanzados) aviso('Faltan los filtros en la base',
+      'Instale la actualización 044 para buscar por monto, hora, producto, caja o efectivo.');
+    hist = await sb.rpc('fn_historial_ventas', { ...args, p_buscar:S.busqueda || null,
+                                                 p_estado:S.estado, p_limite:300 });
+    if (!hist.error) hist = { data:{ filas:hist.data || [], resumen:null }, error:null };
+  }
   if (hist.error){ aviso('No se pudo leer el historial', limpiarError(hist.error)); return; }
-  S.ventas = hist.data || [];
-  S.resumen = res.data || {};
+  S.ventas = hist.data?.filas || [];
+
+  // Sin filtros avanzados las tarjetas son las de siempre (lo devuelto cuenta
+  // el día que se devolvió). Con filtros, cuentan solo lo que coincide.
+  S.resumenFiltrado = avanzados && !!hist.data?.resumen;
+  if (S.resumenFiltrado) S.resumen = hist.data.resumen;
+  else {
+    const res = await sb.rpc('fn_ventas_resumen', args);
+    S.resumen = res.data || {};
+  }
   pintarResumen();
   pintar();
 }
 
+/* ================= filtros avanzados ================= */
+const NOMBRE_FA = { monto:'Monto', hora:'Hora', efectivo:'Efectivo entregado', cambio:'Cambio',
+                    producto:'Producto', cliente:'Cliente', caja_id:'Caja', cajero_id:'Cajero', metodo:'Pago' };
+const numFa = v => { const n = parseFloat(String(v).replace(/[^0-9.]/g, '')); return isNaN(n) ? null : n; };
+
+async function cargarListasAv(){
+  if (S.listasAv) return;
+  S.listasAv = true;
+  try{
+    const [cj, pf] = await Promise.all([
+      sb.from('cajas').select('id,nombre,numero').order('nombre'),
+      sb.from('perfiles').select('id,nombre').order('nombre')
+    ]);
+    const llenar = (sel, filas) => {
+      const el = $(`[data-fa="${sel}"]`);
+      el.innerHTML = el.options[0].outerHTML + (filas || []).map(f =>
+        `<option value="${escapar(f.id)}">${escapar(f.nombre)}</option>`).join('');
+    };
+    llenar('caja_id', cj?.data);
+    llenar('cajero_id', pf?.data);
+  }catch(e){ S.listasAv = false; }
+}
+
+function leerFiltrosAv(){
+  const av = {};
+  document.querySelectorAll('[data-fa]').forEach(el => {
+    const k = el.dataset.fa, v = el.value.trim();
+    if (!v) return;
+    if (/_(min|max)$/.test(k)){ const n = numFa(v); if (n !== null) av[k] = n; }
+    else av[k] = v;
+  });
+  return av;
+}
+
+function pintarChips(){
+  const av = S.av;
+  const rango = (a, b, din = true) => {
+    const f = x => din ? money(x) : x;
+    return a != null && b != null ? (a === b ? f(a) : `${f(a)} a ${f(b)}`)
+         : a != null ? 'desde ' + f(a) : 'hasta ' + f(b);
+  };
+  const chips = [];
+  for (const g of ['monto', 'efectivo', 'cambio'])
+    if (av[g + '_min'] != null || av[g + '_max'] != null)
+      chips.push([g, NOMBRE_FA[g] + ' ' + rango(av[g + '_min'], av[g + '_max'])]);
+  if (av.hora_desde || av.hora_hasta)
+    chips.push(['hora', 'Hora ' + rango(av.hora_desde || null, av.hora_hasta || null, false)]);
+  for (const k of ['producto', 'cliente']) if (av[k]) chips.push([k, NOMBRE_FA[k] + ': ' + av[k]]);
+  for (const k of ['caja_id', 'cajero_id', 'metodo']) if (av[k]){
+    const op = $(`[data-fa="${k}"]`).selectedOptions?.[0]?.textContent || av[k];
+    chips.push([k, NOMBRE_FA[k] + ': ' + op]);
+  }
+  $('#fa-chips').innerHTML = chips.map(([k, t]) =>
+    `<span class="fa-chip">${escapar(t)}<button type="button" data-quitar-fa="${k}" aria-label="Quitar">✕</button></span>`).join('');
+  ver('#fa-chips', chips.length > 0);
+  $('#fa-cuenta').textContent = chips.length;
+  ver('#fa-cuenta', chips.length > 0);
+  $('#btn-filtros').classList.toggle('activo', chips.length > 0);
+}
+
+$('#btn-filtros').addEventListener('click', () => {
+  const abrir = $('#filtros-av').classList.contains('oculto');
+  ver('#filtros-av', abrir);
+  $('#btn-filtros').setAttribute('aria-expanded', String(abrir));
+  if (abrir){ cargarListasAv(); setTimeout(() => $('[data-fa="monto_min"]')?.focus(), 30); }
+});
+$('#fa-aplicar').addEventListener('click', () => {
+  S.av = leerFiltrosAv();
+  pintarChips();
+  ver('#filtros-av', false);
+  $('#btn-filtros').setAttribute('aria-expanded', 'false');
+  cargar();
+});
+$('#fa-limpiar').addEventListener('click', () => {
+  document.querySelectorAll('[data-fa]').forEach(el => el.value = '');
+  S.av = {};
+  pintarChips();
+  cargar();
+});
+$('#filtros-av').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.matches('input')){ e.preventDefault(); $('#fa-aplicar').click(); }
+});
+$('#fa-chips').addEventListener('click', e => {
+  const b = e.target.closest('[data-quitar-fa]'); if (!b) return;
+  const k = b.dataset.quitarFa;
+  const campos = ['monto', 'efectivo', 'cambio'].includes(k) ? [k + '_min', k + '_max']
+               : k === 'hora' ? ['hora_desde', 'hora_hasta'] : [k];
+  campos.forEach(c => { delete S.av[c]; const el = $(`[data-fa="${c}"]`); if (el) el.value = ''; });
+  pintarChips();
+  cargar();
+});
+
 function pintarResumen(){
   const r = S.resumen;
+  if (S.resumenFiltrado){
+    $('#tarjetas').innerHTML = `
+      <div class="tj"><small>Coinciden</small><b>${r.ventas || 0}</b></div>
+      <div class="tj"><small>Vendido</small><b>${money(r.total)}</b></div>
+      <div class="tj"><small>Efectivo entregado</small><b>${money(r.recibido)}</b></div>
+      <div class="tj"><small>Cambio dado</small><b>${money(r.cambio)}</b></div>
+      ${r.ganancia === null || r.ganancia === undefined ? ''
+        : `<div class="tj bien"><small>Ganancia</small><b>${money(r.ganancia)}</b></div>`}
+      ${(r.anuladas || 0) > 0 ? `<div class="tj malo"><small>Anuladas</small><b>${r.anuladas}</b></div>` : ''}`;
+    return;
+  }
   const ganancia = r.ganancia === null || r.ganancia === undefined
     ? '' : `<div class="tj bien"><small>Ganancia</small><b>${money(r.ganancia)}</b></div>`;
   $('#tarjetas').innerHTML = `
@@ -516,7 +714,9 @@ function pintar(){
     : '';
 
   if (!l.length){
-    $('#lista').innerHTML = `<div class="vacio"><b>No hay ventas en ese periodo</b>
+    $('#lista').innerHTML = Object.keys(S.av).length
+      ? `<div class="vacio"><b>Ninguna venta coincide</b>Quite algún filtro o amplíe las fechas.</div>`
+      : `<div class="vacio"><b>No hay ventas en ese periodo</b>
       Pruebe con otras fechas o quite el filtro.</div>`;
     return;
   }
@@ -538,6 +738,8 @@ function pintar(){
           <span class="venta-num">${escapar(v.numero_fiscal || v.numero)}</span>
           <small class="venta-sub">${escapar(hora)}${quien ? ' · ' + escapar(quien) : ''}
             · ${v.lineas} ${v.lineas === 1 ? 'producto' : 'productos'}</small>
+          ${Number(v.efectivo_recibido) > 0 && Number(v.cambio) > 0
+            ? `<span class="venta-pago">Entregó ${money(v.efectivo_recibido)} · cambio ${money(v.cambio)}</span>` : ''}
         </span>
         <span class="venta-fin">
           <b>${money(v.total)}</b>
@@ -598,6 +800,8 @@ function pintarTicket(){
       <span>${escapar(comoPago(p.metodo))}${p.referencia ? ' · ' + escapar(p.referencia) : ''}</span>
       <span>${money(p.monto)}</span>
     </div>
+    ${p.metodo === 'efectivo' && Number(p.recibido) > Number(p.monto)
+      ? `<div class="ticket-tot"><span>Entregó</span><span>${money(p.recibido)}</span></div>` : ''}
     ${Number(p.cambio) > 0
       ? `<div class="ticket-tot"><span>Cambio entregado</span><span>${money(p.cambio)}</span></div>`
       : ''}`).join('');
@@ -667,6 +871,23 @@ $('#form-velo').addEventListener('click', e => {
 // reimpresa sale marcada como COPIA: el original ya se le dio al cliente.
 $('#btn-imprimir').addEventListener('click', () => {
   if (S.venta) imprimirTicket(S.venta, { copia:S.venta.venta.documento === 'factura' });
+});
+
+// La misma factura en PDF, para mandarla por WhatsApp o correo. El módulo
+// (y jsPDF) se cargan la primera vez que se pide: no pesan en la pantalla.
+$('#btn-pdf').addEventListener('click', async () => {
+  if (!S.venta) return;
+  const b = $('#btn-pdf');
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+  try{
+    const { descargarPdf } = await import('./ticket-pdf.js');
+    await descargarPdf(S.venta);
+  }catch(e){
+    aviso('No se pudo hacer el PDF', /Failed to fetch|import/i.test(String(e?.message || e))
+      ? 'Hace falta internet la primera vez para preparar el PDF.' : limpiarError(e));
+  }finally{
+    b.disabled = false; b.textContent = 'PDF';
+  }
 });
 
 /* ================= anular ================= */
