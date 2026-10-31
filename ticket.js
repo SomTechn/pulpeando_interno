@@ -14,11 +14,32 @@
    y la leyenda de original y copia. Sin facturacion es un comprobante
    interno, y lo dice.
 
+   AL PIE: EL CÓDIGO DEL TICKET (migración 043)
+   Un Code 128 con los 16 dígitos de la venta, para escanearlo en Ventas al
+   hacer una devolución:
+
+       804 002 01 17867778
+       │   │   │  └─ ticket, al azar
+       │   │   └──── caja
+       │   └──────── cajero
+       └──────────── código de tienda
+
+   El ancho de cada barra se fija en milímetros que caen en puntos enteros
+   de una térmica de 203 ppp (0.25 mm = 2 puntos en 58 mm, 0.375 mm = 3 en
+   80 mm). Si el navegador estira el código a lo ancho del papel, unas barras
+   salen de 2 puntos y otras de 3, y la pistola falla.
+
+   ARRIBA: EL LOGO, si el negocio subió uno en Configuración. Se imprime en
+   gris (la térmica no tiene color) y se espera a que cargue antes de
+   mandar a imprimir; si no carga (sin internet), sale el ticket sin logo.
+
    Uso:
      import { imprimirTicket, htmlTicket } from './ticket.js';
      const { data } = await sb.rpc('fn_venta_completa', { p_venta_id:id });
      await imprimirTicket(data);
    ========================================================================== */
+
+import { modulosCode128, barrasSVG } from './etiqueta.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -88,6 +109,41 @@ function fecha(v){
   return `${d}/${m}/${a}`;
 }
 
+/* El código del ticket partido en sus cuatro piezas */
+export function partesCodigo(codigo){
+  const c = String(codigo || '').replace(/\D/g, '');
+  if (c.length !== 16) return null;
+  return { tienda:c.slice(0, 3), cajero:c.slice(3, 6), caja:c.slice(6, 8), ticket:c.slice(8) };
+}
+
+/* La dirección pública del logo (bucket "marca", público de lectura) */
+export function urlLogo(neg, opciones = {}){
+  if (opciones.logoUrl !== undefined) return opciones.logoUrl || null;
+  const ruta = neg?.logo_path;
+  const base = (typeof window !== 'undefined' && window.SUPABASE_CONFIG?.url) || '';
+  if (!ruta || typeof ruta !== 'string' || !base) return null;
+  return `${base}/storage/v1/object/public/marca/${ruta}`;
+}
+
+function bloqueCodigo(codigo, ancho){
+  const p = partesCodigo(codigo);
+  if (!p) return '';
+  const mod = modulosCode128(p.tienda + p.cajero + p.caja + p.ticket);
+  const paso = ancho === 58 ? 0.25 : 0.375;          // mm por módulo
+  const mm = ((mod.length + 20) * paso).toFixed(3);  // + zona quieta (10 y 10)
+  const alto = ancho === 58 ? 10 : 12;
+  return `<div class="codigo">
+  <div class="barras" style="width:${mm}mm;height:${alto}mm">${barrasSVG(mod, { alto:40 })}</div>
+  <div class="piezas">
+    <span><b>${p.tienda}</b><small>tienda</small></span>
+    <span><b>${p.cajero}</b><small>cajero</small></span>
+    <span><b>${p.caja}</b><small>caja</small></span>
+    <span><b>${p.ticket}</b><small>ticket</small></span>
+  </div>
+  <div class="c chico">Conserve este ticket para cambios y devoluciones</div>
+</div>`;
+}
+
 export function htmlTicket(d, opciones = {}){
   const ancho = Number(opciones.ancho || d.negocio?.ancho_ticket) === 58 ? 58 : 80;
   const v = d.venta, neg = d.negocio || {}, suc = d.sucursal || {};
@@ -104,6 +160,9 @@ export function htmlTicket(d, opciones = {}){
   const pagos = d.pagos || [];
   const cambio = pagos.reduce((a, p) => a + (Number(p.cambio) || 0), 0);
   const anulada = v.estado === 'anulada';
+  const logo = urlLogo(neg, opciones);
+  // Una venta anulada ya no se devuelve: no lleva código para escanear
+  const codigo = !anulada && !dev ? bloqueCodigo(v.codigo_barras, ancho) : '';
 
   const fila = (izq, der, fuerte = false) =>
     `<div class="f ${fuerte ? 'b' : ''}"><span>${izq}</span><span>${der}</span></div>`;
@@ -126,9 +185,19 @@ hr{border:none;border-top:1px dashed #000;margin:4px 0}
 .it{margin:2px 0}
 .it .n{overflow-wrap:anywhere}
 .chico{font-size:.88em}
+.logo{display:block;margin:0 auto 4px;max-width:70%;max-height:${ancho === 58 ? 16 : 20}mm;
+  object-fit:contain;filter:grayscale(1) contrast(1.15)}
+.codigo{margin:6px 0 2px}
+.barras{margin:0 auto}
+.barras svg{display:block;width:100%;height:100%}
+.piezas{display:flex;justify-content:center;gap:1.2ch;margin-top:2px;letter-spacing:.06em}
+.piezas span{display:flex;flex-direction:column;align-items:center;line-height:1.05}
+.piezas b{font-size:1.08em}
+.piezas small{font-size:.68em;letter-spacing:0;text-transform:uppercase}
 .anulada{border:2px solid #000;text-align:center;font-weight:700;font-size:1.3em;padding:3px;margin:4px 0}
 </style></head><body>
 <div class="c">
+  ${logo ? `<img class="logo" src="${esc(logo)}" alt="" onerror="this.remove()">` : ''}
   <div class="neg">${esc(neg.razon_social || neg.nombre)}</div>
   ${neg.razon_social && neg.razon_social !== neg.nombre ? `<div>${esc(neg.nombre)}</div>` : ''}
   ${neg.rtn ? `<div>RTN: ${esc(neg.rtn)}</div>` : ''}
@@ -193,6 +262,7 @@ ${fiscal && !nc ? `<div class="c chico">
   No. correlativo constancia de registro exonerado: ____<br>
   No. identificativo registro SAG: ____
 </div><hr>` : ''}
+${codigo ? codigo + '<hr>' : ''}
 ${dev ? `<div class="c" style="margin-top:14px">______________________</div>
 <div class="c chico">Recibí conforme</div>`
 : `<div class="c">${esc(neg.mensaje_ticket || '¡Gracias por su compra!')}</div>`}
@@ -227,8 +297,15 @@ export function imprimirTicket(datos, opciones = {}){
         setTimeout(fin, 60000);
       }catch(e){ fin(); }
     };
-    // Esperar a que el documento se pinte antes de imprimir
-    if (doc.readyState === 'complete') setTimeout(disparar, 120);
-    else marco.onload = () => setTimeout(disparar, 120);
+    // Esperar a que se pinte, y al logo: sin esto la primera impresión sale
+    // sin logo porque la imagen todavía venía en camino. Tope de 4 segundos.
+    const imagenes = () => Promise.race([
+      Promise.all([...doc.images].map(im => im.complete ? null
+        : new Promise(r => { im.addEventListener('load', r); im.addEventListener('error', r); }))),
+      new Promise(r => setTimeout(r, 4000))
+    ]);
+    const listo = () => imagenes().then(() => setTimeout(disparar, 120));
+    if (doc.readyState === 'complete') listo();
+    else marco.onload = listo;
   });
 }

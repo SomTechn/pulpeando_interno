@@ -1,6 +1,7 @@
 /* Prueba del ticket impreso: factura, comprobante, devolucion y nota de
    credito, y el total en letras. */
-import { htmlTicket, numeroALetras } from './ticket.js';
+import { htmlTicket, numeroALetras, partesCodigo, urlLogo } from './ticket.js';
+import { modulosCode128 } from './etiqueta.js';
 
 let ok = 0, mal = 0;
 const chk = (n, c) => { if (c){ ok++; console.log('  ok   ' + n); }
@@ -76,6 +77,68 @@ console.log('\n=== NOTA DE CRÉDITO ===');
   chk('lo devuelto por tarjeta', /Devuelto en tarjeta 115\.00/.test(t));
   chk('sin las casillas de exoneración de la factura', !/orden de compra exenta/.test(t));
   chk('original para el cliente', /ORIGINAL: CLIENTE/.test(t));
+}
+
+/* Lee de vuelta las barras del SVG, como lo haría la pistola: de los
+   rectángulos a módulos, de los módulos a símbolos de 11, de ahí a dígitos. */
+function leerBarras(html){
+  const svg = html.match(/<svg[^>]*viewBox="0 0 (\d+) \d+"[\s\S]*?<\/svg>/);
+  if (!svg) return null;
+  const ancho = Number(svg[1]);
+  const m = Array(ancho).fill('0');
+  for (const r of svg[0].matchAll(/<rect x="(\d+)" y="0" width="(\d+)"/g))
+    for (let i = 0; i < Number(r[2]); i++) m[Number(r[1]) + i] = '1';
+  const mod = m.join('').slice(10, -10);                 // sin la zona quieta
+  const tabla = {};
+  for (let v = 0; v < 100; v++){
+    const par = String(v).padStart(2, '0');
+    tabla[modulosCode128(par + par).slice(11, 22)] = par;
+  }
+  if (mod.slice(0, 11) !== modulosCode128('0000').slice(0, 11)) return 'sin Start C';
+  let out = '';
+  for (let i = 11; i < mod.length - 13 - 11; i += 11) out += tabla[mod.slice(i, i + 11)] ?? '?';
+  return out;
+}
+
+console.log('\n=== CÓDIGO DEL TICKET ===');
+{
+  const COD = '8040020117867778';
+  const h = htmlTicket(base({ documento:'ticket', codigo_barras:COD }));
+  const t = texto(h);
+  chk('las piezas del código', JSON.stringify(partesCodigo('804-002-01-17867778')) ===
+      JSON.stringify({ tienda:'804', cajero:'002', caja:'01', ticket:'17867778' }));
+  chk('un código que no es de 16 no se parte', partesCodigo('12345') === null);
+  chk('lleva el código de barras', /<svg/.test(h));
+  chk('las barras se leen de vuelta como el código', leerBarras(h) === COD);
+  chk('los dígitos agrupados con su etiqueta', /804 tienda 002 cajero 01 caja 17867778 ticket/.test(t));
+  chk('pide conservarlo', /cambios y devoluciones/.test(t));
+  const w80 = Number(h.match(/class="barras" style="width:([\d.]+)mm/)[1]);
+  const w58 = Number(htmlTicket(base({ documento:'ticket', codigo_barras:COD }), { ancho:58 })
+                .match(/class="barras" style="width:([\d.]+)mm/)[1]);
+  chk(`cabe en 80 mm (${w80} mm de 72 imprimibles)`, w80 <= 72);
+  chk(`cabe en 58 mm (${w58} mm de 48 imprimibles)`, w58 <= 48);
+  chk('módulo de puntos enteros a 203 ppp (2 y 3 puntos)',
+      Math.abs(w58 / 0.25 - Math.round(w58 / 0.25)) < 1e-6 && Math.abs(w80 / 0.375 - Math.round(w80 / 0.375)) < 1e-6);
+  chk('sin código, sin barras (ventas viejas)', !/<svg/.test(htmlTicket(base({ documento:'ticket' }))));
+  chk('anulada: sin barras', !/<svg/.test(htmlTicket(base({ documento:'ticket', codigo_barras:COD, estado:'anulada' }))));
+  const dv = htmlTicket(base({ documento:'devolucion', codigo_barras:COD },
+    { devolucion:{ motivo:'x', referencia:'T-1', rebaja_fiado:0, reembolso:0 } }));
+  chk('la devolución no lleva barras', !/<svg/.test(dv));
+  const f = htmlTicket(base({ documento:'factura', numero_fiscal:'000-001-01-00000009', cai:'X', codigo_barras:COD }));
+  chk('la factura también lo lleva', leerBarras(f) === COD);
+}
+
+console.log('\n=== LOGO ===');
+{
+  const conLogo = htmlTicket(base({ documento:'ticket' }), { logoUrl:'https://x.supabase.co/l.png' });
+  chk('con logo, va arriba del nombre', /<img class="logo" src="https:\/\/x\.supabase\.co\/l\.png"[^>]*>\s*<div class="neg">/.test(conLogo));
+  chk('si no carga, se quita (sin internet)', /onerror="this\.remove\(\)"/.test(conLogo));
+  chk('sin logo, sin imagen', !/<img/.test(htmlTicket(base({ documento:'ticket' }))));
+  globalThis.window = { SUPABASE_CONFIG:{ url:'https://p.supabase.co' } };
+  chk('la URL sale del bucket marca', urlLogo({ logo_path:'org/logo-1.png' }) ===
+      'https://p.supabase.co/storage/v1/object/public/marca/org/logo-1.png');
+  chk('sin logo_path, nada', urlLogo({}) === null);
+  delete globalThis.window;
 }
 
 console.log('\n' + ok + ' bien, ' + mal + ' mal');

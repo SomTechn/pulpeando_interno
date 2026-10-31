@@ -98,6 +98,8 @@ async function montar(estado){
     .replace(/^import \{ montarMenu, escapar \} from '\.\/menu\.js';$/m, '')
     .replace(/^import \{ imprimirTicket \} from '\.\/ticket\.js';$/m,
              'const imprimirTicket = async (d, o) => { (window.__impresos = window.__impresos || []).push({ d, o }); };')
+    .replace(/^import \{ escanear, hayCamara \} from '\.\/escaner\.js';$/m,
+             'const escanear = async () => window.__escaneo ?? null; const hayCamara = () => !!window.__hayCamara;')
     .replace(/createClient\(SUPABASE_URL, SUPABASE_KEY, \{[\s\S]*?\}\)/, '__sb');
 
   w.__caja = {};
@@ -542,6 +544,63 @@ console.log('\n=== SIN VENTAS Y SIN CONEXIÓN ===');
   chk('sin conexión lo dice en claro',
       /Sin conexión/.test(d.querySelector('#hoja').textContent));
   chk('sin jerga', !/TypeError/.test(d.querySelector('#hoja').textContent));
+}
+
+console.log('\n=== ESCANEAR EL TICKET PARA DEVOLVER ===');
+{
+  const COD = '8040020117867778';
+  const estado = baseEstado();
+  estado.rpc.fn_buscar_ticket = a => a.p_codigo.replace(/\D/g, '') === COD
+    ? { data:{ ok:true, venta_id:'v9' }, error:null }
+    : { data:{ ok:false, mensaje:'Ese ticket es de otra tienda' }, error:null };
+  const { w, d } = await montar(estado);
+  const b = d.querySelector('#buscar');
+  const teclear = txt => { b.value = txt; b.dispatchEvent(new w.Event('input', { bubbles:true })); };
+  const enter = () => b.dispatchEvent(new w.KeyboardEvent('keydown', { key:'Enter', bubbles:true }));
+
+  const antes = estado.llamadas.filter(l => l.fn === 'fn_historial_ventas').length;
+  teclear(COD);
+  await esperar(400);
+  chk('los 16 dígitos no se buscan en el historial',
+      estado.llamadas.filter(l => l.fn === 'fn_historial_ventas').length === antes);
+  enter();
+  await esperar(80);
+  chk('con el Enter de la pistola busca el ticket',
+      estado.llamadas.some(l => l.fn === 'fn_buscar_ticket' && l.args.p_codigo === COD));
+  chk('y abre esa venta, sin mirar las fechas',
+      estado.llamadas.some(l => l.fn === 'fn_venta_completa' && l.args.p_venta_id === 'v9'));
+  chk('el buscador queda limpio para el siguiente', b.value === '');
+
+  teclear('804-002-01-17867778'); enter(); await esperar(80);
+  chk('con guiones también',
+      estado.llamadas.filter(l => l.fn === 'fn_venta_completa').length === 2);
+
+  teclear('1110020117867778'); enter(); await esperar(80);
+  chk('el de otra tienda lo dice', /otra tienda/.test(d.querySelector('#hoja').textContent));
+
+  teclear('T-001'); enter(); await esperar(400);
+  chk('un número de ticket normal sigue buscando en el historial',
+      estado.llamadas.some(l => l.fn === 'fn_historial_ventas' && l.args.p_buscar === 'T-001'));
+  chk('sin cámara no se ve el botón', d.querySelector('#btn-camara').classList.contains('oculto'));
+
+  w.__escaneo = COD;
+  d.querySelector('#btn-camara').click(); await esperar(80);
+  chk('con la cámara abre la venta',
+      estado.llamadas.filter(l => l.fn === 'fn_venta_completa').length === 3);
+  w.__escaneo = '7421110100553';
+  d.querySelector('#btn-camara').click(); await esperar(80);
+  chk('un código de producto no es un ticket', /Ese no es un ticket/.test(d.querySelector('#hoja').textContent));
+}
+
+{
+  const estado = baseEstado();
+  estado.rpc.fn_buscar_ticket = { data:null, error:{ message:'Could not find the function public.fn_buscar_ticket' } };
+  const { w, d } = await montar(estado);
+  const b = d.querySelector('#buscar');
+  b.value = '8040020117867778';
+  b.dispatchEvent(new w.KeyboardEvent('keydown', { key:'Enter', bubbles:true }));
+  await esperar(80);
+  chk('sin la 043 en la base, lo dice', /043/.test(d.querySelector('#hoja').textContent));
 }
 
 console.log('\n' + ok + ' bien, ' + mal + ' mal');

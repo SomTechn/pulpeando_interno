@@ -312,11 +312,11 @@ async function arrancar(){
 
 async function cargarTodo(){
   const [o, s, c, i, f] = await Promise.all([
-    sb.from('organizaciones').select('id,nombre,identificacion_fiscal,facturacion_fiscal_activa,config,moneda')
+    sb.from('organizaciones').select('id,nombre,identificacion_fiscal,facturacion_fiscal_activa,config,moneda,codigo_tienda')
       .eq('id', S.ctx.organizacion.id).single(),
     sb.from('sucursales').select('id,codigo,nombre,direccion,telefono,es_principal,activa,acepta_domicilio,costo_envio,pedido_minimo')
       .order('es_principal', { ascending:false }).order('nombre'),
-    sb.from('cajas').select('id,sucursal_id,codigo,nombre,activa').order('codigo'),
+    sb.from('cajas').select('id,sucursal_id,codigo,nombre,activa,numero').order('codigo'),
     sb.from('impuestos').select('id,nombre,tasa,incluido_en_precio,es_predeterminado,activo').order('tasa'),
     sb.rpc('fn_estado_facturacion')
   ]);
@@ -397,6 +397,10 @@ function pintarNegocio(){
     <div class="ficha">
       <h3>El ticket</h3>
       <p class="sub">Cómo sale impreso en la caja y en Ventas.</p>
+      ${S.org.codigo_tienda ? `<div class="ayuda" style="margin:-2px 0 12px">Código de tienda
+        <b style="font-family:var(--num);font-size:15px;color:var(--texto)">${escapar(S.org.codigo_tienda)}</b>.
+        Va al inicio del código de barras de cada ticket, junto al número del cajero, de la caja
+        y del ticket. Lo asigna Pulpeando y no cambia.</div>` : ''}
       <div class="campos">
         <div class="campo-g ancho-total"><label>Ancho del papel</label>
           <div class="segmento" id="n-ancho">
@@ -683,10 +687,13 @@ function ticketDePrueba(){
   const suc = S.sucursales[0] || {};
   return {
     venta:{ numero:'T-PRUEBA', documento:'ticket', creada_en:new Date().toISOString(),
-            subtotal:86.96, impuesto:13.04, descuento:0, total:100, estado:'completada' },
+            subtotal:86.96, impuesto:13.04, descuento:0, total:100, estado:'completada',
+            // Un código de muestra con la tienda de verdad, para probar la pistola
+            codigo_barras: S.org.codigo_tienda ? S.org.codigo_tienda + '0000100000000' : null },
     negocio:{ nombre:d.nombre, razon_social:d.config.razon_social, rtn:d.rtn,
               direccion:d.config.direccion_fiscal, telefono:d.config.telefono, correo:d.config.correo,
-              mensaje_ticket:d.config.mensaje_ticket, moneda:S.org.moneda, ancho_ticket:anchoElegido() },
+              mensaje_ticket:d.config.mensaje_ticket, moneda:S.org.moneda, ancho_ticket:anchoElegido(),
+              logo_path:S.org.config?.logo_path || null },
     sucursal:{ nombre:suc.nombre, direccion:suc.direccion, telefono:suc.telefono },
     caja:'Caja 1', cajero:S.ctx.usuario.nombre,
     lineas:[{ producto:'Prueba de impresión', cantidad:1, precio:100, total:100 }],
@@ -904,7 +911,7 @@ function pintarSucursales(){
         </div>
         <div class="cajas">
           ${cajas.map(c => `<div class="fila ${c.activa ? '' : 'inactivo'}">
-            <div class="fila-txt"><b>${escapar(c.nombre)}</b><small>Código ${escapar(c.codigo)}${c.activa ? '' : ' · inactiva'}</small></div>
+            <div class="fila-txt"><b>${escapar(c.nombre)}</b><small>Código ${escapar(c.codigo)}${c.numero ? ' · n.º ' + String(c.numero).padStart(2, '0') + ' en el ticket' : ''}${c.activa ? '' : ' · inactiva'}</small></div>
             <button class="btn secundario" data-caja="${escapar(c.id)}">Editar</button>
           </div>`).join('')}
           <button class="mas" data-nueva-caja="${escapar(s.id)}">+ Caja en ${escapar(s.nombre)}</button>
