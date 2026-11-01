@@ -138,7 +138,7 @@ console.log('\n=== QUIÉN ENTRA ===');
 {
   const { d } = await montar(base());
   chk('el gerente sí', !d.querySelector('#app').classList.contains('oculto'));
-  chk('con sus cinco secciones', d.querySelectorAll('#menu-secciones [data-valor]').length === 5);
+  chk('con sus seis secciones (con Plan y pago)', d.querySelectorAll('#menu-secciones [data-valor]').length === 6);
   chk('y una de ellas es la de los aparatos de caja',
       !!d.querySelector('#menu-secciones [data-valor="aparatos"]'));
 }
@@ -571,6 +571,37 @@ const elegirArchivos = (w, input, archivos) => {
   chk('quitar una la saca de la lista y borra su archivo',
       u2.datos.config.promos_caja.length === 1 && !u2.datos.config.promos_caja.includes(primera) &&
       estado.borrados.includes(primera));
+}
+
+console.log('\n=== PLAN Y PAGO ===');
+{
+  const cuenta = { codigo_tienda:'417', whatsapp:'50499990000', pago_instrucciones:'BAC 123456\nA nombre de Pulpeando',
+    planes:[{ id:'basico', nombre:'Básico', precio:450, detalle:'Una sucursal' }, { id:'negocio', nombre:'Negocio', precio:850 }],
+    cuenta:{ plan:'prueba', activa:true, en_prueba:true, dias_restantes:9, prueba_hasta:'2026-11-10', vence:'2026-11-10' },
+    pagos:[] };
+  const e = base(3, RANGOS(), {});
+  e.rpc.fn_mi_cuenta = { data:cuenta, error:null };
+  const { d } = await montar(e);
+  await ir(d, 'plan'); await esperar(80);
+  const t = txt(d.querySelector('#cuerpo'));
+  chk('dice los días de prueba y cuándo acaba', /Prueba gratis · 9 días/.test(t) && /10 de noviembre de 2026/.test(t));
+  chk('el estado va en tarjeta destacada', d.querySelector('#plan-estado').classList.contains('destacada'));
+  chk('lista los planes con precio', /Básico/.test(t) && /L 450/.test(t) && /L 850/.test(t));
+  chk('las instrucciones y el código de tienda', /BAC 123456/.test(t) && /417/.test(t));
+  const wa = d.querySelector('a[href^="https://wa.me/50499990000"]');
+  chk('WhatsApp con el negocio y el código en el mensaje', wa && decodeURIComponent(wa.href).includes('código de tienda 417'));
+  chk('sin pagos lo dice', /Todavía no hay pagos/.test(t));
+}
+{
+  const e = base(3, RANGOS(), {});
+  e.rpc.fn_mi_cuenta = { data:{ codigo_tienda:'417', planes:[], pagos:[{ fecha:'2026-10-02T15:00:00Z', plan:'basico', meses:1,
+    monto:450, referencia:'BAC 9', desde:'2026-10-02', hasta:'2026-11-01' }],
+    cuenta:{ plan:'basico', activa:true, vencida:true, dias_restantes:-10 } }, error:null };
+  const { d } = await montar(e);
+  await ir(d, 'plan'); await esperar(80);
+  const t = txt(d.querySelector('#cuerpo'));
+  chk('vencida: sin destacar y con aviso rojo', !d.querySelector('#plan-estado').classList.contains('destacada') && d.querySelector('#plan-estado .aviso.malo'));
+  chk('el pago registrado con su periodo', /1 mes/.test(t) && /BAC 9/.test(t) && /L 450.00/.test(t));
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);

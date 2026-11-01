@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1729">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="icono-192.png" type="image/png">
+<title>Pulpeando · Negocios</title>
+<script src="config.js"></script>
+<script src="tema.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ui.css">
+<style>
+.zona{flex:1;overflow-y:auto;min-height:0;padding:16px 16px 40px}
+.limite{max-width:980px;margin:0 auto}
+.ficha{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);padding:18px;margin-bottom:14px}
+.ficha h3{font-size:16px;font-weight:800;margin-bottom:4px}
+.ficha .sub{font-size:13px;color:var(--tenue);line-height:1.5;margin-bottom:14px}
+.campos{display:grid;gap:13px;grid-template-columns:1fr 1fr}
+.campo-g label{display:block;font-size:12.5px;font-weight:700;margin-bottom:6px}
+.ancho-total{grid-column:1/-1}
+.entrada{height:46px;border:1.5px solid var(--linea);border-radius:var(--r-md);padding:0 13px;outline:none;
+  font-size:15px;background:var(--panel);width:100%}
+.entrada:focus{border-color:var(--azul)}
+textarea.entrada{height:auto;min-height:80px;padding:11px 13px;resize:vertical;font:inherit}
+.pie-ficha{display:flex;justify-content:flex-end;gap:10px;margin-top:16px;flex-wrap:wrap}
+@media (max-width:640px){ .campos{grid-template-columns:1fr} }
+
+.cifras{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.cifra{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);padding:14px 16px}
+.cifra small{display:block;font-size:12px;font-weight:700;color:var(--tenue);text-transform:uppercase;letter-spacing:.05em}
+.cifra b{display:block;font-size:24px;font-weight:800;margin-top:4px;font-family:'IBM Plex Mono',monospace}
+
+.filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.filtros input{flex:1 1 220px}
+.chip-f{height:38px;padding:0 14px;border-radius:999px;border:1.5px solid var(--linea);background:var(--panel);
+  font-size:13px;font-weight:700;color:var(--tenue)}
+.chip-f.activo{background:var(--marca-suave);border-color:var(--marca-borde);color:var(--marca-tinta)}
+
+.neg{display:grid;grid-template-columns:1fr auto;gap:6px 14px;align-items:center;width:100%;text-align:left;
+  background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);padding:14px 16px;margin-bottom:8px}
+.neg:hover{border-color:var(--marca-borde)}
+.neg b{font-size:15px}
+.neg small{display:block;color:var(--tenue);font-size:12.5px;margin-top:2px}
+.neg .der{text-align:right}
+.estado{display:inline-block;font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.estado.prueba{background:#E8F0FE;color:#1D4ED8}
+.estado.aldia{background:#E7F7EE;color:var(--verde-oscuro)}
+.estado.gracia,.estado.pronto{background:#FFF4E0;color:#8A5A00}
+.estado.vencida{background:#FFEDF1;color:#9F1239}
+.estado.libre{background:var(--fondo);color:var(--tenue)}
+.dato{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--linea);font-size:14px}
+.dato:first-of-type{border-top:0}
+.dato span{color:var(--tenue)}
+.volver{font-weight:800;color:var(--marca-tinta);margin-bottom:12px;padding:6px 0}
+.plan-fila{display:grid;grid-template-columns:110px 1fr 110px 1.6fr 40px;gap:8px;margin-bottom:8px}
+.plan-fila .entrada{height:42px;font-size:14px}
+.plan-fila button{font-size:18px;color:var(--tenue)}
+@media (max-width:700px){ .plan-fila{grid-template-columns:1fr 1fr} .plan-fila .det{grid-column:1/-1} }
+.interruptor{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:var(--r-md);background:var(--fondo);cursor:pointer}
+.interruptor div{flex:1}
+.interruptor b{display:block;font-size:14.5px}
+.interruptor small{display:block;font-size:12.5px;color:var(--tenue);margin-top:2px}
+.interruptor input{width:22px;height:22px;accent-color:var(--marca)}
+</style>
+</head>
+<body>
+
+<div class="oscura oculto" id="p-sesion">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Pulpeando</div>
+    <div class="titulo-o">Administración de la plataforma</div>
+    <p class="sub-o">Solo para el equipo de Pulpeando</p>
+    <input class="campo-o" id="s-email" type="email" placeholder="correo" autocomplete="username">
+    <input class="campo-o" id="s-clave" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <div class="error-o" id="s-error"></div>
+    <button class="btn-o" id="s-entrar">Entrar</button>
+  </div>
+</div>
+
+<div class="oscura oculto" id="p-bloqueado">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Pulpeando</div>
+    <div class="titulo-o">Sin permiso</div>
+    <p class="sub-o">Esta pantalla es del equipo de Pulpeando.</p>
+    <a class="btn-o" href="index.html" style="display:block;line-height:52px">Ir al inicio</a>
+  </div>
+</div>
+
+<div class="armazon oculto" id="app">
+  <aside id="menu"></aside>
+  <div class="principal">
+    <header class="barra">
+      <button class="hamburguesa" id="abrir-menu" aria-label="Menú">
+        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="barra-titulo"><b id="h-titulo">Negocios</b><small>Pulpeando</small></div>
+      <div class="barra-fin"><span class="pill" id="h-usuario">—</span></div>
+    </header>
+    <div class="zona"><div class="limite" id="cuerpo"></div></div>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { montarMenu, escapar } from './menu.js';
+
+const $ = s => document.querySelector(s);
+const ver = (id, si = true) => $(id).classList.toggle('oculto', !si);
+const CFG = window.SUPABASE_CONFIG || {};
+const sb = createClient(CFG.url, CFG.key, { auth:{ persistSession:true, autoRefreshToken:true } });
+
+const S = { ctx:null, menu:null, vista:'negocios', negocios:[], config:null, filtro:'todos', buscar:'' };
+
+const L = n => 'L ' + (Number(n) || 0).toLocaleString('es-HN', { minimumFractionDigits:0, maximumFractionDigits:2 });
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const fecha = v => { if (!v) return '—'; const [a, m, d] = String(v).slice(0, 10).split('-').map(Number); return `${d} ${MESES[m - 1]} ${a}`; };
+const limpiar = e => (e?.message || String(e)).replace(/^(?:[0-9A-Z]{5}|error|Error|ERROR):\s*/, '');
+function toast(texto, malo = false){
+  const t = document.createElement('div');
+  t.className = 'aviso-flotante' + (malo ? ' malo' : '');
+  t.textContent = texto; document.body.appendChild(t);
+  setTimeout(() => { t.classList.add('saliendo'); setTimeout(() => t.remove(), 250); }, 2600);
+}
+
+/* El estado de una cuenta en una palabra, para la lista y los filtros */
+function claseCuenta(c){
+  if (!c) return { k:'libre', t:'—' };
+  if (c.vencida) return { k:'vencida', t: c.activa === false ? 'Suspendida' : 'Vencida' };
+  if (c.sin_limite) return { k:'libre', t:'Sin límite' };
+  if (c.en_gracia) return { k:'gracia', t:'En gracia' };
+  if (c.en_prueba) return { k:'prueba', t:`Prueba · ${c.dias_restantes} d` };
+  if (Number(c.dias_restantes) <= 5) return { k:'pronto', t:`Vence en ${c.dias_restantes} d` };
+  return { k:'aldia', t:'Al día' };
+}
+const FILTROS = [
+  ['todos', 'Todos', () => true],
+  ['prueba', 'En prueba', c => claseCuenta(c).k === 'prueba'],
+  ['cobrar', 'Por cobrar', c => ['gracia', 'pronto', 'vencida'].includes(claseCuenta(c).k) || (c?.en_prueba && c.dias_restantes <= 3)],
+  ['aldia', 'Al día', c => claseCuenta(c).k === 'aldia'],
+  ['vencida', 'Vencidos', c => claseCuenta(c).k === 'vencida'],
+  ['libre', 'Sin límite', c => claseCuenta(c).k === 'libre']
+];
+
+/* ================= sesión ================= */
+$('#s-entrar').addEventListener('click', async () => {
+  const b = $('#s-entrar'); $('#s-error').textContent = '';
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+  const { error } = await sb.auth.signInWithPassword({ email:$('#s-email').value.trim(), password:$('#s-clave').value });
+  b.disabled = false; b.textContent = 'Entrar';
+  if (error){ $('#s-error').textContent = 'Correo o contraseña incorrectos'; return; }
+  arrancar();
+});
+$('#s-clave').addEventListener('keydown', e => { if (e.key === 'Enter') $('#s-entrar').click(); });
+
+async function arrancar(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session){ ver('#p-sesion'); return; }
+  ver('#p-sesion', false);
+  const { data, error } = await sb.rpc('fn_pos_contexto');
+  if (error || data?.usuario?.rol !== 'admin'){ ver('#p-bloqueado'); return; }
+  S.ctx = data;
+  $('#h-usuario').textContent = data.usuario.nombre;
+  $('#app').classList.remove('oculto');
+  S.menu = montarMenu({
+    contenedor:'#menu', modulo:'admin', ctx:S.ctx,
+    alSalir: async () => { await sb.auth.signOut(); location.reload(); },
+    secciones:[{ id:'admin', titulo:'Pulpeando', items:[
+      { valor:'negocios', nombre:'Negocios', icono:'inicio', activo:true },
+      { valor:'config', nombre:'Planes y registro', icono:'ajustes' } ] }]
+  });
+  S.menu.alElegir(abrir);
+  $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
+  abrir('negocios');
+}
+
+function abrir(v){
+  S.vista = v; S.menu?.marcar?.(v);
+  $('#h-titulo').textContent = v === 'config' ? 'Planes y registro' : 'Negocios';
+  (v === 'config' ? pintarConfig : pintarNegocios)();
+}
+
+async function cargar(){
+  const [n, c] = await Promise.all([sb.rpc('fn_admin_negocios'), sb.rpc('fn_admin_config')]);
+  if (n.error) throw n.error;
+  S.negocios = n.data || [];
+  S.config = c.data || {};
+}
+
+/* ================= lista de negocios ================= */
+async function pintarNegocios(){
+  $('#cuerpo').innerHTML = '<div class="ficha"><span class="girando"></span></div>';
+  try { await cargar(); } catch(e){ $('#cuerpo').innerHTML = `<div class="aviso malo">${escapar(limpiar(e))}</div>`; return; }
+  if (S.vista !== 'negocios') return;
+  const N = S.negocios;
+  const cuenta = f => N.filter(x => FILTROS.find(y => y[0] === f)[2](x.cuenta)).length;
+  const mes = new Date().toISOString().slice(0, 7);
+  $('#cuerpo').innerHTML = `
+    <div class="cifras">
+      <div class="cifra destacada"><small>Negocios</small><b>${N.length}</b></div>
+      <div class="cifra"><small>En prueba</small><b>${cuenta('prueba')}</b></div>
+      <div class="cifra"><small>Al día</small><b>${cuenta('aldia')}</b></div>
+      <div class="cifra"><small>Por cobrar</small><b>${cuenta('cobrar')}</b></div>
+      <div class="cifra"><small>Nuevos este mes</small><b>${N.filter(x => String(x.creada_en).startsWith(mes)).length}</b></div>
+    </div>
+    <div class="filtros">
+      <input class="entrada" id="f-buscar" placeholder="Buscar negocio, dueño, correo o código" value="${escapar(S.buscar)}">
+    </div>
+    <div class="filtros">${FILTROS.map(f => `<button class="chip-f ${S.filtro === f[0] ? 'activo' : ''}" data-f="${f[0]}">${f[1]} · ${cuenta(f[0])}</button>`).join('')}</div>
+    <div id="lista"></div>`;
+  $('#f-buscar').oninput = e => { S.buscar = e.target.value; pintarLista(); };
+  $('#cuerpo').querySelectorAll('[data-f]').forEach(b => b.onclick = () => {
+    S.filtro = b.dataset.f;
+    $('#cuerpo').querySelectorAll('[data-f]').forEach(x => x.classList.toggle('activo', x === b));
+    pintarLista();
+  });
+  pintarLista();
+}
+
+function pintarLista(){
+  const q = S.buscar.trim().toLowerCase();
+  const f = FILTROS.find(x => x[0] === S.filtro)[2];
+  const lista = S.negocios.filter(n => f(n.cuenta) && (!q || [n.nombre, n.codigo_tienda, n.dueno?.nombre, n.dueno?.email, n.telefono]
+    .some(v => String(v || '').toLowerCase().includes(q))));
+  $('#lista').innerHTML = lista.map(n => { const e = claseCuenta(n.cuenta); return `
+    <button class="neg" data-id="${escapar(n.id)}">
+      <div><b>${escapar(n.nombre)}</b>
+        <small>${escapar(n.codigo_tienda)} · ${escapar(n.dueno?.nombre || 'sin dueño')} · ${escapar(n.dueno?.email || '')}</small>
+        <small>${n.productos} productos · ${n.ventas_30d} ventas en 30 días · registrado ${fecha(n.creada_en)}</small></div>
+      <div class="der"><span class="estado ${e.k}">${escapar(e.t)}</span>
+        <small>${n.cuenta?.vence ? 'vence ' + fecha(n.cuenta.vence) : ''}</small></div>
+    </button>`; }).join('') || '<div class="ficha"><p class="sub" style="margin:0">Ningún negocio con ese filtro.</p></div>';
+  $('#lista').querySelectorAll('[data-id]').forEach(b => b.onclick = () => pintarDetalle(b.dataset.id));
+}
+
+/* ================= un negocio ================= */
+function pintarDetalle(id){
+  const n = S.negocios.find(x => x.id === id);
+  if (!n) return;
+  S.vista = 'detalle';
+  const c = n.cuenta || {};
+  const e = claseCuenta(c);
+  const planes = Array.isArray(S.config?.planes) ? S.config.planes : [];
+  const tel = String(n.dueno?.telefono || n.telefono || '').replace(/\D/g, '');
+  const wa = tel ? 'https://wa.me/' + (tel.length === 8 ? '504' + tel : tel) : '';
+  $('#h-titulo').textContent = n.nombre;
+  $('#cuerpo').innerHTML = `
+    <button class="volver" id="d-volver">← Negocios</button>
+    <div class="ficha">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
+        <div><h3 style="font-size:20px">${escapar(n.nombre)}</h3>
+          <p class="sub" style="margin:0">Código ${escapar(n.codigo_tienda)} · ${n.origen === 'registro' ? 'se registró solo' : 'creado a mano'} el ${fecha(n.creada_en)}</p></div>
+        <span class="estado ${e.k}" style="font-size:13px">${escapar(e.t)}</span>
+      </div>
+    </div>
+    <div class="ficha">
+      <h3>Dueño</h3>
+      <div class="dato"><span>Nombre</span><b>${escapar(n.dueno?.nombre || '—')}</b></div>
+      <div class="dato"><span>Correo</span><b>${escapar(n.dueno?.email || '—')}</b></div>
+      <div class="dato"><span>Teléfono</span><b>${escapar(n.dueno?.telefono || n.telefono || '—')}
+        ${wa ? ` · <a href="${wa}" target="_blank" rel="noopener" style="color:var(--marca-tinta)">WhatsApp</a>` : ''}</b></div>
+      <div class="dato"><span>Uso</span><b>${n.usuarios} usuarios · ${n.productos} productos · ${n.ventas_30d} ventas/30 d</b></div>
+      <div class="dato"><span>Última venta</span><b>${fecha(n.ultima_venta)}</b></div>
+      <div class="dato"><span>Pagado en total</span><b>${L(n.pagado_total)}</b></div>
+    </div>
+    <div class="ficha">
+      <h3>Cuenta</h3>
+      <div class="dato"><span>Plan</span><b>${escapar(c.plan || '—')}</b></div>
+      <div class="dato"><span>Prueba hasta</span><b>${fecha(c.prueba_hasta)}</b></div>
+      <div class="dato"><span>Pagado hasta</span><b>${fecha(c.pagado_hasta)}</b></div>
+    </div>
+    <div class="ficha">
+      <h3>Registrar pago</h3>
+      <p class="sub">El tiempo pagado arranca cuando se acaba lo que ya tiene (prueba o mes anterior), o hoy si ya venció.</p>
+      <div class="campos">
+        <div class="campo-g"><label for="p-plan">Plan</label>
+          <select class="entrada" id="p-plan">${planes.map(p => `<option value="${escapar(p.id)}" data-precio="${Number(p.precio) || 0}"
+            ${(c.plan === p.id || (c.plan === 'prueba' && p === planes[0])) ? 'selected' : ''}>${escapar(p.nombre)} · ${L(p.precio)}</option>`).join('')}</select></div>
+        <div class="campo-g"><label for="p-meses">Meses</label>
+          <input class="entrada num" id="p-meses" inputmode="numeric" value="1"></div>
+        <div class="campo-g"><label for="p-monto">Monto recibido (L)</label>
+          <input class="entrada num" id="p-monto" inputmode="decimal"></div>
+        <div class="campo-g"><label for="p-metodo">Método</label>
+          <select class="entrada" id="p-metodo"><option>Transferencia</option><option>Depósito</option><option>Efectivo</option><option>Tigo Money</option><option>Otro</option></select></div>
+        <div class="campo-g ancho-total"><label for="p-ref">Referencia</label>
+          <input class="entrada" id="p-ref" placeholder="Número de comprobante"></div>
+      </div>
+      <div class="pie-ficha"><button class="btn principal-b" id="p-guardar">Registrar pago</button></div>
+    </div>
+    <div class="ficha">
+      <h3>Ajustar a mano</h3>
+      <p class="sub">Para cortesías, alargar la prueba o suspender la cuenta.</p>
+      <div class="campos">
+        <div class="campo-g"><label for="a-prueba">Prueba hasta</label>
+          <input class="entrada" id="a-prueba" type="date" value="${escapar(c.prueba_hasta || '')}"></div>
+        <div class="campo-g"><label for="a-pagado">Pagado hasta</label>
+          <input class="entrada" id="a-pagado" type="date" value="${escapar(c.pagado_hasta || '')}"></div>
+        <label class="interruptor ancho-total" for="a-activa">
+          <div><b>Cuenta activa</b><small>Apagada, la caja no abre turnos aunque esté pagada.</small></div>
+          <input type="checkbox" id="a-activa" ${c.activa !== false ? 'checked' : ''}></label>
+        <div class="campo-g ancho-total"><label for="a-notas">Notas internas</label>
+          <textarea class="entrada" id="a-notas">${escapar(n.notas || '')}</textarea></div>
+      </div>
+      <p class="sub" style="margin:10px 0 0">Las dos fechas en blanco = sin límite.</p>
+      <div class="pie-ficha"><button class="btn secundario" id="a-guardar">Guardar cambios</button></div>
+    </div>`;
+  $('#d-volver').onclick = () => abrir('negocios');
+  const sugerir = () => {
+    const precio = Number($('#p-plan').selectedOptions[0]?.dataset.precio || 0);
+    $('#p-monto').value = precio * (parseInt($('#p-meses').value, 10) || 1);
+  };
+  $('#p-plan').onchange = sugerir; $('#p-meses').oninput = sugerir; sugerir();
+  $('#p-guardar').onclick = async () => {
+    const b = $('#p-guardar'); b.disabled = true;
+    const { error } = await sb.rpc('fn_admin_registrar_pago', {
+      p_org:id, p_meses:parseInt($('#p-meses').value, 10) || 0, p_monto:Number($('#p-monto').value) || 0,
+      p_plan:$('#p-plan').value || null, p_metodo:$('#p-metodo').value, p_referencia:$('#p-ref').value.trim() || null });
+    b.disabled = false;
+    if (error){ toast(limpiar(error), true); return; }
+    toast('Pago registrado');
+    await cargar(); pintarDetalle(id);
+  };
+  $('#a-guardar').onclick = async () => {
+    const { error } = await sb.rpc('fn_admin_actualizar_cuenta', { p_org:id, p_cambios:{
+      prueba_hasta:$('#a-prueba').value, pagado_hasta:$('#a-pagado').value,
+      activa:$('#a-activa').checked, notas:$('#a-notas').value.trim() } });
+    if (error){ toast(limpiar(error), true); return; }
+    toast('Cuenta actualizada');
+    await cargar(); pintarDetalle(id);
+  };
+}
+
+/* ================= configuración de la plataforma ================= */
+async function pintarConfig(){
+  $('#cuerpo').innerHTML = '<div class="ficha"><span class="girando"></span></div>';
+  const { data, error } = await sb.rpc('fn_admin_config');
+  if (S.vista !== 'config') return;
+  if (error){ $('#cuerpo').innerHTML = `<div class="aviso malo">${escapar(limpiar(error))}</div>`; return; }
+  const c = data || {};
+  const planes = Array.isArray(c.planes) ? c.planes : [];
+  const filaPlan = p => `<div class="plan-fila">
+      <input class="entrada" data-k="id" placeholder="id" value="${escapar(p.id || '')}">
+      <input class="entrada" data-k="nombre" placeholder="Nombre" value="${escapar(p.nombre || '')}">
+      <input class="entrada num" data-k="precio" inputmode="decimal" placeholder="Precio" value="${escapar(p.precio ?? '')}">
+      <input class="entrada det" data-k="detalle" placeholder="Qué incluye" value="${escapar(p.detalle || '')}">
+      <button type="button" data-quitar aria-label="Quitar plan">×</button></div>`;
+  $('#cuerpo').innerHTML = `
+    <div class="ficha">
+      <h3>Registro</h3>
+      <label class="interruptor" for="c-abierto">
+        <div><b>Registro abierto</b><small>Cualquiera puede crear su negocio desde registro.html</small></div>
+        <input type="checkbox" id="c-abierto" ${c.registro_abierto !== false ? 'checked' : ''}></label>
+      <div class="campos" style="margin-top:13px">
+        <div class="campo-g"><label for="c-prueba">Días de prueba</label>
+          <input class="entrada num" id="c-prueba" inputmode="numeric" value="${escapar(c.dias_prueba ?? 14)}"></div>
+        <div class="campo-g"><label for="c-gracia">Días de gracia al vencer</label>
+          <input class="entrada num" id="c-gracia" inputmode="numeric" value="${escapar(c.dias_gracia ?? 3)}"></div>
+      </div>
+    </div>
+    <div class="ficha">
+      <h3>Planes</h3>
+      <p class="sub">Precio mensual en lempiras. El id es corto y en minúsculas (basico, negocio).</p>
+      <div id="c-planes">${planes.map(filaPlan).join('')}</div>
+      <button class="btn secundario" id="c-mas-plan">+ Plan</button>
+    </div>
+    <div class="ficha">
+      <h3>Cobro</h3>
+      <div class="campos">
+        <div class="campo-g ancho-total"><label for="c-instr">Instrucciones de pago (las ve el gerente en Plan y pago)</label>
+          <textarea class="entrada" id="c-instr" placeholder="Banco, número de cuenta, a nombre de…">${escapar(c.pago_instrucciones || '')}</textarea></div>
+        <div class="campo-g"><label for="c-wa">WhatsApp de Pulpeando</label>
+          <input class="entrada num" id="c-wa" inputmode="tel" placeholder="50499999999" value="${escapar(c.whatsapp || '')}"></div>
+      </div>
+      <div class="pie-ficha"><button class="btn principal-b" id="c-guardar">Guardar</button></div>
+    </div>`;
+  const conectar = () => $('#c-planes').querySelectorAll('[data-quitar]').forEach(b => b.onclick = () => b.parentElement.remove());
+  conectar();
+  $('#c-mas-plan').onclick = () => { $('#c-planes').insertAdjacentHTML('beforeend', filaPlan({})); conectar(); };
+  $('#c-guardar').onclick = async () => {
+    const planes = [...$('#c-planes').querySelectorAll('.plan-fila')].map(f => {
+      const v = k => f.querySelector(`[data-k="${k}"]`).value.trim();
+      return { id:v('id').toLowerCase(), nombre:v('nombre'), precio:Number(v('precio')) || 0, detalle:v('detalle') };
+    }).filter(p => p.id || p.nombre);
+    const { error } = await sb.rpc('fn_admin_guardar_config', { p_datos:{
+      registro_abierto:$('#c-abierto').checked,
+      dias_prueba:parseInt($('#c-prueba').value, 10), dias_gracia:parseInt($('#c-gracia').value, 10),
+      planes, pago_instrucciones:$('#c-instr').value.trim(),
+      whatsapp:$('#c-wa').value.replace(/\D/g, '') } });
+    if (error){ toast(limpiar(error), true); return; }
+    toast('Guardado');
+  };
+}
+
+arrancar();
+</script>
+</body>
+</html>

@@ -49,6 +49,7 @@ const ICONOS = {
   promo:     '<path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"/><path d="m9.5 14.5 5-5"/><circle cx="9.5" cy="9.5" r=".9"/><circle cx="14.5" cy="14.5" r=".9"/>',
   importar:  '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
   reloj:     '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/>',
+  plataforma:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
   inicio:    '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
   todos:     '<path d="M4 6h16M4 12h16M4 18h16"/>',
   salir:     '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
@@ -86,7 +87,8 @@ const GRUPOS = [
   { titulo:'Finanzas', modulos:[
     { id:'finanzas', nombre:'Finanzas',   url:'finanzas.html', icono:'finanzas', nivel:2 } ] },
   { titulo:'Administración', modulos:[
-    { id:'configuracion', nombre:'Configuración', url:'configuracion.html', icono:'ajustes', nivel:3 } ] }
+    { id:'configuracion', nombre:'Configuración', url:'configuracion.html', icono:'ajustes', nivel:3 },
+    { id:'admin', nombre:'Pulpeando', url:'admin.html', icono:'plataforma', nivel:4 } ] }
 ];
 export const MODULOS = GRUPOS.flatMap(g => g.modulos);
 
@@ -304,6 +306,8 @@ export function montarMenu({ contenedor, modulo, ctx, alSalir, secciones = [] })
     if (e.target.closest('a.menu-item') && esCelular()) cerrarEnMovil();
   });
 
+  pintarAvisoCuenta(ctx);
+
   return {
     alternar,
     cerrar: cerrarEnMovil,
@@ -314,6 +318,60 @@ export function montarMenu({ contenedor, modulo, ctx, alSalir, secciones = [] })
         x.classList.toggle('activo', x.dataset.valor === String(valor)));
     }
   };
+}
+
+/* ---------- El aviso de la cuenta (prueba, vencimiento) ----------
+   Decide qué decir sin tocar la pantalla, para poder probarlo solo.
+   Devuelve null cuando no hay nada que avisar. */
+export function avisoCuenta(cuenta, nivel = 0, hoy = new Date()){
+  if (!cuenta || typeof cuenta !== 'object') return null;
+  const dias = Number(cuenta.dias_restantes);
+  const s = n => Math.abs(n) === 1 ? '' : 's';
+  const gerente = nivel >= 3;
+  const pagar = gerente ? { texto:'Ver cómo pagar', url:'configuracion.html#plan' } : null;
+  if (cuenta.vencida){
+    return { tipo:'malo', fijo:true, accion:pagar,
+      texto: cuenta.activa === false
+        ? 'La cuenta de este negocio está suspendida. La caja no abre turnos.'
+        : 'El plan venció. La caja no abre turnos hasta que se pague.' + (gerente ? '' : ' Avísele al dueño.') };
+  }
+  if (cuenta.sin_limite) return null;
+  if (cuenta.en_gracia){
+    const quedan = Number(cuenta.dias_gracia) + dias;   // dias es negativo
+    return { tipo:'malo', fijo:true, accion:pagar,
+      texto: `El plan venció. En ${quedan} día${s(quedan)} la caja deja de abrir turnos.` };
+  }
+  if (!gerente || !Number.isFinite(dias)) return null;
+  if (cuenta.en_prueba && dias <= 5){
+    return { tipo:'ojo', fijo:false, accion:{ texto:'Ver planes', url:'configuracion.html#plan' },
+      texto: dias <= 0 ? 'Hoy es el último día de la prueba gratis.' : `Le quedan ${dias} día${s(dias)} de prueba gratis.` };
+  }
+  if (!cuenta.en_prueba && dias <= 3){
+    return { tipo:'ojo', fijo:false, accion:{ texto:'Ver cómo pagar', url:'configuracion.html#plan' },
+      texto: dias <= 0 ? 'El plan vence hoy.' : `El plan vence en ${dias} día${s(dias)}.` };
+  }
+  return null;
+}
+
+function pintarAvisoCuenta(ctx){
+  if (typeof document === 'undefined') return;
+  document.querySelector('.aviso-cuenta')?.remove();
+  const a = avisoCuenta(ctx?.organizacion?.cuenta, ctx?.usuario?.nivel ?? 0);
+  if (!a) return;
+  const llave = 'aviso-cuenta-oculto:' + new Date().toISOString().slice(0, 10);
+  if (!a.fijo && recordar.leer(llave, '') === a.texto) return;
+  const el = document.createElement('div');
+  el.className = 'aviso-cuenta ' + a.tipo;
+  el.setAttribute('role', 'status');
+  el.innerHTML = `<span>${escapar(a.texto)}</span>
+    ${a.accion ? `<a href="${prefijo()}${escapar(a.accion.url)}">${escapar(a.accion.texto)}</a>` : ''}
+    ${a.fijo ? '' : '<button type="button" aria-label="Ocultar por hoy">×</button>'}`;
+  el.querySelector('button')?.addEventListener('click', () => { recordar.poner(llave, a.texto); el.remove(); });
+  const principal = document.querySelector('.principal');
+  const barra = principal?.querySelector(':scope > .barra');
+  if (barra) barra.after(el);
+  else if (principal) principal.prepend(el);
+  else document.body.prepend(el);
 }
 
 /* La caja vive en /caja: sus enlaces al resto llevan "../". */

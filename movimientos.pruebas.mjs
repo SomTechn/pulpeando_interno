@@ -409,7 +409,9 @@ console.log('\n=== KARDEX DE UNA FILA ===');
   d.querySelector('.control tbody tr').click();
   await esperar();
   const a = ultima(e, 'fn_kardex_producto').args;
-  chk('en periodo el kardex trae todo el periodo', a.p_desde !== a.p_hasta);
+  // El atajo es «este mes»: desde el día 1 hasta hoy. El día 1 del mes las
+  // dos fechas son iguales, así que se revisa el arranque, no que difieran.
+  chk('en periodo el kardex trae todo el periodo', /-01$/.test(a.p_desde) && a.p_desde <= a.p_hasta);
 }
 
 console.log('\n=== CSV ===');

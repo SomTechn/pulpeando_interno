@@ -301,13 +301,14 @@ async function arrancar(){
       { valor:'facturacion', nombre:'Facturación (CAI)', icono:'reportes' },
       { valor:'sucursales',  nombre:'Sucursales y cajas', icono:'caja' },
       { valor:'aparatos',    nombre:'Aparatos de caja', icono:'caja' },
-      { valor:'impuestos',   nombre:'Impuestos', icono:'etiqueta' } ] }]
+      { valor:'impuestos',   nombre:'Impuestos', icono:'etiqueta' },
+      { valor:'plan',        nombre:'Plan y pago', icono:'finanzas' } ] }]
   });
   S.menu.alElegir(abrir);
   $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
 
   await cargarTodo();
-  abrir('negocio');
+  abrir(location.hash === '#plan' ? 'plan' : 'negocio');
 }
 
 async function cargarTodo(){
@@ -330,7 +331,7 @@ async function cargarTodo(){
 
 const TITULOS = { negocio:'Negocio y ticket', facturacion:'Facturación (CAI)',
                   sucursales:'Sucursales y cajas', aparatos:'Aparatos de caja',
-                  impuestos:'Impuestos' };
+                  impuestos:'Impuestos', plan:'Plan y pago' };
 
 function abrir(v){
   S.vista = v;
@@ -338,7 +339,7 @@ function abrir(v){
   $('#h-titulo').textContent = TITULOS[v];
   ({ negocio:pintarNegocio, facturacion:pintarFacturacion,
      sucursales:pintarSucursales, aparatos:pintarAparatos,
-     impuestos:pintarImpuestos })[v]();
+     impuestos:pintarImpuestos, plan:pintarPlan })[v]();
 }
 
 /* ================= negocio y ticket ================= */
@@ -1271,6 +1272,71 @@ function hojaImpuesto(){
     cerrarHoja();
     await cargarTodo(); pintarImpuestos();
   };
+}
+
+/* ================= plan y pago ================= */
+const fechaLarga = iso => {
+  if (!iso) return '—';
+  try { return new Date(String(iso).slice(0, 10) + 'T12:00:00').toLocaleDateString('es-HN', { day:'numeric', month:'long', year:'numeric' }); }
+  catch(e){ return String(iso); }
+};
+
+function estadoPlan(c){
+  if (!c) return { titulo:'—', texto:'' };
+  const d = Number(c.dias_restantes);
+  if (c.vencida) return { titulo: c.activa === false ? 'Cuenta suspendida' : 'Plan vencido',
+    texto:'La caja no abre turnos hasta que se registre el pago. Sus datos siguen guardados.' };
+  if (c.sin_limite) return { titulo:'Cuenta sin vencimiento', texto:'Este negocio no tiene fecha de cobro.' };
+  if (c.en_gracia) return { titulo:'Plan vencido', texto:`Venció el ${fechaLarga(c.vence)}. Tiene ${Number(c.dias_gracia) + d} día(s) antes de que la caja se bloquee.` };
+  if (c.en_prueba) return { titulo:`Prueba gratis · ${d} día${d === 1 ? '' : 's'}`, texto:`La prueba termina el ${fechaLarga(c.prueba_hasta)}.` };
+  return { titulo:'Plan al día', texto:`Pagado hasta el ${fechaLarga(c.pagado_hasta)}.` };
+}
+
+async function pintarPlan(){
+  $('#cuerpo').innerHTML = '<div class="ficha"><span class="girando"></span></div>';
+  const { data, error } = await sb.rpc('fn_mi_cuenta');
+  if (S.vista !== 'plan') return;
+  if (error){ $('#cuerpo').innerHTML = `<div class="ficha"><div class="aviso malo">${escapar(limpiarError(error))}</div></div>`; return; }
+  const c = data.cuenta || {};
+  const e = estadoPlan(c);
+  const wa = String(data.whatsapp || '').replace(/\D/g, '');
+  const msj = `Hola, quiero pagar el plan de Pulpeando. Negocio: ${S.ctx.organizacion.nombre} · código de tienda ${data.codigo_tienda}`;
+  const planes = Array.isArray(data.planes) ? data.planes : [];
+  $('#cuerpo').innerHTML = `
+    <div class="ficha ${c.vencida || c.en_gracia ? '' : 'destacada'}" id="plan-estado">
+      <small>Su cuenta</small>
+      <h3 style="font-size:22px;margin:4px 0 6px">${escapar(e.titulo)}</h3>
+      <p class="sub" style="margin-bottom:0">${escapar(e.texto)}</p>
+      ${c.vencida || c.en_gracia ? `<div class="aviso malo" style="margin-top:12px">${escapar(e.texto)}</div>` : ''}
+    </div>
+
+    <div class="ficha">
+      <h3>Planes</h3>
+      <p class="sub">Precio mensual en lempiras. Sin contrato: paga el mes que va a usar.</p>
+      ${planes.map(p => `<div class="fila">
+        <div class="fila-txt"><b>${escapar(p.nombre)} ${c.plan === p.id ? '<span class="sello ok" style="margin-left:6px">Su plan</span>' : ''}</b>
+          <small>${escapar(p.detalle || '')}</small></div>
+        <b class="num" style="font-size:17px">L ${Number(p.precio || 0).toLocaleString('es-HN')}</b>
+      </div>`).join('') || '<p class="sub">Pregúntenos por los planes.</p>'}
+    </div>
+
+    <div class="ficha">
+      <h3>Cómo pagar</h3>
+      <p class="sub" style="white-space:pre-line">${escapar(data.pago_instrucciones || '')}</p>
+      <div class="fila"><div class="fila-txt"><b>Código de su tienda</b><small>Menciónelo al pagar</small></div>
+        <b class="num" style="font-size:18px">${escapar(data.codigo_tienda || '')}</b></div>
+      ${wa ? `<a class="btn principal-b" style="display:inline-grid;place-items:center;margin-top:12px"
+           target="_blank" rel="noopener" href="https://wa.me/${wa}?text=${encodeURIComponent(msj)}">Mandar comprobante por WhatsApp</a>` : ''}
+    </div>
+
+    <div class="ficha">
+      <h3>Pagos registrados</h3>
+      ${(data.pagos || []).length ? data.pagos.map(p => `<div class="fila">
+        <div class="fila-txt"><b>${escapar(fechaLarga(p.fecha))} · ${p.meses} mes${p.meses === 1 ? '' : 'es'}</b>
+          <small>Cubre del ${escapar(fechaLarga(p.desde))} al ${escapar(fechaLarga(p.hasta))}${p.referencia ? ' · ' + escapar(p.referencia) : ''}</small></div>
+        <b class="num">L ${Number(p.monto).toLocaleString('es-HN', { minimumFractionDigits:2 })}</b>
+      </div>`).join('') : '<p class="sub" style="margin:0">Todavía no hay pagos.</p>'}
+    </div>`;
 }
 
 /* ================= al aire ================= */

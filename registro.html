@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1729">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="icono-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icono-192.png">
+<title>Registre su negocio · Pulpeando</title>
+<meta name="description" content="Caja, inventario, fiado y compras para su pulpería. Pruébelo gratis.">
+<script src="config.js"></script>
+<script src="tema.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ui.css">
+<style>
+.oscura{place-items:start center;padding-top:max(28px, env(safe-area-inset-top))}
+.reg{max-width:440px;text-align:left}
+.reg .marca{display:flex;justify-content:center}
+.reg h1{font-size:clamp(22px,5vw,27px);font-weight:800;letter-spacing:-.02em;margin:0 0 6px;text-align:center}
+.reg .lema{color:var(--tenue);font-size:14.5px;line-height:1.5;margin:0 0 20px;text-align:center}
+.pasos-reg{display:flex;gap:8px;margin:0 0 18px}
+.pasos-reg span{flex:1;height:5px;border-radius:3px;background:var(--linea)}
+.pasos-reg span.hecho{background:var(--marca)}
+.reg label{display:block;font-size:13px;font-weight:700;color:var(--tinta);margin:12px 0 6px}
+.reg label small{font-weight:500;color:var(--tenue)}
+.reg .campo-o{margin-bottom:0}
+.reg .ayuda{font-size:12.5px;color:var(--tenue);margin:6px 0 0;line-height:1.45}
+.reg .fila-btn{display:flex;gap:10px;margin-top:20px}
+.reg .fila-btn .btn-o{margin-top:0}
+.reg .fila-btn .fantasma{flex:0 0 38%}
+.pin-o{font-family:'IBM Plex Mono',monospace;letter-spacing:.5em;font-size:20px;text-align:center}
+.reg label.check-reg{display:flex;gap:12px;align-items:flex-start;background:var(--panel);border:1px solid var(--linea);
+  border-radius:var(--r-md);padding:14px;margin-top:16px;cursor:pointer}
+.check-reg input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--marca);flex:0 0 auto}
+.check-reg b{display:block;font-size:14px}
+.check-reg small{display:block;font-size:12.5px;color:var(--tenue);margin-top:3px;line-height:1.4}
+.trampa{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.ventajas{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 20px}
+.ventajas div{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);
+  padding:10px 12px;font-size:13px;font-weight:600;line-height:1.35}
+.ventajas div::before{content:'✓';color:var(--marca);font-weight:800;margin-right:6px}
+.listo{text-align:center}
+.listo .marca-ok{margin:6px auto 16px}
+.dato-listo{display:flex;justify-content:space-between;gap:12px;background:var(--panel);
+  border:1px solid var(--linea);border-radius:var(--r-md);padding:12px 14px;margin-top:8px;font-size:14px;text-align:left}
+.dato-listo span{color:var(--tenue)}
+.dato-listo b{font-family:'IBM Plex Mono',monospace}
+.cerrado{text-align:center}
+.reg .pie-o{text-align:center}
+.reg .pie-o a{color:var(--marca-tinta);font-weight:700}
+</style>
+</head>
+<body>
+
+<div class="oscura">
+  <div class="tarjeta-oscura reg">
+    <div class="marca"><span>◧</span> Pulpeando</div>
+
+    <!-- ===== paso 1: el negocio ===== -->
+    <section id="paso1">
+      <h1>Su pulpería, en orden</h1>
+      <p class="lema" id="lema">Caja rápida, inventario, fiado y compras. <b id="dias-prueba">14 días</b> gratis, sin tarjeta.</p>
+      <div class="ventajas">
+        <div>Cobra en segundos</div><div>Sabe qué pedir</div>
+        <div>Control del fiado</div><div>Celular, tablet o PC</div>
+      </div>
+      <div class="pasos-reg"><span class="hecho"></span><span></span></div>
+
+      <label for="r-negocio">Nombre del negocio</label>
+      <input class="campo-o" id="r-negocio" maxlength="80" placeholder="Pulpería La Bendición" autocomplete="organization">
+
+      <label for="r-sucursal">Colonia o barrio <small>(opcional)</small></label>
+      <input class="campo-o" id="r-sucursal" maxlength="60" placeholder="Col. Kennedy, Tegucigalpa">
+
+      <label for="r-telefono">Teléfono o WhatsApp</label>
+      <input class="campo-o" id="r-telefono" inputmode="tel" maxlength="16" placeholder="9999-9999" autocomplete="tel">
+
+      <div class="trampa" aria-hidden="true">
+        <label for="r-sitio">Sitio web</label>
+        <input id="r-sitio" tabindex="-1" autocomplete="off">
+      </div>
+
+      <div class="error-o" id="e1"></div>
+      <button class="btn-o" id="b-seguir">Seguir</button>
+      <p class="pie-o">¿Ya tiene cuenta? <a href="index.html">Entre aquí</a></p>
+    </section>
+
+    <!-- ===== paso 2: el dueño ===== -->
+    <section id="paso2" class="oculto">
+      <h1>Su cuenta de dueño</h1>
+      <p class="lema">Con esto entra a todo el sistema. Después da de alta a sus cajeros.</p>
+      <div class="pasos-reg"><span class="hecho"></span><span class="hecho"></span></div>
+
+      <label for="r-nombre">Su nombre</label>
+      <input class="campo-o" id="r-nombre" maxlength="80" placeholder="Rosa Martínez" autocomplete="name">
+
+      <label for="r-email">Correo</label>
+      <input class="campo-o" id="r-email" type="email" maxlength="120" placeholder="correo@gmail.com" autocomplete="email">
+
+      <label for="r-clave">Contraseña</label>
+      <input class="campo-o" id="r-clave" type="password" maxlength="72" placeholder="8 caracteres o más" autocomplete="new-password">
+
+      <label for="r-pin">PIN de caja</label>
+      <input class="campo-o pin-o" id="r-pin" type="password" inputmode="numeric" maxlength="5" placeholder="•••••" autocomplete="off">
+      <p class="ayuda">5 números para abrir la caja y autorizar. No use 12345 ni cinco iguales.</p>
+
+      <label class="check-reg" for="r-muestra">
+        <input type="checkbox" id="r-muestra" checked>
+        <span><b>Cargar 100 productos de muestra</b>
+          <small>Para probar la caja de una vez. Los quita con un botón cuando meta los suyos.</small></span>
+      </label>
+
+      <div class="error-o" id="e2"></div>
+      <div class="fila-btn">
+        <button class="btn-o fantasma" id="b-atras">Atrás</button>
+        <button class="btn-o" id="b-crear">Crear mi negocio</button>
+      </div>
+      <p class="pie-o">Al crear la cuenta acepta que guardemos los datos de su negocio para darle el servicio.</p>
+    </section>
+
+    <!-- ===== listo ===== -->
+    <section id="listo" class="oculto listo">
+      <div class="marca-ok">✓</div>
+      <h1 id="l-titulo">¡Listo!</h1>
+      <p class="lema" id="l-texto">Su negocio ya está creado.</p>
+      <div class="dato-listo"><span>Prueba gratis hasta</span><b id="l-hasta">—</b></div>
+      <div class="dato-listo"><span>Código de su tienda</span><b id="l-codigo">—</b></div>
+      <div class="error-o" id="e3"></div>
+      <button class="btn-o" id="b-entrar">Entrar al sistema</button>
+    </section>
+
+    <!-- ===== cerrado ===== -->
+    <section id="cerrado" class="oculto cerrado">
+      <h1>Registro en pausa</h1>
+      <p class="lema">Por ahora estamos dando de alta los negocios a mano. Escríbanos y lo atendemos.</p>
+      <a class="btn-o" id="b-wa-cerrado" style="display:grid;place-items:center" href="#">Escribir por WhatsApp</a>
+      <p class="pie-o"><a href="index.html">Ya tengo cuenta</a></p>
+    </section>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const $ = s => document.querySelector(s);
+const ver = (id, si = true) => $(id).classList.toggle('oculto', !si);
+const CFG = window.SUPABASE_CONFIG || {};
+const FUNC = CFG.url + '/functions/v1/registrar-negocio';
+const sb = createClient(CFG.url, CFG.key, { auth:{ persistSession:true, autoRefreshToken:true } });
+
+const telefono = v => {
+  const d = String(v || '').replace(/\D/g, '').replace(/^504(?=\d{8}$)/, '');
+  return /^[2-9]\d{7}$/.test(d) ? d.slice(0, 4) + '-' + d.slice(4) : null;
+};
+const pinMalo = p => !/^\d{5}$/.test(p) ? 'El PIN de caja tiene 5 números'
+  : (/^(.)\1{4}$/.test(p) || ['12345','54321','01234','98765'].includes(p)) ? 'Ese PIN es muy fácil. Escoja otro' : '';
+const fecha = iso => {
+  try { return new Date(iso + 'T12:00:00').toLocaleDateString('es-HN', { day:'numeric', month:'long', year:'numeric' }); }
+  catch(e){ return iso; }
+};
+
+// Lo que dice la plataforma: días de prueba y si el registro está abierto
+(async () => {
+  try {
+    const r = await fetch(FUNC, { headers:{ apikey:CFG.key } });
+    const d = await r.json();
+    if (d?.ok){
+      if (d.dias_prueba != null) $('#dias-prueba').textContent = d.dias_prueba + ' días';
+      if (d.registro_abierto === false){
+        ver('#paso1', false); ver('#cerrado');
+        const wa = String(d.whatsapp || '').replace(/\D/g, '');
+        if (wa) $('#b-wa-cerrado').href = 'https://wa.me/' + wa;
+        else $('#b-wa-cerrado').classList.add('oculto');
+      }
+    }
+  } catch(e){ /* sin info no se detiene el registro */ }
+})();
+
+// ---- paso 1 ----
+$('#r-telefono').addEventListener('blur', e => { const t = telefono(e.target.value); if (t) e.target.value = t; });
+$('#b-seguir').addEventListener('click', () => {
+  $('#e1').textContent = '';
+  if ($('#r-negocio').value.trim().length < 3){ $('#e1').textContent = 'Escriba el nombre del negocio'; $('#r-negocio').focus(); return; }
+  if (!telefono($('#r-telefono').value)){ $('#e1').textContent = 'El teléfono tiene 8 números'; $('#r-telefono').focus(); return; }
+  ver('#paso1', false); ver('#paso2');
+  $('#r-nombre').focus();
+  window.scrollTo(0, 0);
+});
+$('#b-atras').addEventListener('click', () => { ver('#paso2', false); ver('#paso1'); });
+$('#r-pin').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 5); });
+['#r-negocio','#r-sucursal','#r-telefono'].forEach(s =>
+  $(s).addEventListener('keydown', e => { if (e.key === 'Enter') $('#b-seguir').click(); }));
+$('#r-pin').addEventListener('keydown', e => { if (e.key === 'Enter') $('#b-crear').click(); });
+
+// ---- paso 2: crear ----
+let creado = null;
+$('#b-crear').addEventListener('click', async () => {
+  const e2 = $('#e2'); e2.textContent = '';
+  const datos = {
+    negocio: $('#r-negocio').value.trim(),
+    sucursal: $('#r-sucursal').value.trim(),
+    telefono: $('#r-telefono').value.trim(),
+    nombre: $('#r-nombre').value.trim(),
+    email: $('#r-email').value.trim().toLowerCase(),
+    password: $('#r-clave').value,
+    pin: $('#r-pin').value,
+    muestra: $('#r-muestra').checked,
+    sitio_web: $('#r-sitio').value
+  };
+  if (datos.nombre.length < 3){ e2.textContent = 'Escriba su nombre'; $('#r-nombre').focus(); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(datos.email)){ e2.textContent = 'Revise el correo'; $('#r-email').focus(); return; }
+  if (datos.password.length < 8){ e2.textContent = 'La contraseña lleva 8 caracteres o más'; $('#r-clave').focus(); return; }
+  const mp = pinMalo(datos.pin); if (mp){ e2.textContent = mp; $('#r-pin').focus(); return; }
+
+  const b = $('#b-crear');
+  b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+  let r;
+  try {
+    const res = await fetch(FUNC, { method:'POST',
+      headers:{ 'Content-Type':'application/json', apikey:CFG.key }, body:JSON.stringify(datos) });
+    r = await res.json();
+  } catch(e){ r = { ok:false, error:'Sin conexión. Revise la señal e intente otra vez' }; }
+  b.disabled = false; b.textContent = 'Crear mi negocio';
+  if (!r?.ok){ e2.textContent = r?.error || 'No se pudo crear el negocio'; return; }
+
+  creado = r;
+  $('#l-titulo').textContent = '¡Listo, ' + datos.nombre.split(' ')[0] + '!';
+  $('#l-texto').textContent = r.negocio + ' ya está en Pulpeando.';
+  $('#l-hasta').textContent = fecha(r.prueba_hasta);
+  $('#l-codigo').textContent = r.codigo_tienda || '—';
+  ver('#paso2', false); ver('#listo');
+  window.scrollTo(0, 0);
+
+  // Entra de una vez con la cuenta nueva
+  const b2 = $('#b-entrar');
+  b2.disabled = true; b2.innerHTML = '<span class="girando"></span> Preparando su negocio';
+  const { error } = await sb.auth.signInWithPassword({ email:datos.email, password:datos.password });
+  if (!error && datos.muestra){
+    const { error:eM } = await sb.rpc('fn_cargar_catalogo_muestra');
+    if (eM) $('#e3').textContent = 'No se cargaron los productos de muestra. Puede cargarlos desde Inicio.';
+  }
+  b2.disabled = false; b2.textContent = 'Entrar al sistema';
+});
+
+$('#b-entrar').addEventListener('click', () => { location.href = 'index.html'; });
+</script>
+</body>
+</html>

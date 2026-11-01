@@ -2,7 +2,7 @@
    La app se cachea para que abra sin internet. Las llamadas a Supabase
    NUNCA se cachean: los datos viejos en una caja hacen más daño que la
    pantalla vacía, y las ventas offline ya viajan en su propia cola. */
-const CACHE = 'pos-abarrotes-v35';
+const CACHE = 'pos-abarrotes-v36';
 const CONCHA = [
   './',
   './index.html',
@@ -28,6 +28,8 @@ const CONCHA = [
   './vencimientos.html',
   './importar.html',
   './promociones.html',
+  './registro.html',
+  './admin.html',
   './promos.js',
   './escaner.js',
   './ticket.js',

@@ -60,6 +60,32 @@
 .mod .ico{flex:0 0 auto;width:38px;height:38px;border-radius:11px;background:var(--marca-suave);
   display:grid;place-items:center;color:var(--marca-tinta)}
 .mod b{font-size:14.5px;font-weight:700;min-width:0;overflow-wrap:break-word;hyphens:auto}
+
+/* Primeros pasos del negocio recién registrado */
+.pasos{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);padding:18px 20px;margin:20px auto 0}
+.pasos-cab{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}
+.pasos-cab div{flex:1;min-width:0}
+.pasos-cab b{display:block;font-size:16px;font-weight:800}
+.pasos-cab small{display:block;color:var(--tenue);font-size:13px;margin-top:3px;line-height:1.4}
+.pasos-cab button{font-size:13px;font-weight:700;color:var(--tenue);padding:4px 8px;border-radius:8px}
+.pasos-cab button:hover{background:var(--fondo)}
+.pasos-barra{height:6px;border-radius:3px;background:var(--fondo);overflow:hidden;margin-bottom:10px}
+.pasos-barra i{display:block;height:100%;background:var(--marca);border-radius:3px}
+.paso{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--linea)}
+.paso:first-of-type{border-top:0}
+.paso .bola{flex:0 0 auto;width:26px;height:26px;border-radius:50%;border:2px solid var(--linea);
+  display:grid;place-items:center;font-size:13px;font-weight:800;color:transparent}
+.paso.hecho .bola{background:var(--marca);border-color:var(--marca);color:var(--marca-sobre)}
+.paso .txt{flex:1;min-width:0}
+.paso .txt b{display:block;font-size:14.5px;font-weight:700}
+.paso.hecho .txt b{color:var(--tenue);text-decoration:line-through}
+.paso .txt small{display:block;font-size:12.5px;color:var(--tenue);margin-top:2px}
+.paso a,.paso button.ir{flex:0 0 auto;font-size:13px;font-weight:800;color:var(--marca-tinta);padding:6px 10px;
+  border-radius:8px;background:var(--marca-suave)}
+.muestra-fila{display:flex;align-items:center;gap:12px;margin-top:12px;padding:12px 14px;border-radius:var(--r-md);
+  background:var(--fondo);font-size:13px;color:var(--tenue)}
+.muestra-fila span{flex:1}
+.muestra-fila button{font-weight:800;color:var(--tinta);font-size:13px}
 </style>
 </head>
 <body>
@@ -82,7 +108,9 @@
     <div class="error-o" id="s-error"></div>
     <button class="btn-o" id="s-entrar">Entrar</button>
     <p class="sub-o" style="margin-top:18px">¿Viene a cobrar?
-      <a href="caja/" style="color:#9FB2CC;font-weight:700">Entre a la caja</a></p>
+      <a href="caja/" style="color:var(--marca-tinta);font-weight:700">Entre a la caja</a></p>
+    <p class="sub-o" style="margin:-14px 0 0">¿Tiene una pulpería y quiere probar?
+      <a href="registro.html" style="color:var(--marca-tinta);font-weight:700">Registre su negocio gratis</a></p>
   </div>
 </div>
 
@@ -109,6 +137,8 @@
         <h1 id="pa-saludo">—</h1>
         <p id="pa-negocio">—</p>
       </div>
+
+      <div id="pasos"></div>
 
       <a class="a-caja" href="caja/">
         <span class="ico">
@@ -228,11 +258,69 @@ async function arrancar(){
     </a>`).join('');
 
   $('#app').classList.remove('oculto');
+  if (S.nivel >= 3) pintarPasos();
   S.menu = montarMenu({
     contenedor:'#menu', modulo:'panel', ctx:S.ctx,
     alSalir: async () => { await sb.auth.signOut(); location.reload(); }
   });
   $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
+}
+
+/* ================= primeros pasos ================= */
+const PASOS = {
+  productos:{ t:'Meta sus productos', d:'Uno por uno en Catálogos o todos de un solo con Excel', url:'importar.html', ir:'Importar' },
+  negocio:  { t:'Ponga su logo y RTN', d:'Salen en el ticket y en las etiquetas', url:'configuracion.html', ir:'Configurar' },
+  usuarios: { t:'Dé de alta a sus cajeros', d:'Cada quien con su PIN, para saber quién vendió', url:'configuracion.html', ir:'Agregar' },
+  venta:    { t:'Haga su primera venta', d:'Abra la caja con su PIN y cobre', url:'caja/', ir:'Ir a la caja' },
+  compra:   { t:'Registre una compra', d:'Así el inventario y el costo quedan al día', url:'compras.html', ir:'Comprar' }
+};
+
+async function pintarPasos(){
+  const { data, error } = await sb.rpc('fn_primeros_pasos');
+  if (error || !data || data.oculto){ $('#pasos').innerHTML = ''; return; }
+  const pasos = (data.pasos || []).filter(p => PASOS[p.id]);
+  const hechos = pasos.filter(p => p.hecho).length;
+  const c = data.cuenta || {};
+  const prueba = c.en_prueba && Number.isFinite(Number(c.dias_restantes))
+    ? ` · le quedan ${c.dias_restantes} día${Number(c.dias_restantes) === 1 ? '' : 's'} de prueba` : '';
+  $('#pasos').innerHTML = `
+    <section class="pasos" aria-label="Primeros pasos">
+      <div class="pasos-cab">
+        <div><b>Primeros pasos</b><small>${hechos} de ${pasos.length} listos${escapar(prueba)}</small></div>
+        <button id="pasos-ocultar">Ocultar</button>
+      </div>
+      <div class="pasos-barra"><i style="width:${pasos.length ? Math.round(hechos * 100 / pasos.length) : 0}%"></i></div>
+      ${pasos.map(p => { const q = PASOS[p.id]; return `
+        <div class="paso ${p.hecho ? 'hecho' : ''}">
+          <span class="bola">✓</span>
+          <span class="txt"><b>${escapar(q.t)}</b><small>${escapar(q.d)}</small></span>
+          ${p.hecho ? '' : (p.id === 'productos'
+            ? `<button class="ir" id="pasos-muestra">Probar con 100</button><a href="${q.url}">${escapar(q.ir)}</a>`
+            : `<a href="${q.url}">${escapar(q.ir)}</a>`)}
+        </div>`; }).join('')}
+      ${data.muestra > 0 ? `<div class="muestra-fila"><span>Tiene ${data.muestra} productos de muestra.</span>
+        <button id="pasos-quitar">Quitar la muestra</button></div>` : ''}
+    </section>`;
+  $('#pasos-ocultar').onclick = async () => { await sb.rpc('fn_ocultar_primeros_pasos', { p_oculto:true }); $('#pasos').innerHTML = ''; };
+  const bm = $('#pasos-muestra');
+  if (bm) bm.onclick = async () => {
+    bm.disabled = true; bm.innerHTML = '<span class="girando"></span>';
+    const { error } = await sb.rpc('fn_cargar_catalogo_muestra');
+    if (error){ bm.disabled = false; bm.textContent = 'No se pudo'; return; }
+    pintarPasos();
+  };
+  const bq = $('#pasos-quitar');
+  if (bq) bq.onclick = async () => {
+    // Doble toque en vez de ventana: el primero pregunta, el segundo quita
+    if (!bq.dataset.seguro){
+      bq.dataset.seguro = '1'; bq.textContent = '¿Seguro? Toque otra vez';
+      bq.previousElementSibling.textContent = 'Se apagan; lo que ya vendió con ellos queda en el historial.';
+      return;
+    }
+    bq.disabled = true;
+    await sb.rpc('fn_quitar_catalogo_muestra');
+    pintarPasos();
+  };
 }
 
 sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT') location.reload(); });
