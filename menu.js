@@ -42,6 +42,7 @@ const ICONOS = {
   etiqueta:  '<path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"/><circle cx="7.5" cy="7.5" r="1.3"/>',
   fiado:     '<path d="M4 5h16a1 1 0 0 1 1 1v3H3V6a1 1 0 0 1 1-1z"/><path d="M3 9v9a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9"/><path d="M7 14h5"/>',
   lupa:      '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  bodega:    '<path d="M3 21V9l9-6 9 6v12"/><path d="M7 21v-8h10v8M7 17h10"/>',
   auditar:   '<path d="M3 6h10M3 12h7M3 18h7"/><circle cx="17" cy="15" r="4"/><path d="m20.5 18.5 2 2"/>',
   merma:     '<path d="M3 6h18l-1.5 13a2 2 0 0 1-2 1.8H6.5a2 2 0 0 1-2-1.8z"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="m10 11 4 5M14 11l-4 5"/>',
   calendario:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/>',
@@ -79,7 +80,7 @@ const GRUPOS = [
     { id:'importar', nombre:'Importar y precios', url:'importar.html', icono:'importar', nivel:3 },
     { id:'vencimientos', nombre:'Vencimientos', url:'vencimientos.html', icono:'reloj', nivel:1 },
     { id:'conteo',  nombre:'Conteo',      url:'conteo.html',  icono:'conteo',   nivel:1 },
-    { id:'auditoria', nombre:'Auditoría', url:'auditoria.html', icono:'auditar', nivel:1 },
+    { id:'auditoria', nombre:'Bodega', url:'auditoria.html', icono:'bodega', nivel:1 },
     { id:'merma',   nombre:'Merma',       url:'merma.html',   icono:'merma',    nivel:1 },
     { id:'movimientos', nombre:'Movimientos', url:'movimientos.html', icono:'calendario', nivel:2 } ] },
   { titulo:'Compras', modulos:[

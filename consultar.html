@@ -219,6 +219,28 @@ button.fila-l:active{transform:scale(.995)}
 /* la grafica: cinco barras dibujadas con CSS. Sin libreria: la app tiene que
    abrir sin internet y una grafica de cinco barras no justifica un paquete. */
 .graf{display:flex;align-items:flex-end;gap:8px;height:132px;margin-top:4px}
+/* historial de ventas: semanas / días */
+.ventas-enc{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.ventas-enc .titulin{margin:0}
+.vtabs{display:inline-flex;background:var(--fondo);border-radius:9px;padding:3px;flex:0 0 auto}
+.vtabs button{height:32px;padding:0 12px;border-radius:7px;font-size:12.5px;font-weight:800;color:var(--tenue)}
+.vtabs button.si{background:var(--panel);color:var(--tinta);box-shadow:0 1px 3px rgba(15,23,41,.12)}
+.vventana{overflow:hidden;touch-action:pan-y}
+.vcarril{display:flex;width:200%;transition:transform .25s cubic-bezier(.2,.8,.3,1)}
+.vcarril.en-dias{transform:translateX(-50%)}
+.vpanel{width:50%;flex:0 0 50%;min-width:0;padding:0 1px}
+.vpuntos{display:flex;justify-content:center;gap:6px;margin-top:10px}
+.vpuntos i{width:6px;height:6px;border-radius:50%;background:var(--linea)}
+.vpuntos i.si{background:var(--marca);width:16px;border-radius:3px}
+.graf-d{position:relative;display:flex;align-items:flex-end;gap:2px;height:132px;margin-top:4px;padding-top:16px}
+.dtope{position:absolute;top:0;left:0;font-family:var(--num);font-size:11px;color:var(--tenue)}
+.dcol{flex:1;height:100%;display:flex;align-items:flex-end;min-width:0}
+.dcol .gbarra{max-width:none;border-radius:3px 3px 1px 1px}
+.dcol.vacia .gbarra{background:var(--linea)}
+.dcol.ahora .gbarra{background:var(--marca)}
+.dpie{display:flex;gap:2px;margin-top:6px}
+.dpie div{flex:1;min-width:0;font-size:10.5px;color:var(--tenue);white-space:nowrap;overflow:visible;text-align:center}
+.dpie div.fin{direction:rtl;font-weight:700}
 .gcol{flex:1;display:flex;flex-direction:column;justify-content:flex-end;
   align-items:center;gap:6px;height:100%;min-width:0}
 .gnum{font-family:var(--num);font-size:12px;font-weight:700;line-height:1;
@@ -695,13 +717,14 @@ async function escanearCodigo(){
 async function abrir(id){
   S.cargando = true; S.vista = 'ficha'; pintar();
 
-  const [perfil, semanas, conteos, etq] = await Promise.all([
+  const [perfil, semanas, conteos, etq, dias] = await Promise.all([
     sb.rpc('fn_consultar_producto', { p_producto_id:id, p_sucursal_id:S.sucursal }),
     sb.rpc('fn_ventas_producto_semanas', { p_producto_id:id, p_semanas:5,
                                            p_sucursal_id:S.sucursal }),
     sb.rpc('fn_conteos_del_producto', { p_producto_id:id, p_sucursal_id:S.sucursal,
                                         p_limite:5 }),
-    sb.rpc('fn_etiqueta_producto', { p_producto_id:id, p_sucursal_id:S.sucursal })
+    sb.rpc('fn_etiqueta_producto', { p_producto_id:id, p_sucursal_id:S.sucursal }),
+    sb.rpc('fn_ventas_producto_dias', { p_producto_id:id, p_dias:30, p_sucursal_id:S.sucursal })
   ]);
 
   S.cargando = false;
@@ -715,6 +738,7 @@ async function abrir(id){
   S.prod = perfil.data;
   S.puedeAprobar = !!perfil.data.puede_aprobar;
   S.semanas = semanas.error ? [] : (semanas.data || []);
+  S.dias = dias?.error ? [] : (dias?.data || []);
   S.conteos = conteos.error ? [] : (conteos.data || []);
   S.etq = etq?.error ? null : (etq?.data || null);
   await cargarBodega();
@@ -833,8 +857,7 @@ function pintarFicha(){
 
   const pie = [
     Number(p.apartado) > 0 ? `Apartado <b>${cant(p.apartado)}</b>` : '',
-    p.stock_maximo ? `Máximo <b>${cant(p.stock_maximo)}</b>` : '',
-    ve ? `Costo <b>${money(p.costo_promedio)}</b>` : ''
+    p.stock_maximo ? `Máximo <b>${cant(p.stock_maximo)}</b>` : ''
   ].filter(Boolean).join(' · ');
 
   /* El conteo del piso depende de la bodega, asi que el estado se ve aqui y
@@ -847,9 +870,10 @@ function pintarFicha(){
          <b>${escapar(faltanBod.map(u => u.nombre).join(', ') || 'la bodega')}</b>.
          <a href="auditoria.html">Ir a auditar</a></div>`);
 
-  // La regla se explica una vez, abajo, en vez de repetirla en cada cifra.
+  S.avisoBodega = avisoBodega;
+  // La regla se explica una vez, en Editar inventario.
   const cual = lugares.find(u => u.predeterminada);
-  const notaLugar = cual && lugares.length > 1
+  S.notaLugar = cual && lugares.length > 1
     ? `<div class="lugar-pie">Lo que entra sin asignarle lugar se cuenta en
          <b>${escapar(cual.nombre)}</b>.</div>`
     : '';
@@ -999,8 +1023,6 @@ function pintarFicha(){
       <div class="tiles n${Math.min(lugares.length + 1, 6)}">${tiles}</div>
       ${barraInventario(p)}
       ${pie ? `<div class="tile-pie">${pie}</div>` : ''}
-      ${avisoBodega}
-      ${notaLugar}
       ${otras ? `<div class="titulin" style="margin-top:16px">En otras sucursales</div>
                  <div>${otras}</div>` : ''}
     </div>
@@ -1008,10 +1030,7 @@ function pintarFicha(){
     ${bloqueConteos}
 
 
-    <div class="ficha">
-      <div class="titulin">Ventas de las últimas 5 semanas</div>
-      ${graf}
-    </div>
+    <div class="ficha" id="ventas-ficha">${graf}</div>
 
     ${bloqueLotes}
 
@@ -1034,6 +1053,7 @@ function pintarFicha(){
 
   $('#btn-editar').addEventListener('click', () => hojaEditar());
   conectarFab();
+  conectarVentas();
   $$('.tiles button.tile').forEach(b =>
     b.addEventListener('click', () => hojaLugares(b.dataset.u || null)));
   // El código de barras: tocarlo lo agranda (para leerlo de lejos); los
@@ -1116,17 +1136,29 @@ function bloqueBarras(p){
   </div>`;
 }
 
-function pintarGrafica(){
-  const sem = S.semanas;
-  if (!sem.length) return '<div class="vacio" style="padding:20px">Sin datos de ventas</div>';
+/* ---------- historial de ventas: por semana (5) o por día (30) ----------
+   Dos paneles lado a lado; se cambia con las pestañas o deslizando el dedo.
+   Los promedios salen del panel que se está viendo. */
+const leerVistaVentas = () => { try { return localStorage.getItem('consultar-ventas') === 'dias' ? 'dias' : 'semanas'; } catch(e){ return 'semanas'; } };
 
+function promediosHTML(unidades, dias){
+  const diario = dias > 0 ? unidades / dias : 0;
+  const prom = v => (Math.round(v * 10) / 10).toLocaleString('es-HN', { maximumFractionDigits:1 });
+  return `<div class="promedios">
+      <div><small>Promedio diario</small><b>${prom(diario)}</b></div>
+      <div><small>Semanal</small><b>${prom(diario * 7)}</b></div>
+      <div><small>Mensual</small><b>${prom(diario * 30)}</b></div>
+    </div>`;
+}
+
+function panelSemanas(){
+  const sem = S.semanas || [];
+  if (!sem.length) return '<div class="vacio" style="padding:20px">Sin datos de ventas</div>';
   const tope = Math.max(1, ...sem.map(s => Number(s.unidades) || 0));
   const unidades = sem.reduce((a, s) => a + (Number(s.unidades) || 0), 0);
   const importe  = sem.reduce((a, s) => a + (Number(s.importe)  || 0), 0);
-
   const barras = sem.map((s, i) => {
     const n = Number(s.unidades) || 0;
-    // El alto se reparte dejando sitio al numero de arriba.
     const alto = n === 0 ? 3 : Math.max(8, Math.round(n / tope * 100));
     const ahora = i === sem.length - 1;
     return `<div class="gcol ${n === 0 ? 'vacia' : ''} ${ahora ? 'ahora' : ''}"
@@ -1135,31 +1167,90 @@ function pintarGrafica(){
       <span class="gbarra" style="height:${alto}%"></span>
     </div>`;
   }).join('');
-
-  const pies = sem.map((s, i) => {
-    const ahora = i === sem.length - 1;
-    return `<div><b>${semanaCorta(s.semana_inicio)}</b>${ahora ? 'esta semana' : money(s.importe).replace(S.moneda + ' ', '')}</div>`;
-  }).join('');
-
-  // Días que cubren las 5 semanas: 4 enteras más lo que va de esta (desde el lunes)
-  const hoy = new Date();
-  const diasEsta = ((hoy.getDay() + 6) % 7) + 1;
+  const pies = sem.map((s, i) => `<div><b>${semanaCorta(s.semana_inicio)}</b>${i === sem.length - 1 ? 'esta semana' : money(s.importe).replace(S.moneda + ' ', '')}</div>`).join('');
+  // Días que cubren: las semanas enteras más lo que va de esta (desde el lunes)
+  const diasEsta = ((new Date().getDay() + 6) % 7) + 1;
   const dias = (sem.length - 1) * 7 + diasEsta;
-  const diario = dias > 0 ? unidades / dias : 0;
-  const prom = v => (Math.round(v * 10) / 10).toLocaleString('es-HN', { maximumFractionDigits:1 });
-
   return `
     <div class="graf">${barras}</div>
     <div class="gpie">${pies}</div>
-    <div class="promedios">
-      <div><small>Promedio diario</small><b>${prom(diario)}</b></div>
-      <div><small>Semanal</small><b>${prom(diario * 7)}</b></div>
-      <div><small>Mensual</small><b>${prom(diario * 30)}</b></div>
-    </div>
+    ${promediosHTML(unidades, dias)}
     <div class="graf-tot">
-      <span>Total de las 5 semanas · ${dias} días</span>
+      <span>Total de las ${sem.length} semanas · ${dias} días</span>
       <b>${cant(unidades)} ${escapar(S.prod.unidad)} · ${money(importe)}</b>
     </div>`;
+}
+
+function panelDias(){
+  const dd = S.dias || [];
+  if (!dd.length) return '<div class="vacio" style="padding:20px">Sin datos de ventas</div>';
+  const tope = Math.max(1, ...dd.map(d => Number(d.unidades) || 0));
+  const unidades = dd.reduce((a, d) => a + (Number(d.unidades) || 0), 0);
+  const importe  = dd.reduce((a, d) => a + (Number(d.importe)  || 0), 0);
+  const conVenta = dd.filter(d => Number(d.unidades) > 0).length;
+  const barras = dd.map((d, i) => {
+    const n = Number(d.unidades) || 0;
+    const alto = n === 0 ? 2 : Math.max(6, Math.round(n / tope * 100));
+    return `<div class="dcol ${n === 0 ? 'vacia' : ''} ${i === dd.length - 1 ? 'ahora' : ''}"
+       title="${semanaCorta(d.dia)}: ${cant(n)} ${escapar(S.prod.unidad)} · ${money(d.importe)}">
+      <span class="gbarra" style="height:${alto}%"></span></div>`;
+  }).join('');
+  // Las fechas cada 5 días para que se lean
+  // y el último dice «hoy», pegado a la derecha para que no se corte.
+  const pies = dd.map((d, i) => i === dd.length - 1 ? '<div class="fin">hoy</div>'
+    : `<div>${(dd.length - 1 - i) % 5 === 0 ? semanaCorta(d.dia) : ''}</div>`).join('');
+  return `
+    <div class="graf-d"><span class="dtope">${cant(tope)}</span>${barras}</div>
+    <div class="dpie">${pies}</div>
+    ${promediosHTML(unidades, dd.length)}
+    <div class="graf-tot">
+      <span>Total de ${dd.length} días · vendió ${conVenta} de ${dd.length}</span>
+      <b>${cant(unidades)} ${escapar(S.prod.unidad)} · ${money(importe)}</b>
+    </div>`;
+}
+
+function pintarGrafica(){
+  const v = leerVistaVentas();
+  return `
+    <div class="ventas-enc">
+      <div class="titulin">${v === 'dias' ? 'Ventas de los últimos 30 días' : 'Ventas de las últimas 5 semanas'}</div>
+      <div class="vtabs" role="tablist">
+        <button role="tab" data-vv="semanas" aria-selected="${v === 'semanas'}" class="${v === 'semanas' ? 'si' : ''}">Semanas</button>
+        <button role="tab" data-vv="dias" aria-selected="${v === 'dias'}" class="${v === 'dias' ? 'si' : ''}">Días</button>
+      </div>
+    </div>
+    <div class="vventana" id="vventana">
+      <div class="vcarril ${v === 'dias' ? 'en-dias' : ''}" id="vcarril">
+        <div class="vpanel" data-panel="semanas">${panelSemanas()}</div>
+        <div class="vpanel" data-panel="dias">${panelDias()}</div>
+      </div>
+    </div>
+    <div class="vpuntos"><i class="${v === 'semanas' ? 'si' : ''}"></i><i class="${v === 'dias' ? 'si' : ''}"></i></div>`;
+}
+
+function cambiarVentas(v){
+  try { localStorage.setItem('consultar-ventas', v); } catch(e){}
+  const f = $('#ventas-ficha'); if (!f) return;
+  f.querySelector('#vcarril').classList.toggle('en-dias', v === 'dias');
+  f.querySelectorAll('[data-vv]').forEach(b => { b.classList.toggle('si', b.dataset.vv === v); b.setAttribute('aria-selected', String(b.dataset.vv === v)); });
+  f.querySelectorAll('.vpuntos i').forEach((x, k) => x.classList.toggle('si', (k === 1) === (v === 'dias')));
+  f.querySelector('.titulin').textContent = v === 'dias' ? 'Ventas de los últimos 30 días' : 'Ventas de las últimas 5 semanas';
+}
+
+function conectarVentas(){
+  const f = $('#ventas-ficha'); if (!f) return;
+  f.querySelectorAll('[data-vv]').forEach(b => b.addEventListener('click', () => cambiarVentas(b.dataset.vv)));
+  // Deslizar: a la izquierda va a días, a la derecha vuelve a semanas
+  const vent = f.querySelector('#vventana');
+  let x0 = null, y0 = null;
+  vent.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive:true });
+  vent.addEventListener('touchend', e => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+    x0 = null;
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+    cambiarVentas(dx < 0 ? 'dias' : 'semanas');
+  });
 }
 
 /* 2026-10-05 -> "5 oct". La semana se identifica por el lunes con que arranca. */
@@ -1400,6 +1491,8 @@ function hojaEditar(loteElegido){
     <p class="sub">${escapar(p.sku)}${(p.codigos || []).length ? ' · ' + escapar(p.codigos[0]) : ''}${
       p.categoria ? ' · ' + escapar(p.categoria) : ''} · se cuenta en
       <b>${escapar(p.unidad)}</b></p>
+    ${S.avisoBodega || ''}
+    ${S.notaLugar || ''}
     ${selLote}
     <div class="campo-g" style="margin-top:12px">
       <label for="ed-cant">Contado en el piso de ventas</label>

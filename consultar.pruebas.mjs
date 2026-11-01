@@ -350,8 +350,7 @@ console.log('\n=== LA FICHA ===');
   chk('cada cifra lleva el nombre de su lugar',
       [...d.querySelectorAll('.tile:not(.fuerte) small')].map(e => e.textContent).join(',')
         === 'Piso de ventas,Refrigerador,Bodega');
-  chk('dice dónde cae lo no asignado',
-      /Piso de ventas/.test(d.querySelector('.lugar-pie').textContent));
+  chk('la nota de dónde cae lo no asignado ya no va en la tarjeta', !d.querySelector('#cuerpo .lugar-pie'));
   chk('avisa lo apartado para pedidos', /Apartado/.test(t));
   chk('muestra la otra sucursal', /El Carmen/.test(t));
 }
@@ -739,8 +738,7 @@ console.log('\n=== LA TARJETA DE INVENTARIO ===');
   chk('piso y bodega llenan la barra en partes iguales', Math.abs(wPdv - 50) < 0.1 && Math.abs(wBod - 50) < 0.1);
   chk('la raya del mínimo en su lugar (10 de 60)', Math.abs(parseFloat(d.querySelector('.inv-min').style.left) - 16.67) < 0.1);
   chk('y lo apartado', /Apartado/.test(d.querySelector('.tile-pie').textContent));
-  chk('el gerente ve el costo ahí mismo',
-      /Costo/.test(d.querySelector('.tile-pie').textContent));
+  chk('el costo ya no va en la tarjeta de inventario', !/Costo/.test(d.querySelector('.tile-pie').textContent));
 }
 {
   const estado = base('auxiliar', 1);
@@ -787,11 +785,12 @@ console.log('\n=== CONTEO DE PISO (EDITAR) ===');
       e.llamadas.some(l => l.fn === 'fn_estado_bodega'));
   await p.abrir('p1');
   await esperar(140);
-  chk('con la bodega al día lo dice en la tarjeta',
-      d.querySelector('.bodega-av.ok') !== null);
+  chk('el aviso de la bodega ya no va en la tarjeta', !d.querySelector('#cuerpo .bodega-av'));
 
   d.querySelector('#btn-editar').click();
   await esperar();
+  chk('con la bodega al día lo dice en Editar inventario', d.querySelector('#hoja .bodega-av.ok') !== null);
+  chk('y explica dónde cae lo no asignado', /Piso de ventas/.test(d.querySelector('#hoja .lugar-pie')?.textContent || ''));
   chk('abre con el nombre del producto en el título',
       d.querySelector('#hoja h2').textContent.trim() === 'Leche entera 1 L');
   chk('y los datos generales debajo',
@@ -874,11 +873,7 @@ console.log('\n=== LA PUERTA DE LAS 24 HORAS ===');
   const { d, p, estado:e } = await montar(estado);
   await p.abrir('p1');
   await esperar(140);
-  chk('la tarjeta avisa que falta auditar', !!d.querySelector('.bodega-av.no'));
-  chk('y nombra cuáles bodegas',
-      /Bodega, Bodega de arriba/.test(d.querySelector('.bodega-av').textContent));
-  chk('con un camino directo a auditar',
-      d.querySelector('.bodega-av a[href="auditoria.html"]') !== null);
+  chk('la tarjeta ya no lleva el aviso', !d.querySelector('#cuerpo .bodega-av'));
 
   d.querySelector('#btn-editar').click();
   await esperar();
@@ -1368,6 +1363,32 @@ console.log('\n=== BAJO EL MÍNIMO, PROMEDIOS Y ETIQUETA DE BODEGA ===');
   d.querySelector('#eb-cant').value = '12';
   d.querySelector('#eb-cant').dispatchEvent(new w.Event('input'));
   chk('la cantidad de la caja se ve en la vista', /<b>12<\/b>/.test(v()));
+}
+
+console.log('\n=== VENTAS: SEMANAS O DÍAS ===');
+{
+  const estado = base();
+  estado.rpc.fn_ventas_producto_dias = { data:Array.from({ length:30 }, (_, i) => ({ dia:'2026-10-' + String(i + 2).padStart(2, '0'), unidades: i % 3 === 0 ? 2 : 0, importe: i % 3 === 0 ? 56 : 0 })), error:null };
+  try { localStorage.removeItem('consultar-ventas'); } catch(e){}
+  const { d, w, p } = await montar(estado);
+  try { w.localStorage.removeItem('consultar-ventas'); } catch(e){}
+  await p.abrir('p1'); await esperar(120);
+  chk('pide las ventas por día', estado.llamadas.some(l => l.fn === 'fn_ventas_producto_dias' && l.args.p_dias === 30));
+  chk('arranca en semanas', /5 semanas/.test(d.querySelector('#ventas-ficha .titulin').textContent) && !d.querySelector('#vcarril').classList.contains('en-dias'));
+  chk('treinta barras en el panel de días', d.querySelectorAll('[data-panel="dias"] .dcol').length === 30);
+  d.querySelector('[data-vv="dias"]').click();
+  chk('la pestaña Días cambia el panel y el título', d.querySelector('#vcarril').classList.contains('en-dias') && /30 días/.test(d.querySelector('#ventas-ficha .titulin').textContent));
+  const dpro = d.querySelectorAll('[data-panel="dias"] .promedios b');
+  chk('el promedio diario de los días sale de los 30 (20 ÷ 30 = 0.7)', dpro[0].textContent === '0.7');
+  chk('cuenta los días con venta', /vendió 10 de 30/.test(d.querySelector('[data-panel="dias"] .graf-tot').textContent));
+  const v = d.querySelector('#vventana');
+  const toque = (tipo, x) => { const ev = new w.Event(tipo, { bubbles:true }); ev[tipo === 'touchstart' ? 'touches' : 'changedTouches'] = [{ clientX:x, clientY:100 }]; v.dispatchEvent(ev); };
+  toque('touchstart', 100); toque('touchend', 260);
+  chk('deslizar a la derecha vuelve a semanas', !d.querySelector('#vcarril').classList.contains('en-dias'));
+  toque('touchstart', 260); toque('touchend', 100);
+  chk('y a la izquierda va a días', d.querySelector('#vcarril').classList.contains('en-dias'));
+  toque('touchstart', 100); toque('touchend', 120);
+  chk('un toque corto no cambia nada', d.querySelector('#vcarril').classList.contains('en-dias'));
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);

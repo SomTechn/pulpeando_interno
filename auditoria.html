@@ -8,7 +8,7 @@
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" href="icono-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icono-192.png">
-<title>Auditoría · Pulpeando</title>
+<title>Bodega · Pulpeando</title>
 <script src="config.js"></script>
 <script src="tema.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -49,6 +49,21 @@
 .ubi-sem{flex:0 0 auto;width:10px;height:10px;border-radius:50%;background:var(--linea)}
 .ubi-sem.ok{background:var(--verde)}
 .ubi-sem.viejo{background:var(--ambar)}
+.titulin-fila{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:18px 0 8px}
+.titulin-fila .titulin{margin:0}
+.btn-mini{border:1px solid var(--marca);background:var(--marca-suave,#EEF2FF);color:var(--marca);
+  font:inherit;font-size:13px;font-weight:700;padding:7px 12px;border-radius:999px;cursor:pointer}
+.ubi-ir{flex:0 0 auto;color:var(--tenue)}
+.bod-cab{display:flex;align-items:center;gap:13px;background:var(--papel,#fff);border:1px solid var(--linea);
+  border-radius:var(--r,14px);padding:13px 15px;margin-bottom:12px}
+.bod-est{font-weight:700}
+.bod-est.ok{color:var(--verde)} .bod-est.viejo{color:var(--ambar)} .bod-est.abierta{color:#B7791F}
+.bod-prod{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid var(--linea)}
+.bod-cant{flex:0 0 auto;font-size:17px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
+.bod-cant small{display:block;font-size:11px;font-weight:600;color:var(--tenue)}
+.venc{display:inline-block;margin-left:4px;padding:1px 7px;border-radius:999px;background:var(--linea);
+  font-size:11px;font-weight:700;color:var(--texto,#334)}
+.venc.ojo{background:#FDF0D5;color:#92600A} .venc.malo{background:#FDE2E1;color:#B42318}
 .ubi.abierta{background:#FFF9EC;border-color:#F3E2BC}
 
 /* reponer el piso de ventas */
@@ -95,6 +110,7 @@
   padding:12px 16px calc(12px + env(safe-area-inset-bottom));
   background:var(--panel);border-top:1px solid var(--linea)}
 .pie .btn{flex:1}
+.pie .btn.principal-b{flex:1.7;white-space:nowrap}
 .principal{position:relative}
 
 /* la hoja de cantidad */
@@ -176,7 +192,7 @@
 
 <div class="oscura oculto" id="p-sesion">
   <div class="tarjeta-oscura">
-    <div class="marca"><span>◧</span> Auditoría</div>
+    <div class="marca"><span>◧</span> Bodega</div>
     <div class="titulo-o">Iniciar sesión</div>
     <p class="sub-o">Use el correo con el que su gerente lo dio de alta</p>
     <input class="campo-o" id="s-email" type="email" placeholder="correo@negocio.hn" autocomplete="username">
@@ -188,7 +204,7 @@
 
 <div class="oscura oculto" id="p-bloqueado">
   <div class="tarjeta-oscura">
-    <div class="marca"><span>◧</span> Auditoría</div>
+    <div class="marca"><span>◧</span> Bodega</div>
     <div class="titulo-o" id="bl-titulo">Sin permiso</div>
     <p class="sub-o" id="bl-texto"></p>
     <a class="btn-o" href="caja/" style="display:block;line-height:52px">Ir a la caja</a>
@@ -206,7 +222,7 @@
              stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
       <div class="barra-titulo">
-        <b id="h-titulo">Auditoría</b>
+        <b id="h-titulo">Bodega</b>
         <small id="h-sucursal">—</small>
       </div>
       <div class="barra-fin">
@@ -244,7 +260,8 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 const S = {
   ctx:null, sucursal:null, moneda:'L', menu:null, nivel:0, camara:false,
-  vista:'lugares',          // lugares · auditando · etiquetas
+  vista:'lugares',          // lugares · bodega · auditando · etiquetas · reponer
+  bodega:null,
   lugares:[], auditoria:null, resumen:null, lineas:[], cargando:false
 };
 
@@ -263,6 +280,8 @@ function cuando(v){
   if (dias < 8) return 'hace ' + dias + ' días';
   return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`;
 }
+const fecha = v => { const d = new Date(String(v).slice(0,10) + 'T00:00:00');
+  return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`; };
 const alDia = v => v && (Date.now() - new Date(v).getTime()) < 24*3600000;
 
 function limpiarError(e){
@@ -359,6 +378,7 @@ async function cargarLugares(){
 
 /* ================= auditar ================= */
 async function abrirAuditoria(ubicacionId){
+  S.ubiAuditando = ubicacionId;
   S.cargando = true; S.vista = 'auditando'; pintar();
   const { data, error } = await sb.rpc('fn_abrir_auditoria', { p_ubicacion_id:ubicacionId });
   if (error){
@@ -398,7 +418,12 @@ async function escanearUbicacion(){
       'su cantidad es el resto. Audite las bodegas y cuente el piso desde Consultar.');
     return;
   }
-  abrirAuditoria(data.ubicacion_id);
+  if (data.tipo && data.tipo !== 'bodega'){
+    aviso('Ese QR es del piso de ventas',
+      `${data.nombre} se cuenta desde Consultar. Aquí solo se auditan las bodegas.`);
+    return;
+  }
+  abrirBodega(data.ubicacion_id);
 }
 
 /* Escanear un producto. Cada escaneo SUMA a lo que ya se llevaba. */
@@ -631,7 +656,7 @@ function hojaCompletar(){
         se escaneó más de lo que hay en toda la sucursal. Eso no es de este lugar,
         es un faltante en otra parte.</div>` : ''}
       <button class="btn principal-b" style="width:100%" id="cp-ok">Entendido</button>`;
-    $('#cp-ok').onclick = () => { cerrarHoja(); cargarLugares(); };
+    $('#cp-ok').onclick = () => { cerrarHoja(); volverABodega(); };
   };
 }
 
@@ -661,8 +686,14 @@ function hojaCancelar(){
       { p_auditoria_id:S.auditoria, p_motivo:motivo });
     if (error){ err.textContent = limpiarError(error); err.classList.remove('oculto'); return; }
     cerrarHoja();
-    cargarLugares();
+    volverABodega();
   };
+}
+
+/* Al salir de una auditoría se vuelve a la bodega, ya actualizada. */
+function volverABodega(){
+  if (S.ubiAuditando) abrirBodega(S.ubiAuditando);
+  else cargarLugares();
 }
 
 /* ================= pintar ================= */
@@ -677,11 +708,12 @@ function pintar(){
   if (S.vista === 'etiquetas') return pintarEtiquetas();
   if (S.vista === 'reponer') return pintarReponer();
   if (S.vista === 'auditando') return pintarAuditando();
+  if (S.vista === 'bodega') return pintarBodega();
   return pintarLugares();
 }
 
 function pintarLugares(){
-  $('#h-titulo').textContent = 'Auditoría';
+  $('#h-titulo').textContent = 'Bodega';
   $('#pie').innerHTML = '';
   $('#cuerpo').className = 'cuerpo';
 
@@ -691,11 +723,10 @@ function pintarLugares(){
               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
            <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/>
            <rect x="7" y="7" width="4" height="4"/><rect x="13" y="13" width="4" height="4"/></svg>
-         Escanear la ubicación
+         Escanear el QR de la bodega
        </button>` : '';
 
   const bodegas = S.lugares.filter(u => u.tipo === 'bodega');
-  const pisos   = S.lugares.filter(u => u.tipo === 'piso');
 
   const fila = u => {
     const sem = u.abierta ? '' : (alDia(u.auditada_en) ? 'ok' : (u.auditada_en ? 'viejo' : ''));
@@ -705,17 +736,16 @@ function pintarLugares(){
         <b>${escapar(u.nombre)}</b>
         <small>${u.abierta
           ? 'Auditoría abierta · ' + escapar(u.abierta.numero)
-          : (u.es_predeterminada
-             ? 'No se audita: es el resto'
-             : `${u.productos} ${u.productos === 1 ? 'producto' : 'productos'} · auditada ${cuando(u.auditada_en)}`)}</small>
+          : `${u.productos} ${u.productos === 1 ? 'producto' : 'productos'} · auditada ${cuando(u.auditada_en)}`}</small>
       </div>
       <span class="ubi-sem ${sem}"></span>
+      <svg class="ubi-ir" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
     </button>`;
   };
 
-  const sinDia = bodegas.filter(u => !alDia(u.auditada_en));
-
   const nRep = S.reponer ? S.reponer.filas.filter(f => Number(f.sugerido) > 0).length : null;
+  const puedeCrear = S.nivel >= 2;
   $('#cuerpo').innerHTML = `
     <button class="reponer-btn ${nRep ? 'destacada' : ''}" id="btn-reponer">
       <span><b>Reponer piso de ventas</b>
@@ -723,31 +753,122 @@ function pintarLugares(){
           : nRep ? `${nRep} ${nRep === 1 ? 'producto' : 'productos'} para bajar de la bodega` : 'Los estantes están llenos'}</small></span>
       ${nRep ? `<span class="cuantos">${nRep}</span>` : ''}
     </button>
-    ${bodegas.length ? (sinDia.length
-      ? `<div class="aviso ojo">Para poder contar el piso de ventas, la bodega
-           tiene que estar auditada hace menos de 24 horas.
-           ${sinDia.length === bodegas.length ? 'Falta auditar toda la bodega.'
-             : 'Falta: ' + escapar(sinDia.map(u => u.nombre).join(', ')) + '.'}</div>`
-      : '<div class="aviso bien">La bodega está al día. Ya se puede contar el piso de ventas desde Consultar.</div>')
-     : ''}
 
-    <div class="titulin">Bodega</div>
+    <div class="titulin-fila">
+      <div class="titulin">Bodegas${bodegas.length ? ` · ${bodegas.length}` : ''}</div>
+      ${puedeCrear ? '<button class="btn-mini" id="btn-nueva">+ Nueva bodega</button>' : ''}
+    </div>
     ${bodegas.length ? bodegas.map(fila).join('')
-      : `<div class="vacio"><b>No hay ubicaciones de bodega</b>
-           <p>Un supervisor puede crearlas en Catálogos y marcarlas como bodega.</p></div>`}
+      : `<div class="vacio"><b>Todavía no hay bodegas</b>
+           <p>${puedeCrear ? 'Cree la primera con «+ Nueva bodega».'
+             : 'Pídale a un supervisor que cree la bodega.'}</p></div>`}
 
-    <div class="titulin" style="margin-top:18px">Piso de ventas</div>
-    ${pisos.map(fila).join('')}
-
-    <button class="btn secundario no-imprimir" id="btn-etq"
-            style="width:100%;margin-top:16px">Etiquetas QR para pegar</button>`;
+    ${bodegas.length ? `<button class="btn secundario no-imprimir" id="btn-etq"
+            style="width:100%;margin-top:16px">Etiquetas QR para pegar</button>` : ''}`;
 
   $('#btn-qr')?.addEventListener('click', escanearUbicacion);
-  $('#btn-etq').addEventListener('click', () => { S.vista = 'etiquetas'; pintar(); });
+  $('#btn-etq')?.addEventListener('click', () => { S.vista = 'etiquetas'; pintar(); });
+  $('#btn-nueva')?.addEventListener('click', hojaNuevaBodega);
   $('#btn-reponer').addEventListener('click', abrirReponer);
   $('#cuerpo').querySelectorAll('[data-ubi]').forEach(b => {
-    b.onclick = () => abrirAuditoria(b.dataset.ubi);
+    b.onclick = () => abrirBodega(b.dataset.ubi);
   });
+}
+
+/* ================= nueva bodega ================= */
+function hojaNuevaBodega(){
+  $('#hoja').innerHTML = `
+    <h2>Nueva bodega</h2>
+    <p class="sub">Póngale el nombre con que el equipo la conoce. El código del QR se arma solo.</p>
+    <div class="campo-g">
+      <label for="nb-nombre">Nombre</label>
+      <input class="entrada" id="nb-nombre" maxlength="60" placeholder="Bodega de atrás, Cuarto frío…">
+    </div>
+    <div class="aviso malo oculto" id="nb-error"></div>
+    <div class="acciones">
+      <button class="btn secundario" id="nb-no">Mejor no</button>
+      <button class="btn principal-b" id="nb-si">Crear bodega</button>
+    </div>`;
+  ver('#velo');
+  $('#nb-nombre').focus();
+  $('#nb-no').onclick = cerrarHoja;
+  $('#nb-nombre').addEventListener('keydown', e => { if (e.key === 'Enter') $('#nb-si').click(); });
+  $('#nb-si').onclick = async () => {
+    const nombre = $('#nb-nombre').value.trim();
+    const err = $('#nb-error');
+    if (!nombre){ err.textContent = 'Escriba el nombre de la bodega.'; err.classList.remove('oculto'); return; }
+    $('#nb-si').disabled = true;
+    const { data, error } = await sb.rpc('fn_crear_bodega',
+      { p_nombre:nombre, p_sucursal_id:S.sucursal });
+    $('#nb-si').disabled = false;
+    if (error){ err.textContent = limpiarError(error); err.classList.remove('oculto'); return; }
+    cerrarHoja();
+    abrirBodega(data.ubicacion_id);
+  };
+}
+
+/* ================= una bodega por dentro ================= */
+async function abrirBodega(ubicacionId){
+  S.vista = 'bodega'; S.cargando = true; pintar();
+  const { data, error } = await sb.rpc('fn_bodega_productos', { p_ubicacion_id:ubicacionId });
+  S.cargando = false;
+  if (error){ S.vista = 'lugares'; pintar(); aviso('No se pudo abrir la bodega', limpiarError(error)); return; }
+  S.bodega = data;
+  pintar();
+}
+
+function pintarBodega(){
+  const b = S.bodega;
+  if (!b) return;
+  $('#h-titulo').textContent = b.nombre;
+  $('#arriba').innerHTML = '';
+  const prods = b.productos || [];
+  const total = prods.reduce((t, p) => t + (Number(p.cantidad) || 0), 0);
+  const sem = b.abierta ? 'abierta' : (alDia(b.auditada_en) ? 'ok' : 'viejo');
+  const estado = b.abierta
+    ? `Auditoría abierta · ${escapar(b.abierta.numero)}`
+    : (b.auditada_en ? `Auditada ${cuando(b.auditada_en)}` : 'Nunca se ha auditado');
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const venc = v => {
+    if (!v) return '';
+    const d = new Date(v + 'T00:00:00');
+    const dias = Math.round((d - hoy) / 864e5);
+    const cls = dias < 0 ? 'malo' : dias <= 30 ? 'ojo' : '';
+    return `<span class="venc ${cls}">Vence ${fecha(v)}</span>`;
+  };
+
+  $('#cuerpo').className = 'cuerpo con-pie';
+  $('#cuerpo').innerHTML = `
+    <div class="bod-cab">
+      <span class="ubi-cod">${escapar(b.codigo || '—')}</span>
+      <div class="ubi-txt">
+        <b>${prods.length} ${prods.length === 1 ? 'producto' : 'productos'} · ${cant(total)} unidades</b>
+        <small class="bod-est ${sem}">${estado}</small>
+      </div>
+    </div>
+    ${b.abierta ? '' : (alDia(b.auditada_en) ? ''
+      : `<div class="aviso ojo">Esta bodega no está al día. Mientras no se audite,
+           no se puede contar el piso de ventas.</div>`)}
+    <div class="titulin">Lo que hay</div>
+    ${prods.length ? prods.map(p => `
+      <div class="bod-prod">
+        <div class="ubi-txt">
+          <b>${escapar(p.nombre)}</b>
+          <small>${escapar(p.sku || '')}${p.empaque ? ` · empaque de ${cant(p.empaque)}` : ''} ${venc(p.vence)}</small>
+        </div>
+        <span class="bod-cant">${cant(p.cantidad)}<small>${escapar(p.unidad || '')}</small></span>
+      </div>`).join('')
+      : `<div class="vacio"><b>Está vacía</b>
+           <p>Audítela para registrar lo que tiene, o mueva producto aquí desde Consultar.</p></div>`}`;
+
+  $('#pie').innerHTML = `
+    <div class="pie">
+      <button class="btn secundario" id="bd-volver">Volver</button>
+      <button class="btn principal-b" id="bd-auditar">${b.abierta
+        ? 'Continuar auditoría' : 'Auditar (actualizar)'}</button>
+    </div>`;
+  $('#bd-volver').onclick = cargarLugares;
+  $('#bd-auditar').onclick = () => abrirAuditoria(b.ubicacion_id);
 }
 
 /* ================= reponer el piso =================
@@ -872,7 +993,7 @@ function pintarAuditando(){
     </div>`;
 
   $('#btn-prod').addEventListener('click', escanearProducto);
-  $('#btn-volver').addEventListener('click', cargarLugares);
+  $('#btn-volver').addEventListener('click', volverABodega);
   $('#btn-completar')?.addEventListener('click', hojaCompletar);
   $('#cuerpo').querySelectorAll('[data-corregir]').forEach(d => {
     d.onclick = () => {
@@ -891,10 +1012,10 @@ async function pintarEtiquetas(){
   $('#cuerpo').className = 'cuerpo';
   $('#cuerpo').innerHTML = `
     <div class="aviso ojo no-imprimir">Imprima esta hoja y pegue cada etiqueta en
-      su estante. Al escanear el QR, el equipo abre la auditoría de ese lugar.
+      su bodega. Al escanear el QR, el equipo abre esa bodega para auditarla.
       Si la cámara falla, el código también se puede digitar.</div>
     <div class="etiquetas">
-      ${S.lugares.filter(u => !u.es_predeterminada).map(u => `
+      ${S.lugares.filter(u => u.tipo === 'bodega').map(u => `
         <div class="etq">
           <canvas data-qr="${escapar(u.codigo || '')}"></canvas>
           <b>${escapar(u.codigo || '')}</b>

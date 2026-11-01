@@ -56,6 +56,23 @@ const LINEAS = [
     contado:null, sistema:6, escaneos:0, quien:null, actualizado:null }
 ];
 
+const hoyMas = d => { const x = new Date(); x.setDate(x.getDate() + d);
+  return x.toISOString().slice(0,10); };
+const BODEGA = (id = 'u3', extra = {}) => {
+  const u = UBIS.find(x => x.ubicacion_id === id) || { ubicacion_id:id, nombre:'Cuarto frío',
+    codigo:'S01-B03', tipo:'bodega', auditada_en:null };
+  return { ubicacion_id:u.ubicacion_id, nombre:u.nombre, codigo:u.codigo, tipo:u.tipo,
+    activa:true, auditada_en:u.auditada_en, abierta:null,
+    productos: id === 'u9' ? [] : [
+      { producto_id:'p1', nombre:'Arroz de primera 5 lb', sku:'ARR5LB', unidad:'UND',
+        cantidad:24, empaque:12, vence:null },
+      { producto_id:'p3', nombre:'Leche entera 1 L', sku:'LEC1L', unidad:'UND',
+        cantidad:6, empaque:null, vence:hoyMas(10) },
+      { producto_id:'p4', nombre:'Yogur fresa', sku:'YOG', unidad:'UND',
+        cantidad:4, empaque:null, vence:hoyMas(-2) }
+    ], ...extra };
+};
+
 async function montar(estado){
   const html = fs.readFileSync(BASE + 'auditoria.html', 'utf8');
   const cuerpo = html.match(/<script type="module">([\s\S]*?)<\/script>/)[1];
@@ -107,6 +124,7 @@ async function montar(estado){
     ; window.__a.escanearProducto = escanearProducto;
     ; window.__a.abrirAuditoria = abrirAuditoria;
     ; window.__a.cargarLugares = cargarLugares;
+    ; window.__a.abrirBodega = abrirBodega;
   })()`);
   await new Promise(r => setTimeout(r, 200));
   return { w, d:w.document, a:w.__a, estado };
@@ -139,20 +157,24 @@ const base = (rol = 'supervisor', nivel = 2, extra = {}) => ({
       ubicacion:'Bodega', codigo:'S01-B01', actualizados:1,
       vaciados:a.p_vaciar_no_escaneados ? 2 : 0, recortados:0, unidades:24 },
       error:null }),
-    fn_cancelar_auditoria:{ data:{ numero:'AU-S01-000007', estado:'cancelada' }, error:null }
+    fn_cancelar_auditoria:{ data:{ numero:'AU-S01-000007', estado:'cancelada' }, error:null },
+    fn_bodega_productos: a => ({ data:BODEGA(a.p_ubicacion_id), error:null }),
+    fn_crear_bodega: a => ({ data:{ ubicacion_id:'u9', nombre:a.p_nombre, codigo:'S01-B03' }, error:null })
   }, ...extra });
 
 /* ===================================================================== */
-console.log('\n=== LAS UBICACIONES ===');
+console.log('\n=== LAS BODEGAS ===');
 {
   const estado = base();
   const { d, estado:e } = await montar(estado);
   chk('entra', !d.querySelector('#app').classList.contains('oculto'));
+  chk('el módulo se llama Bodega', d.querySelector('#h-titulo').textContent === 'Bodega');
   chk('pide las ubicaciones con su estado',
       e.llamadas.some(l => l.fn === 'fn_ubicaciones_detalle'));
-  chk('separa bodega de piso',
-      /BODEGA[\s\S]*PISO DE VENTAS/.test(d.querySelector('#cuerpo').textContent.toUpperCase()));
-  chk('cuatro ubicaciones', d.querySelectorAll('.ubi').length === 4);
+  chk('solo muestra las bodegas', d.querySelectorAll('.ubi').length === 2);
+  chk('ya no lista el piso de ventas',
+      !/S01-P0/.test(d.querySelector('#cuerpo').textContent));
+  chk('dice cuántas hay', /BODEGAS · 2/.test(d.querySelector('#cuerpo').textContent.toUpperCase()));
   chk('cada una con su código', /S01-B01/.test(d.querySelector('#cuerpo').textContent));
   chk('la auditada hace 2 h en verde',
       [...d.querySelectorAll('.ubi')].find(x => /S01-B01/.test(x.textContent))
@@ -160,31 +182,118 @@ console.log('\n=== LAS UBICACIONES ===');
   chk('la de hace 50 h en ámbar',
       [...d.querySelectorAll('.ubi')].find(x => /S01-B02/.test(x.textContent))
         .querySelector('.ubi-sem').classList.contains('viejo'));
-  chk('la predeterminada dice que no se audita',
-      /No se audita: es el resto/.test(
-        [...d.querySelectorAll('.ubi')].find(x => /S01-P01/.test(x.textContent)).textContent));
-  chk('avisa que falta auditar para poder contar el piso',
-      /Falta: Bodega de arriba/.test(d.querySelector('.aviso.ojo').textContent));
+  chk('el supervisor puede crear bodegas', !!d.querySelector('#btn-nueva'));
   chk('y ofrece escanear el QR', !!d.querySelector('#btn-qr'));
   chk('y las etiquetas', !!d.querySelector('#btn-etq'));
+  chk('sigue el botón de reponer piso', !!d.querySelector('#btn-reponer'));
+}
+{
+  const estado = base('auxiliar', 1);
+  const { d } = await montar(estado);
+  chk('la auxiliar no crea bodegas', !d.querySelector('#btn-nueva'));
+  chk('pero sí las ve', d.querySelectorAll('.ubi').length === 2);
 }
 {
   const estado = base();
-  estado.rpc.fn_ubicaciones_detalle = { data:UBIS.map(u =>
-    u.tipo === 'bodega' ? { ...u, auditada_en:hace(1) } : u), error:null };
+  estado.rpc.fn_ubicaciones_detalle = { data:UBIS.filter(u => u.tipo !== 'bodega'), error:null };
   const { d } = await montar(estado);
-  chk('con todo al día lo dice y manda a contar',
-      /La bodega está al día/.test(d.querySelector('.aviso.bien').textContent));
+  chk('sin bodegas lo dice e invita a crear',
+      /Todavía no hay bodegas[\s\S]*Nueva bodega/.test(d.querySelector('#cuerpo').textContent));
+  chk('y no ofrece etiquetas vacías', !d.querySelector('#btn-etq'));
 }
 {
   const estado = base();
   estado.camara = false;
   const { d } = await montar(estado);
   chk('sin cámara no ofrece escanear pero sí la lista', !d.querySelector('#btn-qr'));
-  chk('y las ubicaciones se pueden tocar', d.querySelectorAll('.ubi').length === 4);
+  chk('y las bodegas se pueden tocar', d.querySelectorAll('.ubi').length === 2);
 }
 
-console.log('\n=== ESCANEAR LA UBICACIÓN ===');
+console.log('\n=== ENTRAR A UNA BODEGA ===');
+{
+  const estado = base();
+  const { d, estado:e } = await montar(estado);
+  [...d.querySelectorAll('.ubi')].find(x => /S01-B01/.test(x.textContent)).click();
+  await esperar(200);
+  chk('pide lo que tiene esa bodega',
+      e.llamadas.find(l => l.fn === 'fn_bodega_productos').args.p_ubicacion_id === 'u3');
+  chk('no abre la auditoría solo por entrar',
+      !e.llamadas.some(l => l.fn === 'fn_abrir_auditoria'));
+  chk('el título es la bodega', d.querySelector('#h-titulo').textContent === 'Bodega');
+  chk('lista sus productos', d.querySelectorAll('.bod-prod').length === 3);
+  chk('con cantidad', /24/.test(d.querySelector('.bod-prod .bod-cant').textContent));
+  chk('dice el total', /3 productos · 34 unidades/.test(d.querySelector('.bod-cab').textContent));
+  chk('el empaque', /empaque de 12/.test(d.querySelector('#cuerpo').textContent));
+  chk('lo que vence pronto en ámbar', !!d.querySelector('.venc.ojo'));
+  chk('lo vencido en rojo', !!d.querySelector('.venc.malo'));
+  chk('al día: no avisa', !d.querySelector('#cuerpo .aviso.ojo'));
+  const btn = d.querySelector('#bd-auditar');
+  chk('ofrece auditar (actualizar)', /Auditar \(actualizar\)/.test(btn.textContent));
+  btn.click();
+  await esperar(220);
+  chk('al tocar abre la auditoría de esa bodega',
+      e.llamadas.find(l => l.fn === 'fn_abrir_auditoria').args.p_ubicacion_id === 'u3');
+  chk('y pasa a escanear', !!d.querySelector('#btn-prod'));
+  d.querySelector('#btn-volver').click();
+  await esperar(220);
+  chk('al salir de la auditoría vuelve a la bodega', !!d.querySelector('#bd-auditar'));
+  d.querySelector('#bd-volver').click();
+  await esperar(220);
+  chk('y de ahí a la lista', d.querySelectorAll('.ubi').length === 2);
+}
+{
+  const estado = base();
+  const { d, a } = await montar(estado);
+  await a.abrirBodega('u4');
+  await esperar(150);
+  chk('la bodega vieja avisa que no está al día',
+      /no está al día/.test(d.querySelector('#cuerpo .aviso.ojo').textContent));
+}
+{
+  const estado = base();
+  estado.rpc.fn_bodega_productos = { data:BODEGA('u3', { abierta:{ auditoria_id:'a1',
+    numero:'AU-S01-000007' } }), error:null };
+  const { d } = await montar(estado);
+  [...d.querySelectorAll('.ubi')][0].click();
+  await esperar(200);
+  chk('con auditoría abierta lo dice', /AU-S01-000007/.test(d.querySelector('.bod-cab').textContent));
+  chk('y ofrece continuarla', /Continuar auditoría/.test(d.querySelector('#bd-auditar').textContent));
+}
+
+console.log('\n=== NUEVA BODEGA ===');
+{
+  const estado = base();
+  const { d, estado:e } = await montar(estado);
+  d.querySelector('#btn-nueva').click();
+  await esperar(40);
+  chk('abre la hoja', /Nueva bodega/.test(d.querySelector('#hoja').textContent));
+  d.querySelector('#nb-si').click();
+  await esperar(80);
+  chk('sin nombre no la crea', !e.llamadas.some(l => l.fn === 'fn_crear_bodega'));
+  chk('y lo pide', !d.querySelector('#nb-error').classList.contains('oculto'));
+  d.querySelector('#nb-nombre').value = '  Cuarto frío ';
+  d.querySelector('#nb-si').click();
+  await esperar(250);
+  const c = e.llamadas.find(l => l.fn === 'fn_crear_bodega');
+  chk('la crea con el nombre limpio', c && c.args.p_nombre === 'Cuarto frío');
+  chk('en la sucursal activa', c && c.args.p_sucursal_id === 's1');
+  chk('y entra a la bodega nueva', d.querySelector('#h-titulo').textContent === 'Cuarto frío');
+  chk('vacía, lo dice', /Está vacía/.test(d.querySelector('#cuerpo').textContent));
+}
+{
+  const estado = base();
+  estado.rpc.fn_crear_bodega = { data:null, error:{ message:'Ya hay una bodega con ese nombre' } };
+  const { d } = await montar(estado);
+  d.querySelector('#btn-nueva').click();
+  await esperar(40);
+  d.querySelector('#nb-nombre').value = 'Bodega';
+  d.querySelector('#nb-si').click();
+  await esperar(150);
+  chk('un nombre repetido se explica en la hoja',
+      /Ya hay una bodega/.test(d.querySelector('#nb-error').textContent));
+}
+
+console.log('\n=== ESCANEAR EL QR ===');
 {
   const estado = base();
   estado.codigo = 'S01-B01';
@@ -193,10 +302,8 @@ console.log('\n=== ESCANEAR LA UBICACIÓN ===');
   await esperar(200);
   chk('resuelve el código',
       e.llamadas.find(l => l.fn === 'fn_ubicacion_por_codigo').args.p_codigo === 'S01-B01');
-  chk('y abre la auditoría de ese lugar',
-      e.llamadas.some(l => l.fn === 'fn_abrir_auditoria'));
-  chk('el título pasa a ser la ubicación',
-      d.querySelector('#h-titulo').textContent === 'Bodega');
+  chk('y abre esa bodega', e.llamadas.some(l => l.fn === 'fn_bodega_productos'));
+  chk('lista para auditar', !!d.querySelector('#bd-auditar'));
 }
 {
   const estado = base();
@@ -208,9 +315,22 @@ console.log('\n=== ESCANEAR LA UBICACIÓN ===');
   await a.escanearUbicacion();
   await esperar(160);
   chk('el QR de la predeterminada no abre nada',
-      !e.llamadas.some(l => l.fn === 'fn_abrir_auditoria'));
+      !e.llamadas.some(l => l.fn === 'fn_abrir_auditoria' || l.fn === 'fn_bodega_productos'));
   chk('y explica por qué',
       /su cantidad es el resto/.test(d.querySelector('#hoja').textContent));
+}
+{
+  const estado = base();
+  estado.codigo = 'S01-P02';
+  estado.rpc.fn_ubicacion_por_codigo = { data:{ ubicacion_id:'u2',
+    nombre:'Exhibidor de la entrada', codigo:'S01-P02', tipo:'piso', predeterminada:false,
+    sucursal_id:'s1', sucursal:'Central' }, error:null };
+  const { d, a, estado:e } = await montar(estado);
+  await a.escanearUbicacion();
+  await esperar(160);
+  chk('un QR de piso no se audita aquí',
+      !e.llamadas.some(l => l.fn === 'fn_bodega_productos'));
+  chk('y manda a Consultar', /desde Consultar/.test(d.querySelector('#hoja').textContent));
 }
 {
   const estado = base();
@@ -444,8 +564,7 @@ console.log('\n=== ETIQUETAS QR ===');
   const { d } = await montar(estado);
   d.querySelector('#btn-etq').click();
   await esperar(250);
-  chk('una etiqueta por ubicación, menos la predeterminada',
-      d.querySelectorAll('.etq').length === 3);
+  chk('una etiqueta por bodega', d.querySelectorAll('.etq').length === 2);
   chk('cada una con su código', /S01-B01/.test(d.querySelector('.etiquetas').textContent));
   chk('y el nombre del lugar',
       /Bodega de arriba/.test(d.querySelector('.etiquetas').textContent));
@@ -456,7 +575,7 @@ console.log('\n=== ETIQUETAS QR ===');
   chk('hay botón de imprimir', !!d.querySelector('#et-imp'));
   d.querySelector('#et-volver').click();
   await esperar(150);
-  chk('y se puede volver', d.querySelectorAll('.ubi').length === 4);
+  chk('y se puede volver', d.querySelectorAll('.ubi').length === 2);
 }
 
 console.log('\n=== REPONER PISO ===');
