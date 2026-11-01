@@ -50,6 +50,28 @@
 .ubi-sem.ok{background:var(--verde)}
 .ubi-sem.viejo{background:var(--ambar)}
 .ubi.abierta{background:#FFF9EC;border-color:#F3E2BC}
+
+/* reponer el piso de ventas */
+.reponer-btn{display:flex;align-items:center;gap:13px;width:100%;text-align:left;border-radius:var(--r-md);
+  padding:15px 16px;margin-bottom:14px;border:1px solid var(--linea);background:var(--panel)}
+.reponer-btn b{display:block;font-size:15.5px}
+.reponer-btn small{display:block;font-size:12.5px;opacity:.85;margin-top:2px}
+.reponer-btn > span:first-child{flex:1;min-width:0}
+.reponer-btn .cuantos{font-family:var(--num);font-size:24px;font-weight:800}
+.rp{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);padding:13px 15px;margin-bottom:9px}
+.rp-cab{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.rp-cab b{font-size:14.5px;overflow-wrap:anywhere}
+.rp-cab small{display:block;font-size:12px;color:var(--tenue);margin-top:2px}
+.rp-barra{height:7px;border-radius:4px;background:var(--fondo);overflow:hidden;margin:10px 0 8px}
+.rp-barra i{display:block;height:100%;border-radius:4px;background:var(--marca)}
+.rp-barra i.bajo{background:var(--rojo)}
+.rp-barra i.medio{background:var(--ambar)}
+.rp-acc{display:flex;gap:8px;align-items:center}
+.rp-acc input{width:96px;min-width:0;height:44px;border:1.5px solid var(--linea);border-radius:var(--r-md);
+  padding:0 10px;font-family:var(--num);font-size:16px;text-align:right;background:var(--panel)}
+.rp-acc span{flex:1;font-size:12.5px;color:var(--tenue);min-width:0}
+.rp-acc .btn{height:44px;padding:0 16px}
+.rp.comprar{background:#FFF7F9;border-color:#F6CBD6}
 .ubi.abierta .ubi-cod{background:#F8EAC9}
 
 /* una linea de la auditoria */
@@ -320,10 +342,12 @@ async function arrancar(){
 /* ================= las ubicaciones ================= */
 async function cargarLugares(){
   S.vista = 'lugares'; S.auditoria = null; S.cargando = true; pintar();
-  const [ubis, auds] = await Promise.all([
+  const [ubis, auds, rep] = await Promise.all([
     sb.rpc('fn_ubicaciones_detalle', { p_sucursal_id:S.sucursal }),
-    sb.rpc('fn_auditorias', { p_sucursal_id:S.sucursal, p_limite:40 })
+    sb.rpc('fn_auditorias', { p_sucursal_id:S.sucursal, p_limite:40 }),
+    sb.rpc('fn_reponer_piso', { p_sucursal_id:S.sucursal })
   ]);
+  S.reponer = rep && !rep.error && rep.data ? rep.data : null;
   S.cargando = false;
   if (ubis.error){ aviso('No se pudieron leer las ubicaciones', limpiarError(ubis.error)); return; }
   const abiertas = (auds.error ? [] : (auds.data || []))
@@ -651,6 +675,7 @@ function pintar(){
     return;
   }
   if (S.vista === 'etiquetas') return pintarEtiquetas();
+  if (S.vista === 'reponer') return pintarReponer();
   if (S.vista === 'auditando') return pintarAuditando();
   return pintarLugares();
 }
@@ -690,7 +715,14 @@ function pintarLugares(){
 
   const sinDia = bodegas.filter(u => !alDia(u.auditada_en));
 
+  const nRep = S.reponer ? S.reponer.filas.filter(f => Number(f.sugerido) > 0).length : null;
   $('#cuerpo').innerHTML = `
+    <button class="reponer-btn ${nRep ? 'destacada' : ''}" id="btn-reponer">
+      <span><b>Reponer piso de ventas</b>
+        <small>${nRep === null ? 'Lo que hay que bajar de la bodega para llenar los estantes'
+          : nRep ? `${nRep} ${nRep === 1 ? 'producto' : 'productos'} para bajar de la bodega` : 'Los estantes están llenos'}</small></span>
+      ${nRep ? `<span class="cuantos">${nRep}</span>` : ''}
+    </button>
     ${bodegas.length ? (sinDia.length
       ? `<div class="aviso ojo">Para poder contar el piso de ventas, la bodega
            tiene que estar auditada hace menos de 24 horas.
@@ -712,8 +744,66 @@ function pintarLugares(){
 
   $('#btn-qr')?.addEventListener('click', escanearUbicacion);
   $('#btn-etq').addEventListener('click', () => { S.vista = 'etiquetas'; pintar(); });
+  $('#btn-reponer').addEventListener('click', abrirReponer);
   $('#cuerpo').querySelectorAll('[data-ubi]').forEach(b => {
     b.onclick = () => abrirAuditoria(b.dataset.ubi);
+  });
+}
+
+/* ================= reponer el piso =================
+   Lo que está por debajo de su capacidad de estante y tiene en bodega.
+   Pasarlo es mover entre ubicaciones (no cambia el total). */
+async function abrirReponer(){
+  S.vista = 'reponer'; S.cargando = true; pintar();
+  const { data, error } = await sb.rpc('fn_reponer_piso', { p_sucursal_id:S.sucursal });
+  S.cargando = false;
+  if (error){ S.vista = 'lugares'; pintar(); aviso('No se pudo armar la lista', limpiarError(error)); return; }
+  S.reponer = data;
+  pintar();
+}
+
+function pintarReponer(){
+  $('#h-titulo').textContent = 'Reponer piso';
+  $('#arriba').innerHTML = '';
+  $('#pie').innerHTML = '';
+  $('#cuerpo').className = 'cuerpo';
+  const r = S.reponer || { filas:[] };
+  const bajar = r.filas.filter(f => Number(f.sugerido) > 0);
+  const comprar = r.filas.filter(f => !(Number(f.sugerido) > 0));
+  const n = v => { const x = Number(v) || 0; return Number.isInteger(x) ? String(x) : String(Math.round(x * 1000) / 1000); };
+  const fila = f => {
+    const pct = Math.max(0, Math.min(100, Number(f.lleno) || 0));
+    return `<div class="rp ${Number(f.sugerido) > 0 ? '' : 'comprar'}" data-p="${escapar(f.producto_id)}">
+      <div class="rp-cab"><div><b>${escapar(f.nombre)}</b>
+        <small>${escapar(f.sku || '')} · en el piso ${n(Math.max(0, f.piso))} de ${n(f.capacidad)} ${escapar(f.unidad || '')}</small></div>
+        <small style="text-align:right">${Number(f.sugerido) > 0 ? 'en ' + escapar(f.desde) + ': ' + n(f.bodega) : 'No hay en bodega'}</small></div>
+      <div class="rp-barra"><i class="${pct <= 25 ? 'bajo' : pct <= 60 ? 'medio' : ''}" style="width:${pct}%"></i></div>
+      ${Number(f.sugerido) > 0 ? `<div class="rp-acc">
+        <input inputmode="decimal" value="${n(f.sugerido)}" aria-label="Cantidad a pasar de ${escapar(f.nombre)}">
+        <span>de ${escapar(f.desde)} al piso</span>
+        <button class="btn principal-b" data-pasar="${escapar(f.producto_id)}">Pasar</button></div>`
+        : '<small style="color:#9F1239;font-size:12.5px;font-weight:600">Hay que comprarlo</small>'}
+    </div>`;
+  };
+  $('#cuerpo').innerHTML = `
+    <button class="btn secundario" id="rp-volver" style="margin-bottom:12px">← Auditoría</button>
+    ${!r.filas.length ? `<div class="vacio"><b>Los estantes están llenos</b>
+        <p>${r.sin_capacidad ? `${r.sin_capacidad} productos no tienen capacidad de estante: póngasela en Catálogos para que salgan aquí.` : ''}</p></div>` : ''}
+    ${bajar.length ? `<div class="titulin">Bajar de la bodega · ${bajar.length}</div>${bajar.map(fila).join('')}` : ''}
+    ${comprar.length ? `<div class="titulin" style="margin-top:16px">Bajos y sin bodega · ${comprar.length}</div>${comprar.map(fila).join('')}` : ''}
+    ${r.filas.length && r.sin_capacidad ? `<p class="ayuda" style="font-size:12.5px;color:var(--tenue);margin-top:12px">${r.sin_capacidad} productos no tienen capacidad de estante y no salen en esta lista.</p>` : ''}`;
+  $('#rp-volver').onclick = () => cargarLugares();
+  $('#cuerpo').querySelectorAll('[data-pasar]').forEach(b => b.onclick = async () => {
+    const f = r.filas.find(x => x.producto_id === b.dataset.pasar);
+    const caja = b.closest('.rp').querySelector('input');
+    const cant = Number(String(caja.value).replace(',', '.'));
+    if (!(cant > 0)){ caja.focus(); return; }
+    if (cant > Number(f.bodega)){ aviso('No alcanza', `En ${f.desde} hay ${n(f.bodega)}.`); return; }
+    b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+    const { error } = await sb.rpc('fn_mover_entre_ubicaciones', {
+      p_producto_id:f.producto_id, p_hacia:r.piso_id, p_cantidad:cant, p_desde:f.desde_id });
+    if (error){ b.disabled = false; b.textContent = 'Pasar'; aviso('No se pudo pasar', limpiarError(error)); return; }
+    abrirReponer();
   });
 }
 

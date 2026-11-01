@@ -459,5 +459,39 @@ console.log('\n=== ETIQUETAS QR ===');
   chk('y se puede volver', d.querySelectorAll('.ubi').length === 4);
 }
 
+console.log('\n=== REPONER PISO ===');
+{
+  let filas = [
+    { producto_id:'p1', sku:'51089', nombre:'Arroz de primera 5 lb', unidad:'UND', capacidad:20, piso:4, bodega:40,
+      falta:16, lleno:20, desde_id:'u3', desde:'Bodega', sugerido:16 },
+    { producto_id:'p2', sku:'51090', nombre:'Aceite 750 ml', unidad:'UND', capacidad:12, piso:2, bodega:0,
+      falta:10, lleno:17, desde_id:null, desde:null, sugerido:0 }];
+  const e = base('auxiliar', 1);
+  e.rpc.fn_reponer_piso = () => ({ data:{ piso_id:'u1', piso:'Piso de ventas', sin_capacidad:3, filas }, error:null });
+  e.rpc.fn_mover_entre_ubicaciones = () => { filas = filas.slice(1); return { data:{ ok:true }, error:null }; };
+  const { d, w } = await montar(e);
+  await esperar();
+  const btn = d.querySelector('#btn-reponer');
+  chk('el botón dice cuántos hay que bajar y se destaca', /1 producto para bajar/.test(btn.textContent) && btn.classList.contains('destacada'));
+  btn.click(); await esperar(150);
+  const t = d.querySelector('#cuerpo').textContent.replace(/\s+/g, ' ');
+  chk('separa lo que se baja de lo que hay que comprar', /Bajar de la bodega · 1/.test(t) && /Bajos y sin bodega · 1/.test(t) && /Hay que comprarlo/.test(t));
+  chk('enseña piso y capacidad', /en el piso 4 de 20/.test(t));
+  chk('avisa los que no tienen capacidad', /3 productos no tienen capacidad/.test(t));
+  const inp = d.querySelector('.rp input');
+  chk('sugiere la cantidad', inp.value === '16');
+  inp.value = '50';
+  d.querySelector('[data-pasar="p1"]').click(); await esperar(80);
+  chk('no deja pasar más de lo que hay en bodega', !e.llamadas.some(l => l.fn === 'fn_mover_entre_ubicaciones') && /hay 40/.test(d.body.textContent));
+  d.querySelector('#hoja .btn, #hoja button')?.click(); await esperar(40);
+  d.querySelector('.rp input').value = '16';
+  d.querySelector('[data-pasar="p1"]').click(); await esperar(200);
+  const m = e.llamadas.find(l => l.fn === 'fn_mover_entre_ubicaciones');
+  chk('pasa de la bodega al piso', m && m.args.p_producto_id === 'p1' && m.args.p_hacia === 'u1' && m.args.p_desde === 'u3' && m.args.p_cantidad === 16);
+  chk('y vuelve a armar la lista', !d.querySelector('[data-pasar="p1"]'));
+  d.querySelector('#rp-volver').click(); await esperar(150);
+  chk('vuelve a las ubicaciones', !!d.querySelector('#btn-reponer'));
+}
+
 console.log(`\n${ok} bien · ${mal} mal`);
 process.exit(mal ? 1 : 0);

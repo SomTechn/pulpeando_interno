@@ -319,7 +319,7 @@ const ENTIDADES = {
   productos: {
     nombre:'Productos', singular:'Producto', icono:'inventario',
     tabla:'productos', nivel:3, orden:'nombre',
-    columnas:'id,sku,nombre,categoria_id,marca_id,proveedor_id,impuesto_id,tipo,unidad_base,controla_lote,controla_vencimiento,stock_minimo,stock_maximo,unidades_empaque,dias_cobertura,imagen_url,color,tamano,se_vende,se_compra,activo',
+    columnas:'id,sku,nombre,categoria_id,marca_id,proveedor_id,impuesto_id,tipo,unidad_base,controla_lote,controla_vencimiento,stock_minimo,stock_maximo,capacidad_estante,unidades_empaque,dias_cobertura,imagen_url,color,tamano,se_vende,se_compra,activo',
     buscaEn:['nombre','sku'],
     numero: r => r.sku ? { e:'Item', v:r.sku } : null,
     fila: r => ({
@@ -363,6 +363,8 @@ const ENTIDADES = {
         ayuda:'Debajo de esto se marca en rojo.' },
       { k:'stock_maximo', e:'Stock máximo', tipo:'decimal', vacioEsNulo:true,
         ayuda:'Hasta cuánto conviene tener. Se ve en Consultar. Déjelo vacío si no lo usa.' },
+      { k:'capacidad_estante', e:'Capacidad de estante', tipo:'decimal', vacioEsNulo:true,
+        ayuda:'Cuánto cabe en su espacio del piso de ventas. Con esto, Auditoría → Reponer piso dice qué bajar de la bodega.' },
       { k:'dias_cobertura', e:'Días de cobertura', tipo:'entero', def:15,
         ayuda:'Para las sugerencias de compra.' },
       { k:'controla_vencimiento', e:'Controla vencimiento', tipo:'si', def:false,
