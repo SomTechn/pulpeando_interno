@@ -108,6 +108,8 @@ async function montar(estado){
   w.montarMenu = menu.montarMenu; w.escapar = menu.escapar; w.iniciales = menu.iniciales;
   const promos = await import(BASE + 'promos.js');
   w.calcularPromos = promos.calcularPromos; w.nombreCorto = promos.nombreCorto;
+  const balanza = await import(BASE + 'balanza.js');
+  w.lineaDeBalanza = balanza.lineaDeBalanza;
 
   const prep = cuerpo
     .replace(/^import \{ createClient \} from 'https:\/\/esm\.sh\/@supabase\/supabase-js@2';$/m, '')
@@ -117,6 +119,7 @@ async function montar(estado){
     .replace(/^import \{ imprimirTicket \} from '\.\.\/ticket\.js';$/m,
              'const imprimirTicket = async (d, o) => { (window.__impresos = window.__impresos || []).push({ d, o }); };')
     .replace(/^import \{ calcularPromos, nombreCorto \} from '\.\.\/promos\.js';$/m, '')
+    .replace(/^import \{ lineaDeBalanza \} from '\.\.\/balanza\.js';$/m, '')
     .replace(/createClient\(SUPABASE_URL, SUPABASE_KEY, \{[\s\S]*?\}\)/, '__sb');
 
   w.__c = {};
@@ -132,6 +135,7 @@ async function montar(estado){
     ; C.entrarCaja = entrarCaja; C.pedirCredencial = pedirCredencial;
     ; C.aparato = aparato; C.bloquear = bloquear; C.abrirBuscador = abrirBuscador;
     ; C.eventosPendientes = eventosPendientes; C.enviarEventos = enviarEventos;
+    ; C.porCodigo = porCodigo; C.hojaAnular = hojaAnular;
   })()`);
   await new Promise(r => setTimeout(r, 140));
 
@@ -1825,6 +1829,125 @@ console.log('\n=== EL PERMISO DEL SUPERVISOR ===');
   await esperar();
   chk('sin internet no se puede autorizar y la venta sigue',
       C.S.ticket.length === 1 && !estado.llamadas.some(l => l.fn === 'fn_autorizar_caja' && l.args.p_accion === 'cancelar'));
+}
+
+console.log('\n=== BALANZA ===');
+{
+  const B = await import(BASE + 'balanza.js');
+  const ean = doce => doce + B.digitoEan13(doce);
+  chk('dígito de control (EAN conocido)', B.digitoEan13('750100100001') === Number(ean('750100100001').at(-1)) && ean('400638133393') === '4006381333931');
+  chk('prefijos 20-29', B.prefijosDe('20-29').size === 10 && B.prefijosDe('23').has('23') && !B.prefijosDe('23').has('20'));
+  chk('prefijos sueltos y raros', [...B.prefijosDe('21, 28 ,x,30')].join() === '21,28');
+  const cfg = { activa:true, prefijos:'20-29', largo_plu:5, tipo:'peso', decimales:3 };
+  chk('peso: 01250 con 3 decimales = 1.25', B.leerBalanza(ean('201234501250'), cfg)?.valor === 1.25);
+  chk('apagada no lee', B.leerBalanza(ean('201234501250'), { ...cfg, activa:false }) === null);
+  chk('control malo no lee', B.leerBalanza('2012345012509', cfg) === null || B.digitoEan13('201234501250') === 9);
+  chk('prefijo fuera de la lista no lee', B.leerBalanza(ean('201234501250'), { ...cfg, prefijos:'23' }) === null);
+  chk('peso cero no lee', B.leerBalanza(ean('201234500000'), cfg) === null);
+  chk('PLU de 4: el valor es de 6', B.leerBalanza(ean('201234012500'), { ...cfg, largo_plu:4 })?.plu === '1234'
+     && B.leerBalanza(ean('201234012500'), { ...cfg, largo_plu:4 })?.valor === 12.5);
+  chk('precio: 02550 = L 25.50', B.leerBalanza(ean('201234502550'), { ...cfg, tipo:'precio' })?.valor === 25.5);
+  const cat = [{ producto_id:'q', sku:'12345', precio:60, codigos:[] }, { producto_id:'r', sku:'99', precio:10, codigos:['00777'] }];
+  chk('PLU con ceros delante encuentra el item', B.productoDelPlu('00777', cat)?.producto_id === 'r' && B.productoDelPlu('777', cat)?.producto_id === 'r');
+  const lp = B.lineaDeBalanza(ean('201234502550'), { ...cfg, tipo:'precio' }, cat);
+  chk('precio / precio del producto = cantidad (25.50 / 60 = 0.425)', lp.cantidad === 0.425);
+}
+{
+  const Bz = await import(BASE + 'balanza.js'); const ean = async doce => doce + Bz.digitoEan13(doce);
+  const ctx = JSON.parse(JSON.stringify(CTX));
+  ctx.organizacion.balanza = { activa:true, prefijos:'20-29', largo_plu:5, tipo:'peso', decimales:3 };
+  const e = base();
+  e.catalogo.find(p => p.producto_id === 'p2').sku = '12345';
+  e.catalogo.push({ producto_id:'p9', sku:'51089', nombre:'Muestra 21x', imagen_url:null, unidad_base:'UND',
+    categoria_id:'ca1', categoria:'Abarrotes', precio:14, existencia:9, stock_bajo:false, vence_el:null,
+    codigos:['2110000000073'], tasa_impuesto:0 });
+  const { w, d, C } = await montar(e);
+  C.S.ctx = ctx;
+  teclear(w, d, await ean('201234500750'), { pistola:true });
+  await esperar();
+  chk('la etiqueta de balanza agrega el queso con 0.75', C.S.ticket.length === 1 && C.S.ticket[0].producto_id === 'p2' && C.S.ticket[0].cantidad === 0.75);
+  teclear(w, d, await ean('201234501000'), { pistola:true });
+  await esperar();
+  chk('otra etiqueta del mismo suma el peso', C.S.ticket[0].cantidad === 1.75);
+  teclear(w, d, '2110000000073', { pistola:true });
+  await esperar();
+  chk('un código exacto que empieza con 2 gana sobre la balanza', C.S.ticket.some(l => l.producto_id === 'p9' && l.cantidad === 1));
+  teclear(w, d, await ean('205555500500'), { pistola:true });
+  await esperar();
+  chk('PLU que no existe avisa y no agrega', C.S.ticket.length === 2 && /PLU 55555/.test(d.body.textContent));
+  C.S.ctx = CTX;
+  teclear(w, d, await ean('201234500750'), { pistola:true });
+  await esperar();
+  chk('sin balanza configurada no se lee', C.S.ticket.find(l => l.producto_id === 'p2').cantidad === 1.75);
+}
+
+console.log('\n=== ANULAR UNA VENTA COBRADA (F11) ===');
+const VENTA = (estado = 'completada') => ({ venta:{ id:'v9', numero:'T-S01-00000009', creada_en:'2026-11-01T16:20:00Z', total:180, estado },
+  cajero:'Ana Maradiaga', cliente:null,
+  lineas:[{ producto:'Arroz de primera 5 lb', cantidad:1, total:98 }, { producto:'Refresco 600 ml', cantidad:4, total:82 }],
+  pagos:[{ metodo:'efectivo', monto:180 }] });
+{
+  const ctx = JSON.parse(JSON.stringify(CTX));
+  ctx.organizacion.codigo_tienda = '195';
+  ctx.organizacion.caja_autoriza = { quitar:false, cancelar:false, descartar:false };
+  const { w, d, C, estado } = await montar(base({
+    fn_ventas_turno_caja:{ data:[
+      { id:'v9', numero:'T-S01-00000009', creada_en:'2026-11-01T16:20:00Z', total:180, estado:'completada', lineas:2, metodos:'efectivo', cliente:null },
+      { id:'v8', numero:'T-S01-00000008', creada_en:'2026-11-01T16:00:00Z', total:60, estado:'anulada', lineas:1, metodos:'credito', cliente:'Doña Fía' }], error:null },
+    fn_venta_completa:{ data:VENTA(), error:null },
+    fn_buscar_ticket: a => a.p_codigo === '1950020159636974' ? { data:{ ok:true, venta_id:'v9' }, error:null }
+                                                             : { data:{ ok:false, mensaje:'No hay venta con ese código' }, error:null },
+    fn_autorizar_caja: a => a.p_pin === '77777' && a.p_accion === 'anular'
+      ? { data:{ ok:true, autorizacion_id:'aut-9', nombre:'Don Supervisor' }, error:null }
+      : { data:{ ok:false, mensaje:'Codigo o PIN incorrecto' }, error:null },
+    fn_anular_venta_caja:{ data:{ ok:true, numero:'T-S01-00000009', total:180, efectivo:180, credito:0, otros:0, autorizo:'Don Supervisor' }, error:null } }));
+  C.S.ctx = ctx;
+  tecla(w, d, 'F11');
+  await esperar(120);
+  const h = () => d.querySelector('#hoja').textContent.replace(/\s+/g, ' ');
+  chk('F11 abre la lista de ventas del turno', /Anular una venta/.test(h()) && d.querySelectorAll('.an-venta').length === 2);
+  chk('pide las ventas de SU turno', estado.llamadas.some(l => l.fn === 'fn_ventas_turno_caja' && l.args.p_turno_id === 't1'));
+  chk('la anulada no se puede escoger', d.querySelector('.an-venta[data-v="v8"]').disabled && /fiado/.test(h()));
+  d.querySelector('.an-venta[data-v="v9"]').click();
+  await esperar(120);
+  chk('el detalle trae líneas, total y forma de pago', /Anular T-S01-00000009/.test(h()) && /Refresco/.test(h()) && /Efectivo L 180/.test(h()));
+  tecla(w, d, 'Enter', d.querySelector('#an-motivo'));
+  await esperar();
+  chk('sin motivo no sigue', /motivo/.test(d.querySelector('#an-err').textContent) && !estado.llamadas.some(l => l.fn === 'fn_anular_venta_caja'));
+  d.querySelector('.an-motivos [data-m="Cobró de más"]').click();
+  chk('el motivo rápido llena el campo', d.querySelector('#an-motivo').value === 'Cobró de más');
+  d.querySelector('#an-si').click();
+  await esperar();
+  chk('pide supervisor aunque el negocio no pida permisos', /Autoriza un supervisor/.test(h()) && /Motivo: Cobró de más/.test(h()));
+  d.querySelector('#sv-cod').value = 'S1'; d.querySelector('#sv-pin').value = '77777';
+  tecla(w, d, 'Enter', d.querySelector('#sv-pin'));
+  await esperar(160);
+  const an = estado.llamadas.find(l => l.fn === 'fn_anular_venta_caja');
+  chk('anula con la autorización y el motivo', an && an.args.p_venta_id === 'v9' && an.args.p_autorizacion_id === 'aut-9' && an.args.p_motivo === 'Cobró de más');
+  chk('dice cuánto devolver en efectivo', /Venta anulada/.test(h()) && /Devuelva al cliente/.test(h()) && /L 180/.test(h()) && /Don Supervisor/.test(h()));
+  d.querySelector('#an-listo').click();
+  chk('Listo cierra', d.querySelector('#velo-hoja').classList.contains('oculto'));
+
+  teclear(w, d, '1950020159636974', { pistola:true });
+  await esperar(160);
+  chk('escanear un ticket propio en el buscador abre la anulación', estado.llamadas.some(l => l.fn === 'fn_buscar_ticket') && /Anular T-S01-00000009/.test(h()));
+  chk('y no lo toma como producto', C.S.ticket.length === 0);
+  d.querySelector('#an-volver').click();
+  teclear(w, d, '2220020159636974', { pistola:true });
+  await esperar(100);
+  chk('un ticket de otra tienda no abre nada', estado.llamadas.filter(l => l.fn === 'fn_buscar_ticket').length === 1);
+
+  C.S.enLinea = false;
+  tecla(w, d, 'F11');
+  await esperar();
+  chk('sin internet no se puede anular', /internet/.test(d.body.textContent) && !d.querySelector('.an-venta'));
+}
+{
+  const { w, d, C, estado } = await montar(base({ fn_ventas_turno_caja:{ data:[], error:null } }));
+  C.S.turno = null;
+  tecla(w, d, 'F11');
+  await esperar();
+  chk('sin turno abierto avisa', /abrir el turno/.test(d.body.textContent) && !estado.llamadas.some(l => l.fn === 'fn_ventas_turno_caja'));
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);

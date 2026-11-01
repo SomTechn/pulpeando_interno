@@ -97,6 +97,7 @@ async function montar(archivo, estado){
     .replace(/^import \{([^}]*)\} from '\.{1,2}\/menu\.js';$/m, '')
     .replace(/^import \{([^}]*)\} from '\.{1,2}\/escaner\.js';$/m, '')
     .replace(/^import \{ calcularPromos, nombreCorto \} from '\.{1,2}\/promos\.js';$/m, '')
+    .replace(/^import \{ lineaDeBalanza \} from '\.{1,2}\/balanza\.js';$/m, '')
     .replace(/^import \{ imprimirTicket \} from '\.{1,2}\/ticket\.js';$/m,
              'const imprimirTicket = async (d, o) => { (window.__impresos = window.__impresos || []).push({ d, o }); };')
     .replace(/createClient\(SUPABASE_URL, SUPABASE_KEY, \{[\s\S]*?\}\)/, '__sb');
@@ -112,6 +113,7 @@ async function montar(archivo, estado){
   ctx.montarMenu = menu.montarMenu;
   const promos = await import(BASE + 'promos.js');
   ctx.calcularPromos = promos.calcularPromos; ctx.nombreCorto = promos.nombreCorto;
+  ctx.lineaDeBalanza = (await import(BASE + 'balanza.js')).lineaDeBalanza;
   ctx.escapar = menu.escapar;
   ctx.iniciales = menu.iniciales;
   ctx.escanear = async () => null;

@@ -681,6 +681,44 @@
     background:var(--marca);color:var(--marca-sobre);display:grid;place-items:center;font-size:12px;
     font-family:var(--num);font-weight:700}
 }
+.an-ventas{display:flex;flex-direction:column;gap:6px;max-height:46vh;overflow-y:auto}
+.an-venta{display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;
+  border:1px solid var(--linea);border-radius:var(--r-md);padding:11px 13px;background:var(--panel)}
+.an-venta:hover:not(:disabled){border-color:var(--marca-borde)}
+.an-venta span{min-width:0}
+.an-venta small{display:block;font-size:12px;color:var(--tenue);margin-top:2px}
+.an-venta.anulada{opacity:.5}
+.an-lineas{border:1px solid var(--linea);border-radius:var(--r-md);padding:10px 13px;font-size:14px}
+.an-lineas > div{display:flex;justify-content:space-between;gap:10px;padding:4px 0}
+.an-total{border-top:1px solid var(--linea);margin-top:4px;padding-top:8px!important;font-weight:800}
+.an-pagos{color:var(--tenue);font-size:12.5px}
+.an-motivos{display:flex;flex-wrap:wrap;gap:6px}
+.an-motivos .chip{height:36px;padding:0 12px;border-radius:999px;border:1.5px solid var(--linea);background:var(--panel);font-size:13px;font-weight:700}
+.an-motivos .chip.activo{background:var(--marca-suave);border-color:var(--marca-borde);color:var(--marca-tinta)}
+.an-devolver{background:#FFF4E0;color:#6B4500;border-radius:var(--r-md);padding:16px;text-align:center;margin-top:6px}
+.an-devolver b{display:block;font-size:32px;font-weight:800;margin:4px 0}
+.an-devolver small{font-size:13px;font-weight:600}
+
+/* ==========================================================================
+   NADA FLOTA
+   Cobrar, el cliente, cantidad, suspendidas, el supervisor, anular… ocupan
+   la pantalla entera, como la búsqueda y la gaveta. Somar no quiere
+   ventanas encima. El contenido va en una columna centrada y el teclado
+   sigue igual (Enter, Esc, las F).
+   ========================================================================== */
+#velo-cobro,#velo-hoja,#velo-cliente,#velo-sync{
+  display:block;padding:0;background:var(--fondo);backdrop-filter:none;overflow-y:auto}
+#velo-cobro > .hoja,#velo-hoja > .hoja,#velo-cliente > .hoja,#velo-sync > .hoja{
+  max-width:none;width:100%;min-height:100%;max-height:none;margin:0;border-radius:0;
+  box-shadow:none;background:var(--fondo);overflow:visible;
+  padding:max(28px, env(safe-area-inset-top)) max(20px, calc((100% - 620px) / 2)) 48px;
+  animation:caja-vista .16s cubic-bezier(.2,.8,.3,1)}
+#velo-cobro > .hoja h2,#velo-hoja > .hoja h2,#velo-cliente > .hoja h2,#velo-sync > .hoja h2{font-size:24px}
+#velo-hoja .btn.secundario,#velo-cobro .btn.secundario,#velo-cliente .btn.secundario,#velo-sync .btn.secundario{
+  background:var(--panel);border:1.5px solid var(--linea)}
+@keyframes caja-vista{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+.an-ventas{max-height:none}
+#velo-cobro .metodo:not(.activo){background:var(--panel)}
 </style>
 </head>
 <body>
@@ -1021,6 +1059,7 @@ import { iniciales, escapar } from '../menu.js';
 import { escanear, hayCamara } from '../escaner.js';
 import { imprimirTicket } from '../ticket.js';
 import { calcularPromos, nombreCorto } from '../promos.js';
+import { lineaDeBalanza } from '../balanza.js';
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth:{ persistSession:true, autoRefreshToken:true }
@@ -1670,8 +1709,30 @@ $('#buscar').addEventListener('keydown', e => {
 function porCodigo(cod, cuanto){
   const p = S.catalogo.find(x => (x.codigos||[]).includes(cod) || x.sku === cod);
   if (p) return agregar(p.producto_id, cuanto);
+  // ¿Etiqueta de balanza? Va después del código exacto: los 21x de la
+  // muestra también empiezan con 2.
+  const b = deBalanza(cod);
+  if (b) return b.ok;
+  // ¿Un ticket de esta tienda? Se ofrece anularlo.
+  if (esTicketPropio(cod)){ hojaAnular(cod); return true; }
   return false;
 }
+
+/* La etiqueta de balanza trae el producto y el peso (o el precio). Devuelve
+   null si no es de balanza; { ok } si lo era, se haya podido agregar o no
+   (para no decir además «código no encontrado»). */
+function deBalanza(cod){
+  const r = lineaDeBalanza(cod, S.ctx?.organizacion?.balanza, S.catalogo);
+  if (!r) return null;
+  if (!r.producto){ avisoCaja('Etiqueta de balanza: el PLU ' + r.plu + ' no es de ningún producto'); return { ok:false, texto:'PLU ' + r.plu + ' sin producto' }; }
+  if (!(r.cantidad > 0)){ avisoCaja(r.producto.nombre + ' no tiene precio'); return { ok:false, texto:r.producto.nombre + ' sin precio' }; }
+  const ok = agregar(r.producto.producto_id, r.cantidad);
+  if (!ok) avisoCaja(r.producto.nombre + (Number(r.producto.existencia) <= 0 ? ' está agotado' : ' no se pudo agregar'));
+  return { ok, producto:r.producto, cantidad:r.cantidad };
+}
+
+const esTicketPropio = cod => /^\d{16}$/.test(cod)
+  && !!S.ctx?.organizacion?.codigo_tienda && cod.startsWith(S.ctx.organizacion.codigo_tienda);
 
 /* ================= cámara ================= */
 $('#btn-camara').addEventListener('click', async () => {
@@ -1681,7 +1742,15 @@ $('#btn-camara').addEventListener('click', async () => {
     pista:'Cada código leído se agrega al ticket',
     alLeer: async (cod) => {
       const p = S.catalogo.find(x => (x.codigos||[]).includes(cod) || x.sku === cod);
-      if (!p) return { ok:false, texto:'Código no encontrado: ' + cod };
+      if (!p){
+        const b = deBalanza(cod);
+        if (b?.ok){
+          const l = S.ticket.find(x => x.producto_id === b.producto.producto_id);
+          return { ok:true, texto:b.producto.nombre, cuenta:cantTxt(l.cantidad) };
+        }
+        if (b) return { ok:false, texto:b.texto || 'No se pudo agregar' };
+        return { ok:false, texto:'Código no encontrado: ' + cod };
+      }
       if (p.existencia <= 0) return { ok:false, texto:p.nombre + ' está agotado' };
       if (!p.precio) return { ok:false, texto:p.nombre + ' no tiene precio' };
       agregar(p.producto_id);
@@ -1898,6 +1967,7 @@ $('#lineas').addEventListener('click', e => {
      F9                 bloquear la caja
      F7 / F8            suspender la venta / retomar una suspendida
      F10                cobrar
+     F11                anular una venta ya cobrada (siempre con supervisor)
      flechas            moverse por el ticket
      Esc                cerrar lo que este abierto
 
@@ -1917,6 +1987,7 @@ const ATAJOS = [
   { k:'F8',  t:'Retomar',   fn:() => hojaSuspendidas() },
   { k:'F9',  t:'Bloquear',  fn:() => bloquear() },
   { k:'F10', t:'Cobrar',    fn:() => $('#btn-cobrar').click(), linea:true },
+  { k:'F11', t:'Anular venta', fn:() => hojaAnular() },
   { k:'F12', t:'Cancelar venta', fn:() => hojaCancelarVenta(), linea:true }
 ];
 
@@ -3826,7 +3897,8 @@ const nombreDe = id => (S.catalogo.find(x => x.producto_id === id) || {}).nombre
    no se hace la acción. */
 function pedirSupervisor(accion, que){
   const reglas = S.ctx?.organizacion?.caja_autoriza || {};
-  if (!reglas[accion]) return Promise.resolve({});
+  // Anular una venta cobrada siempre lo autoriza un supervisor.
+  if (!reglas[accion] && accion !== 'anular') return Promise.resolve({});
   if (!S.enLinea){
     avisoCaja('Sin internet no se puede pedir el permiso del supervisor. Deje la venta en espera (F7) y siga.');
     return Promise.resolve(null);
@@ -3936,6 +4008,124 @@ function hojaCancelarVenta(){
     if (e.key === 'Enter'){ e.preventDefault(); confirmar(); }
     if (e.key === 'Escape'){ e.preventDefault(); volver(); }
   });
+}
+
+/* =================== anular una venta ya cobrada ===================
+
+   F11, o escanear el ticket en el buscador. Siempre con supervisor y solo
+   ventas del turno que sigue abierto (si ya se cerró, el arqueo contó esa
+   plata y la anulación va por Ventas). Se busca por el código del ticket o
+   se escoge de las ventas del turno.
+   ================================================================== */
+const MOTIVOS_ANULAR = ['Cobró de más', 'Producto equivocado', 'El cliente se arrepintió', 'Forma de pago equivocada'];
+
+async function hojaAnular(codigo){
+  if (!S.turno){ avisoCaja('Primero hay que abrir el turno.'); return; }
+  if (!S.enLinea){ avisoCaja('Para anular una venta hace falta internet.'); return; }
+  if (codigo){
+    const { data, error } = await sb.rpc('fn_buscar_ticket', { p_codigo:codigo });
+    if (error || !data?.ok){ avisoCaja(data?.mensaje || limpiarError(error) || 'No se encontró esa venta'); return; }
+    return anularDetalle(data.venta_id);
+  }
+  $('#hoja').innerHTML = `
+    <h2>Anular una venta</h2>
+    <p class="sub">Escanee el ticket o escoja la venta de este turno. La autoriza un supervisor.</p>
+    <div class="campo-g" style="margin-bottom:12px"><label for="an-cod">Código del ticket</label>
+      <input class="entrada num" id="an-cod" inputmode="numeric" autocomplete="off" placeholder="16 números"></div>
+    <div id="an-lista"><span class="girando"></span></div>
+    <div class="acciones" style="margin-top:14px">
+      <button class="btn secundario" id="an-no">Volver <kbd>Esc</kbd></button>
+    </div>`;
+  ver('#velo-hoja');
+  setTimeout(() => $('#an-cod').focus(), 40);
+  const volver = () => { ver('#velo-hoja', false); $('#buscar').focus(); };
+  $('#an-no').onclick = volver;
+  $('#an-cod').addEventListener('keydown', e => {
+    if (e.key === 'Escape'){ e.preventDefault(); volver(); }
+    if (e.key === 'Enter'){
+      e.preventDefault();
+      const c = e.target.value.replace(/\D/g, '');
+      if (c.length === 16){ ver('#velo-hoja', false); hojaAnular(c); }
+    }
+  });
+  const { data, error } = await sb.rpc('fn_ventas_turno_caja', { p_turno_id:S.turno });
+  const z = $('#an-lista'); if (!z) return;
+  if (error){ z.innerHTML = `<div class="aviso malo">${escapar(limpiarError(error))}</div>`; return; }
+  const lista = data || [];
+  z.innerHTML = lista.length ? `<div class="titulin">Ventas de este turno</div>
+    <div class="an-ventas">${lista.map(v => `
+      <button class="an-venta ${v.estado === 'anulada' ? 'anulada' : ''}" data-v="${escapar(v.id)}" ${v.estado === 'anulada' ? 'disabled' : ''}>
+        <span><b>${escapar(v.numero)}</b><small>${escapar(horaCorta(v.creada_en))} · ${v.lineas} ${v.lineas === 1 ? 'línea' : 'líneas'}
+          · ${escapar(String(v.metodos || '').replace('credito', 'fiado'))}${v.cliente ? ' · ' + escapar(v.cliente) : ''}</small></span>
+        <b class="num">${v.estado === 'anulada' ? 'Anulada' : money(v.total)}</b>
+      </button>`).join('')}</div>`
+    : '<p class="sub">Todavía no hay ventas en este turno.</p>';
+  z.querySelectorAll('[data-v]').forEach(b => b.onclick = () => anularDetalle(b.dataset.v));
+}
+
+const horaCorta = iso => { try { return new Date(iso).toLocaleTimeString('es-HN', { hour:'numeric', minute:'2-digit' }); } catch(e){ return ''; } };
+
+async function anularDetalle(id){
+  $('#hoja').innerHTML = '<span class="girando"></span>';
+  ver('#velo-hoja');
+  const { data, error } = await sb.rpc('fn_venta_completa', { p_venta_id:id });
+  if (error || !data){ ver('#velo-hoja', false); avisoCaja(limpiarError(error) || 'No se pudo abrir la venta'); return; }
+  const v = data.venta;
+  if (v.estado === 'anulada'){ ver('#velo-hoja', false); avisoCaja('Esa venta ya está anulada.'); return; }
+  const pagos = (data.pagos || []).map(p => `${p.metodo === 'credito' ? 'Fiado' : p.metodo[0].toUpperCase() + p.metodo.slice(1)} ${money(p.monto)}`).join(' · ');
+  $('#hoja').innerHTML = `
+    <h2>Anular ${escapar(v.numero)}</h2>
+    <p class="sub">${escapar(horaCorta(v.creada_en))} · ${escapar(data.cajero || '')}${data.cliente ? ' · ' + escapar(data.cliente.nombre) : ''}</p>
+    <div class="an-lineas">${(data.lineas || []).map(l => `<div><span>${cantTxt(l.cantidad)} × ${escapar(l.producto)}</span><b class="num">${money(l.total)}</b></div>`).join('')}
+      <div class="an-total"><span>Total</span><b class="num">${money(v.total)}</b></div>
+      <div class="an-pagos">${escapar(pagos)}</div></div>
+    <div class="titulin" style="margin-top:14px">Motivo</div>
+    <div class="an-motivos">${MOTIVOS_ANULAR.map(m => `<button class="chip" data-m="${escapar(m)}">${escapar(m)}</button>`).join('')}</div>
+    <input class="entrada" id="an-motivo" placeholder="O escríbalo" autocomplete="off" style="margin-top:8px">
+    <div class="aviso malo oculto" id="an-err" style="margin-top:10px"></div>
+    <div class="acciones" style="margin-top:14px">
+      <button class="btn secundario" id="an-volver">Volver <kbd>Esc</kbd></button>
+      <button class="btn principal-b" id="an-si" style="background:var(--rojo);color:#fff">Anular <kbd>Enter</kbd></button>
+    </div>`;
+  const volver = () => { ver('#velo-hoja', false); $('#buscar').focus(); };
+  $('#hoja').querySelectorAll('[data-m]').forEach(b => b.onclick = () => {
+    $('#an-motivo').value = b.dataset.m;
+    $('#hoja').querySelectorAll('[data-m]').forEach(x => x.classList.toggle('activo', x === b));
+  });
+  setTimeout(() => $('#an-motivo').focus(), 40);
+  const anular = async () => {
+    const motivo = $('#an-motivo').value.trim();
+    if (!motivo){ $('#an-err').textContent = 'Escoja o escriba el motivo.'; ver('#an-err'); $('#an-motivo').focus(); return; }
+    ver('#velo-hoja', false);
+    const aut = await pedirSupervisor('anular', `Anular la venta ${v.numero} de ${money(v.total)}. Motivo: ${motivo}.`);
+    if (aut === null){ $('#buscar').focus(); return; }
+    const { data:r, error:e } = await sb.rpc('fn_anular_venta_caja',
+      { p_venta_id:id, p_motivo:motivo, p_autorizacion_id:aut.autorizacion_id });
+    if (e || !r?.ok){ avisoCaja(limpiarError(e) || 'No se pudo anular'); return; }
+    anulada(v, r);
+  };
+  $('#an-volver').onclick = volver;
+  $('#an-si').onclick = anular;
+  $('#an-motivo').addEventListener('keydown', e => {
+    if (e.key === 'Enter'){ e.preventDefault(); anular(); }
+    if (e.key === 'Escape'){ e.preventDefault(); volver(); }
+  });
+}
+
+function anulada(v, r){
+  const efectivo = Number(r.efectivo) || 0, credito = Number(r.credito) || 0, otros = Number(r.otros) || 0;
+  $('#hoja').innerHTML = `
+    <h2>Venta anulada</h2>
+    <p class="sub">${escapar(r.numero || v.numero)} · la autorizó ${escapar(r.autorizo || 'el supervisor')}.
+      Los productos volvieron al inventario.</p>
+    ${efectivo > 0 ? `<div class="an-devolver"><small>Devuelva al cliente</small><b class="num">${money(efectivo)}</b><small>en efectivo, de la gaveta</small></div>` : ''}
+    ${credito > 0 ? `<div class="aviso bueno" style="margin-top:10px">Se le quitaron ${money(credito)} del fiado al cliente.</div>` : ''}
+    ${otros > 0 ? `<div class="aviso ojo" style="margin-top:10px">${money(otros)} se pagaron con tarjeta o transferencia: la devolución se hace por ese medio.</div>` : ''}
+    <button class="btn principal-b" id="an-listo" style="width:100%;margin-top:14px">Listo <kbd>Enter</kbd></button>`;
+  ver('#velo-hoja');
+  const listo = () => { ver('#velo-hoja', false); $('#buscar').focus(); };
+  $('#an-listo').onclick = listo;
+  setTimeout(() => $('#an-listo').focus(), 40);
 }
 
 async function revisarCola(){

@@ -386,6 +386,13 @@ function pintarNegocio(){
     </div>
 
     <div class="ficha">
+      <h3>Balanza</h3>
+      <p class="sub">Si pesa en una balanza que imprime etiqueta con código de barras, la caja la lee y
+        agrega el producto con su peso. En la balanza, el PLU de cada producto es su <b>item de 5 dígitos</b>.</p>
+      <div id="n-balanza"></div>
+    </div>
+
+    <div class="ficha">
       <h3>La caja bloqueada</h3>
       <p class="sub">Lo que se ve en la caja entre un cliente y otro: el logo del negocio y
         las imágenes de las promociones. PNG, JPG o WEBP, de 2 MB como mucho.</p>
@@ -591,9 +598,50 @@ function pintarPermisos(){
   }));
 }
 
+/* ---------- la balanza ---------- */
+function pintarBalanza(){
+  const z = $('#n-balanza'); if (!z) return;
+  const b = { activa:false, prefijos:'20-29', largo_plu:5, tipo:'peso', decimales:3, ...((S.org.config || {}).balanza || {}) };
+  const largoValor = 10 - Number(b.largo_plu);
+  z.innerHTML = `
+    <label class="perm"><span>Leer etiquetas de balanza en la caja</span>
+      <button class="switch ${b.activa ? 'on' : ''}" role="switch" aria-checked="${b.activa}" id="bz-activa"><i></i></button></label>
+    <div class="campos ${b.activa ? '' : 'oculto'}" id="bz-campos" style="margin-top:12px">
+      <div class="campo-g"><label for="bz-tipo">La etiqueta trae</label>
+        <select class="entrada" id="bz-tipo">
+          <option value="peso" ${b.tipo !== 'precio' ? 'selected' : ''}>El peso</option>
+          <option value="precio" ${b.tipo === 'precio' ? 'selected' : ''}>El precio a cobrar</option></select></div>
+      <div class="campo-g"><label for="bz-dec">Decimales del peso</label>
+        <select class="entrada" id="bz-dec" ${b.tipo === 'precio' ? 'disabled' : ''}>
+          ${[3, 2, 1, 0].map(n => `<option value="${n}" ${Number(b.decimales) === n ? 'selected' : ''}>${n} (${(1250 / Math.pow(10, n)).toFixed(n)})</option>`).join('')}</select></div>
+      <div class="campo-g"><label for="bz-plu">Dígitos del PLU</label>
+        <select class="entrada" id="bz-plu">${[4, 5, 6].map(n => `<option value="${n}" ${Number(b.largo_plu) === n ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+      <div class="campo-g"><label for="bz-pre">Empiezan con</label>
+        <input class="entrada num" id="bz-pre" value="${escapar(b.prefijos)}" placeholder="20-29"></div>
+      <p class="ayuda ancho-total">Ejemplo con ${b.largo_plu} dígitos de PLU: <span class="num">2 0 · ${'1'.padStart(Number(b.largo_plu), '0')} · ${'1250'.padStart(largoValor, '0')} · control</span>
+        = ${b.tipo === 'precio' ? 'L 12.50 del producto con item ' + '1'.padStart(5, '0') : (1250 / Math.pow(10, b.decimales)).toFixed(b.decimales) + ' del producto con item ' + '1'.padStart(5, '0')}.
+        El peso va en la misma unidad del producto (LB o KG).</p>
+      <div class="pie-ficha ancho-total" style="margin-top:0"><button class="btn principal-b" id="bz-guardar">Guardar balanza</button></div>
+    </div>`;
+  const guardar = async (cambios) => {
+    try{ await anotarImagenes({ balanza:{ ...b, ...cambios } }); pintarBalanza(); }
+    catch(err){ aviso('No se pudo guardar', limpiarError(err)); }
+  };
+  $('#bz-activa').onclick = () => guardar({ activa:!b.activa });
+  $('#bz-tipo').onchange = e => { $('#bz-dec').disabled = e.target.value === 'precio'; };
+  $('#bz-guardar').onclick = () => {
+    const pre = $('#bz-pre').value.trim() || '20-29';
+    if (!/^\s*\d{2}(\s*-\s*\d{2})?(\s*,\s*\d{2}(\s*-\s*\d{2})?)*\s*$/.test(pre)){
+      aviso('Revise los prefijos', 'Escriba dos dígitos, un rango (20-29) o varios separados por coma (20,23).'); return;
+    }
+    guardar({ tipo:$('#bz-tipo').value, decimales:Number($('#bz-dec').value), largo_plu:Number($('#bz-plu').value), prefijos:pre });
+  };
+}
+
 function pintarImagenes(){
   pintarColor();
   pintarPermisos();
+  pintarBalanza();
   const c = S.org.config || {};
   const logo = c.logo_path;
   const promos = Array.isArray(c.promos_caja) ? c.promos_caja : [];

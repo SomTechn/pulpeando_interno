@@ -573,6 +573,29 @@ const elegirArchivos = (w, input, archivos) => {
       estado.borrados.includes(primera));
 }
 
+console.log('\n=== BALANZA ===');
+{
+  const e = base();
+  const { w, d } = await montar(e);
+  await esperar(80);
+  chk('la balanza arranca apagada y sin campos', !d.querySelector('#bz-activa').classList.contains('on') && d.querySelector('#bz-campos').classList.contains('oculto'));
+  d.querySelector('#bz-activa').click(); await esperar(80);
+  const w1 = escrito(e, 'organizaciones', 'update').at(-1);
+  chk('prenderla guarda balanza.activa', w1?.datos.config.balanza.activa === true && w1.datos.config.balanza.largo_plu === 5);
+  chk('y no borra lo demás del config', w1?.datos.config.mensaje_ticket === 'Vuelva pronto');
+  chk('se ven los campos', !d.querySelector('#bz-campos').classList.contains('oculto'));
+  d.querySelector('#bz-tipo').value = 'precio'; d.querySelector('#bz-tipo').dispatchEvent(new w.Event('change'));
+  chk('con precio, los decimales no aplican', d.querySelector('#bz-dec').disabled);
+  d.querySelector('#bz-plu').value = '4';
+  d.querySelector('#bz-pre').value = 'veinte';
+  d.querySelector('#bz-guardar').click(); await esperar(60);
+  chk('prefijo malo no se guarda', escrito(e, 'organizaciones', 'update').length === 1);
+  d.querySelector('#bz-pre').value = '20, 23';
+  d.querySelector('#bz-guardar').click(); await esperar(80);
+  const b = escrito(e, 'organizaciones', 'update').at(-1)?.datos.config.balanza;
+  chk('guarda tipo, PLU y prefijos', b && b.tipo === 'precio' && b.largo_plu === 4 && b.prefijos === '20, 23' && b.activa === true);
+}
+
 console.log('\n=== PLAN Y PAGO ===');
 {
   const cuenta = { codigo_tienda:'417', whatsapp:'50499990000', pago_instrucciones:'BAC 123456\nA nombre de Pulpeando',
