@@ -119,6 +119,22 @@
 .br .pista{display:block;grid-column:1 / -1;height:8px;border-radius:4px;background:var(--fondo);overflow:hidden}
 .br .lleno{display:block;height:100%;border-radius:4px;background:var(--marca)}
 .nada{font-size:13px;color:var(--tenue);padding:6px 0}
+/* contabilidad */
+.tabla.isv td,.tabla.isv th,.tabla.meses td,.tabla.meses th{white-space:nowrap}
+.tabla .tot td{font-weight:800;border-top:2px solid var(--linea)}
+.tramo{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;margin-bottom:9px;font-size:13.5px}
+.tramo span{color:var(--tenue)}
+.tramo .cb{grid-column:1/-1}
+.cb{height:7px;border-radius:4px;background:var(--fondo);overflow:hidden;min-width:60px}
+.cb i{display:block;height:100%;border-radius:4px;background:var(--marca)}
+.cb i.medio{background:var(--ambar)}
+.cb i.malo{background:var(--rojo)}
+.tramo b.malo{color:var(--rojo)}
+.titulin-c{font-size:11.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--tenue);margin:16px 0 6px}
+.dato-c{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--linea);font-size:13.5px}
+.dato-c span{min-width:0}
+.dato-c small{display:block;font-size:12px;color:var(--tenue);margin-top:2px}
+.col-barra{width:120px}
 
 /* tablas que en el celular se vuelven tarjetas */
 .tabla-env{overflow-x:auto}
@@ -286,6 +302,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 const SECCIONES = [
   { valor:'resumen',      nombre:'Resumen',              icono:'reportes' },
+  { valor:'contabilidad', nombre:'Contabilidad',         icono:'conteo', nivel:3 },
   { valor:'egresos',      nombre:'Egresos',              icono:'finanzas' },
   { valor:'arqueos',      nombre:'Arqueos y cierres',    icono:'caja' },
   { valor:'cuadre',       nombre:'Faltantes y sobrantes', icono:'fiado' },
@@ -383,13 +400,14 @@ async function arrancar(){
   $('#h-usuario').textContent = data.usuario.nombre;
   ver('#app');
 
-  const inicial = SECCIONES.find(x => x.valor === location.hash.slice(1)) ? location.hash.slice(1) : 'resumen';
+  const pedida = SECCIONES.find(x => x.valor === location.hash.slice(1));
+  const inicial = pedida && (!pedida.nivel || S.nivel >= pedida.nivel) ? pedida.valor : 'resumen';
   S.seccion = inicial;
   S.menu = montarMenu({
     contenedor:'#menu', modulo:'finanzas', ctx:S.ctx,
     alSalir: async () => { await sb.auth.signOut(); location.reload(); },
     secciones:[{ id:'finanzas', titulo:'Finanzas',
-      items:SECCIONES.map(x => ({ ...x, activo:x.valor === inicial })) }]
+      items:SECCIONES.filter(x => !x.nivel || S.nivel >= x.nivel).map(x => ({ ...x, activo:x.valor === inicial })) }]
   });
   S.menu.alElegir(irA);
   $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
@@ -425,6 +443,8 @@ async function cargar(){
 
   const r = S.seccion === 'resumen'
     ? await sb.rpc('fn_finanzas_resumen', args())
+    : S.seccion === 'contabilidad'
+    ? await sb.rpc('fn_contabilidad', args())
     : await sb.rpc('fn_finanzas_lista', { p_seccion:S.seccion, ...args(), p_limite:500 });
   if (turno !== S.pidiendo) return;
   if (r.error){
@@ -432,6 +452,7 @@ async function cargar(){
     return;
   }
   if (S.seccion === 'resumen'){ S.resumen = r.data; pintarResumen(); }
+  else if (S.seccion === 'contabilidad'){ S.conta = r.data; pintarContabilidad(); }
   else { S.lista = r.data || []; pintarLista(); }
 }
 
@@ -439,12 +460,17 @@ function pintarAcciones(){
   const a = [];
   if (S.seccion === 'egresos' || S.seccion === 'resumen')
     a.push('<button class="btn-chico prin" id="b-nuevo">+ Registrar egreso</button>');
-  if (S.seccion !== 'resumen')
+  if (S.seccion === 'contabilidad'){
+    a.push('<button class="btn-chico sec" id="b-lventas">Libro de ventas</button>');
+    a.push('<button class="btn-chico sec" id="b-lcompras">Libro de compras</button>');
+  } else if (S.seccion !== 'resumen')
     a.push('<button class="btn-chico sec" id="b-csv">Descargar CSV</button>');
   a.push('<button class="btn-chico sec" id="b-imprimir">Imprimir</button>');
   $('#acciones').innerHTML = a.join('');
   $('#b-nuevo')?.addEventListener('click', hojaEgreso);
   $('#b-csv')?.addEventListener('click', descargarCSV);
+  $('#b-lventas')?.addEventListener('click', () => descargarLibro('ventas'));
+  $('#b-lcompras')?.addEventListener('click', () => descargarLibro('compras'));
   $('#b-imprimir').addEventListener('click', () => window.print());
 }
 
@@ -683,6 +709,115 @@ function pintarLista(){
 }
 
 /* ---------- CSV para el contador ---------- */
+/* ================= contabilidad ================= */
+const NOM_MES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const mesTxt = ym => { const [a, m] = String(ym).split('-').map(Number); return `${NOM_MES[m - 1].slice(0, 3)} ${String(a).slice(2)}`; };
+
+function pintarContabilidad(){
+  const c = S.conta || {};
+  const i = c.isv || {}, cc = c.cxc || {}, cp = c.cxp || {};
+  const tasa = (o, k, campo) => Number(o?.[k]?.[campo]) || 0;
+  const filaIsv = (t, k) => `<tr><td>${t}</td>
+      <td class="n">${money(tasa(i.ventas, k, 'base') - tasa(i.devoluciones, k, 'base'))}</td>
+      <td class="n">${money(tasa(i.ventas, k, 'isv') - tasa(i.devoluciones, k, 'isv'))}</td>
+      <td class="n">${money(tasa(i.compras, k, 'base'))}</td>
+      <td class="n">${money(tasa(i.compras, k, 'isv'))}</td></tr>`;
+  const aPagar = Number(i.a_pagar) || 0, aFavor = Number(i.a_favor) || 0;
+  const meses = c.meses || [];
+  const maxV = Math.max(1, ...meses.map(m => Math.abs(Number(m.venta_neta) || 0)));
+  const barra = (v, max, clase = '') => `<div class="cb"><i class="${clase}" style="width:${Math.max(0, Math.min(100, Math.abs(v) / max * 100))}%"></i></div>`;
+  const tramo = (t, v, total, clase) => `<div class="tramo"><span>${t}</span><b class="${clase || ''}">${money(v)}</b>${barra(v, Math.max(total, 1), clase)}</div>`;
+
+  $('#contenido').innerHTML = `
+    <div class="kpis">
+      <div class="kpi destacado"><small>${aFavor > 0 ? 'ISV a favor' : 'ISV a pagar'}</small><b>${money(aFavor > 0 ? aFavor : aPagar)}</b>
+        <div class="pie">Cobrado ${money(i.debito)} − pagado en compras ${money(i.credito)}</div></div>
+      <div class="kpi"><small>Le deben (fiado)</small><b>${money(cc.total)}</b>
+        <div class="pie">${cant(cc.clientes)} clientes · ${cant(cc.atrasados)} atrasados</div></div>
+      <div class="kpi"><small>Debe a proveedores</small><b>${money(cp.total)}</b>
+        <div class="pie">${money((Number(cp.v1_30) || 0) + (Number(cp.v31_60) || 0) + (Number(cp.mas_60) || 0))} vencido</div></div>
+      <div class="kpi"><small>Utilidad neta del mes</small><b class="${Number(meses.at(-1)?.utilidad_neta) < 0 ? 'neg' : ''}">${money(meses.at(-1)?.utilidad_neta)}</b>
+        <div class="pie">${meses.length ? mesTxt(meses.at(-1).mes) : ''}</div></div>
+    </div>
+
+    <section class="tj">
+      <div class="tj-enc"><h2>ISV del período</h2><span class="sub">para la declaración mensual</span></div>
+      <div class="tabla-env"><table class="tabla isv">
+        <thead><tr><th></th><th class="n">Ventas (base)</th><th class="n">ISV cobrado</th><th class="n">Compras (base)</th><th class="n">ISV pagado</th></tr></thead>
+        <tbody>
+          ${filaIsv('Gravado 15%', '15')}
+          ${(i.ventas?.['18'] || i.compras?.['18']) ? filaIsv('Gravado 18%', '18') : ''}
+          <tr><td>Exento</td><td class="n">${money(tasa(i.ventas, '0', 'base') - tasa(i.devoluciones, '0', 'base'))}</td><td class="n">—</td>
+            <td class="n">${money(tasa(i.compras, '0', 'base'))}</td><td class="n">—</td></tr>
+          <tr class="tot"><td>Total</td><td></td><td class="n">${money(i.debito)}</td><td></td><td class="n">${money(i.credito)}</td></tr>
+        </tbody></table></div>
+      <p class="det">Las ventas ya restan las devoluciones del período y no cuentan las anuladas. Las compras son las facturas
+        confirmadas con fecha en el período. ${aFavor > 0 ? 'El saldo a favor pasa al mes siguiente.' : ''}
+        Revise con su contador antes de declarar.</p>
+    </section>
+
+    <div class="rej">
+      <section class="tj">
+        <div class="tj-enc"><h2>Cuentas por cobrar</h2><span class="sub">fiado por antigüedad</span></div>
+        ${tramo('Hasta 30 días', cc.corriente, cc.total)}
+        ${tramo('31 a 60 días', cc.d31_60, cc.total, 'medio')}
+        ${tramo('61 a 90 días', cc.d61_90, cc.total, 'malo')}
+        ${tramo('Más de 90 días', cc.mas_90, cc.total, 'malo')}
+        ${(cc.mayores || []).length ? `<div class="titulin-c">Los que más deben</div>
+          ${cc.mayores.map(m => `<div class="dato-c"><span>${escapar(m.cliente)}${m.atrasado ? ' <b style="color:var(--rojo);font-size:12px">· atrasado</b>' : ''}</span>
+            <b>${money(m.debe)}</b></div>`).join('')}` : '<p class="nada">Nadie debe.</p>'}
+      </section>
+      <section class="tj">
+        <div class="tj-enc"><h2>Cuentas por pagar</h2><span class="sub">facturas de compra con saldo</span></div>
+        ${tramo('Por vencer', cp.por_vencer, cp.total)}
+        ${tramo('Vencido 1 a 30 días', cp.v1_30, cp.total, 'medio')}
+        ${tramo('Vencido 31 a 60 días', cp.v31_60, cp.total, 'malo')}
+        ${tramo('Vencido más de 60 días', cp.mas_60, cp.total, 'malo')}
+        ${(cp.proveedores || []).length ? `<div class="titulin-c">Por proveedor</div>
+          ${cp.proveedores.map(m => `<div class="dato-c"><span>${escapar(m.proveedor || 'Sin proveedor')}
+            <small>${m.facturas} ${m.facturas === 1 ? 'factura' : 'facturas'}${Number(m.vencido) > 0 ? ` · ${money(m.vencido)} vencido` : m.proxima ? ` · vence ${fecha(m.proxima)}` : ''}</small></span>
+            <b>${money(m.debe)}</b></div>`).join('')}` : '<p class="nada">No se le debe a nadie.</p>'}
+      </section>
+    </div>
+
+    <section class="tj">
+      <div class="tj-enc"><h2>Resultados de los últimos 6 meses</h2><span class="sub">venta sin ISV</span></div>
+      <div class="tabla-env"><table class="tabla meses">
+        <thead><tr><th>Mes</th><th class="n">Venta neta</th><th class="n">Costo</th><th class="n">Utilidad bruta</th>
+          <th class="n">Merma</th><th class="n">Gastos</th><th class="n">Utilidad neta</th><th class="col-barra"></th></tr></thead>
+        <tbody>${meses.map(m => `<tr>
+          <td>${mesTxt(m.mes)}</td><td class="n">${money(m.venta_neta)}</td><td class="n">${money(m.costo)}</td>
+          <td class="n">${money(m.utilidad_bruta)}</td><td class="n">${money(m.merma)}</td><td class="n">${money(m.gastos)}</td>
+          <td class="n ${Number(m.utilidad_neta) < 0 ? 'neg' : ''}"><b>${money(m.utilidad_neta)}</b></td>
+          <td class="col-barra">${barra(m.venta_neta, maxV)}</td></tr>`).join('')}</tbody>
+      </table></div>
+    </section>`;
+}
+
+async function descargarLibro(cual){
+  const { data, error } = await sb.rpc(cual === 'ventas' ? 'fn_libro_ventas' : 'fn_libro_compras', args());
+  if (error){ aviso('No se pudo armar el libro', limpiarError(error)); return; }
+  const filas = data || [];
+  const N = v => (Number(v) || 0).toFixed(2);
+  const cols = cual === 'ventas'
+    ? [['Fecha', x => x.fecha], ['Número', x => x.numero], ['Documento', x => x.documento || ''], ['Número fiscal', x => x.numero_fiscal || ''],
+       ['CAI', x => x.cai || ''], ['Cliente', x => x.cliente], ['RTN', x => x.rtn || ''], ['Estado', x => x.estado],
+       ['Exento', x => N(x.exento)], ['Gravado 15%', x => N(x.base_15)], ['ISV 15%', x => N(x.isv_15)],
+       ['Gravado 18%', x => N(x.base_18)], ['ISV 18%', x => N(x.isv_18)], ['Total', x => N(x.total)]]
+    : [['Fecha', x => x.fecha], ['Factura', x => x.numero], ['CAI', x => x.cai || ''], ['Proveedor', x => x.proveedor || ''],
+       ['RTN', x => x.rtn || ''], ['Estado', x => x.estado], ['Exento', x => N(x.exento)], ['Gravado 15%', x => N(x.base_15)],
+       ['ISV 15%', x => N(x.isv_15)], ['Gravado 18%', x => N(x.base_18)], ['ISV 18%', x => N(x.isv_18)],
+       ['Total', x => N(x.total)], ['Saldo', x => N(x.saldo)], ['Vence', x => x.vence || '']];
+  const fila = v => v.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',');
+  const lineas = [fila(cols.map(([t]) => t)), ...filas.map(x => fila(cols.map(([, f]) => f(x))))];
+  const blob = new Blob(['\ufeff' + lineas.join('\r\n')], { type:'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `libro_de_${cual}_${S.desde}_${S.hasta}.csv`;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+
 function descargarCSV(){
   const cols = COLUMNAS[S.seccion] || COLUMNAS.eventos;
   const limpio = h => String(h).replace(/<span class="chico">/g, ' · ').replace(/<[^>]+>/g, '')

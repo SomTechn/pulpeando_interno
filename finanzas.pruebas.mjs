@@ -54,7 +54,7 @@ async function montar(estado, hash = ''){
   // el tema de verdad, para ver que el menú lo aplique
   w.eval(fs.readFileSync(BASE + 'tema.js', 'utf8'));
 
-  estado.llamadas = [];
+  estado.llamadas = []; globalThis.__ultimoEstado = estado;
   w.__sb = {
     auth:{ getSession: async () => ({ data:{ session:{ user:{ id:'u1' } } } }),
            signInWithPassword: async () => ({ error:null }), signOut: async () => {} },
@@ -76,6 +76,7 @@ async function montar(estado, hash = ''){
   return { w, d:w.document };
 }
 
+const estadoLlamo = (d, fn) => (globalThis.__ultimoEstado?.llamadas || []).some(l => l.fn === fn);
 const base = (nivel = 3, extra = {}) => ({ rpc:{
   fn_pos_contexto:{ data:CTX(nivel), error:null },
   fn_finanzas_resumen:{ data:RESUMEN(nivel >= 3), error:null },
@@ -103,7 +104,7 @@ console.log('\n=== EL MENÚ NUEVO ===');
   chk('Finanzas está marcada como la pantalla actual', nodo?.dataset.modulo === 'finanzas');
   chk('sus secciones cuelgan justo debajo de ella, no al final',
       nodo && nodo.querySelector('#menu-secciones [data-valor="egresos"]'));
-  chk('son nueve', d.querySelectorAll('#menu-secciones [data-valor]').length === 9);
+  chk('son diez para el gerente (con Contabilidad)', d.querySelectorAll('#menu-secciones [data-valor]').length === 10);
   chk('están agrupadas por área', [...d.querySelectorAll('.menu-titulo')].map(t => t.textContent)
       .join(',') === 'Venta,Inventario,Compras,Finanzas,Administración');
   chk('el gerente ve Tablero y Configuración',
@@ -219,6 +220,45 @@ console.log('\n=== EL TEMA ===');
   chk('y pinta la barra del navegador', w.document.querySelector('meta[name="theme-color"]').content === '#BE123C');
   chk('todos los sugeridos se leen con su letra encima',
       T.SUGERIDOS.every(([c]) => T.contraste(c, T.tonos(c)['--marca-sobre']) >= 4.5));
+}
+
+console.log('\n=== CONTABILIDAD ===');
+const CONTA = () => ({ desde:'2026-11-01', hasta:'2026-11-01',
+  isv:{ ventas:{ '15':{ base:78.26, isv:11.74 }, '0':{ base:120, isv:0 } }, devoluciones:{}, compras:{ '15':{ base:480, isv:72 }, '0':{ base:450, isv:0 } },
+        debito:11.74, credito:72, a_pagar:0, a_favor:60.26 },
+  cxc:{ total:30, clientes:1, corriente:30, d31_60:0, d61_90:0, mas_90:0, atrasados:0, mayores:[{ cliente:'Doña Fía', debe:30, dias:0, atrasado:false }] },
+  cxp:{ total:1002, facturas:1, por_vencer:0, v1_30:1002, v31_60:0, mas_60:0,
+        proveedores:[{ proveedor:'Distribuidora Norte', debe:1002, facturas:1, vencido:1002, proxima:null }] },
+  meses:['2026-06','2026-07','2026-08','2026-09','2026-10','2026-11'].map((m, k) => ({ mes:m, venta_neta:1000 * (k + 1), costo:700 * (k + 1),
+    utilidad_bruta:300 * (k + 1), merma:10, gastos:100, utilidad_neta:300 * (k + 1) - 110 })) });
+{
+  const { d } = await montar(base(2));
+  await esperar();
+  chk('el supervisor no ve Contabilidad', !d.querySelector('#menu-secciones [data-valor="contabilidad"]'));
+}
+{
+  const { d } = await montar(base(2), '#contabilidad');
+  await esperar();
+  chk('ni entrando con el enlace', !estadoLlamo(d, 'fn_contabilidad'));
+}
+{
+  const e = base(3, { fn_contabilidad:{ data:CONTA(), error:null },
+    fn_libro_ventas:{ data:[{ fecha:'2026-11-01', numero:'T-1', cliente:'Consumidor final', estado:'completada', exento:120, base_15:78.26, isv_15:11.74, base_18:0, isv_18:0, total:210 }], error:null } });
+  const { w, d } = await montar(e, '#contabilidad'); const estado = e;
+  await esperar(150);
+  const t = d.querySelector('#contenido').textContent.replace(/\s+/g, ' ');
+  chk('el gerente ve el ISV a favor cuando lo pagado supera lo cobrado', /ISV a favor ?L 60.26/.test(t));
+  chk('la tabla del ISV por tasa', /Gravado 15% ?L 78.26 ?L 11.74 ?L 480.00 ?L 72.00/.test(t) && /Exento ?L 120.00/.test(t));
+  chk('cuentas por cobrar y por pagar', /Doña Fía/.test(t) && /Distribuidora Norte/.test(t) && /1,002.00 vencido/.test(t));
+  chk('seis meses de resultados', d.querySelectorAll('.tabla.meses tbody tr').length === 6 && /Nov 26/.test(t));
+  chk('sin 18% no sale la fila de 18%', !/Gravado 18%/.test(t));
+  let descargado = null;
+  w.URL.createObjectURL = b => { descargado = b; return 'blob:x'; }; w.URL.revokeObjectURL = () => {};
+  d.querySelector('#b-lventas').click(); await esperar(120);
+  const lv = estado.llamadas.find(l => l.fn === 'fn_libro_ventas');
+  chk('el libro de ventas pide el período', lv && lv.args.p_desde && lv.args.p_hasta);
+  const txt = descargado ? await descargado.text() : '';
+  chk('y baja un CSV con ISV por tasa', /Gravado 15%/.test(txt) && /"78.26"/.test(txt) && /"Consumidor final"/.test(txt));
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);
