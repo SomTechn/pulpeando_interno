@@ -186,6 +186,37 @@ export function etiquetaHTML(d){
 </div>`;
 }
 
+/* ---------- una etiqueta de bodega ----------
+   Va pegada en la caja o el fardo, no en el estante: no lleva precio (cambia
+   y la caja dura meses en bodega). Lleva lo que sirve para acomodar y rotar:
+   cuánto trae esa caja, cuándo vence, y el empaque, tamaño y color para no
+   confundirla con la de al lado. La cantidad y el vencimiento son de cada
+   caja; se escriben al imprimir. */
+export function etiquetaBodegaHTML(d){
+  const cod = elegirCodigo(d.codigo, d.sku);
+  const datos = [
+    d.unidades_empaque ? `Empaque <b>${esc(Number(d.unidades_empaque).toLocaleString('es-HN'))}</b>` : '',
+    d.tamano ? `Tamaño <b>${esc(d.tamano)}</b>` : '',
+    d.color ? `Color <b>${esc(d.color)}</b>` : ''
+  ].filter(Boolean);
+  return `<div class="et bodega">
+  <div class="et-desc">${esc(d.nombre)}</div>
+  <div class="et-cuerpo">
+    <div class="et-izq">
+      ${cod ? `<div class="et-barras">${barrasSVG(cod.modulos)}</div>
+      <div class="et-digitos">${esc(cod.texto)}</div>` : ''}
+      <div class="et-item">Item <b>${esc(d.sku || '—')}</b></div>
+    </div>
+    <div class="et-bod">
+      <div class="et-bod-n"><small>CANT.</small><b>${d.cantidad ? esc(Number(d.cantidad).toLocaleString('es-HN', { maximumFractionDigits:3 })) : '____'}</b>
+        <small>${esc(d.unidad || '')}</small></div>
+      <div class="et-bod-v"><small>VENCE</small><b>${d.vence ? fechaCorta(d.vence) : '__/__/__'}</b></div>
+    </div>
+  </div>
+  ${datos.length ? `<div class="et-datos">${datos.join(' · ')}</div>` : ''}
+</div>`;
+}
+
 /* ---------- el documento a imprimir ---------- */
 export function htmlEtiqueta(datos, opciones = {}){
   const tam = TAMANOS[opciones.tamano] || TAMANOS['60x40'];
@@ -194,7 +225,7 @@ export function htmlEtiqueta(datos, opciones = {}){
   const carta = color && !opciones.vista;     // la vista previa enseña una sola
   // las letras crecen con la etiqueta: todo va en mm relativo al alto
   const k = tam.alto / 40;
-  const una = etiquetaHTML(datos);
+  const una = opciones.tipo === 'bodega' ? etiquetaBodegaHTML(datos) : etiquetaHTML(datos);
   const todas = Array.from({ length: copias }, () => una).join('');
 
   return `<!doctype html><html lang="es"><head><meta charset="utf-8">
@@ -231,6 +262,15 @@ ${carta
 .et-tag{font-size:${2.6*k}mm;font-weight:800;letter-spacing:0.6mm;margin-bottom:${0.4*k}mm}
 .et-antes{font-size:${2.4*k}mm;text-decoration:line-through;margin-top:${0.5*k}mm}
 .et-pie{font-size:${2.2*k}mm;text-align:center;font-weight:700}
+/* bodega: sin precio; cantidad y vencimiento en recuadro */
+.et-bod{flex:0 0 42%;display:flex;flex-direction:column;gap:${0.8*k}mm}
+.et-bod > div{flex:1;border:${0.5*k}mm solid #000;border-radius:${1.2*k}mm;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;line-height:1.05;padding:${0.4*k}mm}
+.et-bod small{font-size:${2*k}mm;font-weight:700;letter-spacing:0.3mm}
+.et-bod-n b{font-size:${6*k}mm;font-weight:800}
+.et-bod-v b{font-size:${3.8*k}mm;font-weight:800;font-family:"Courier New",monospace}
+.et-datos{font-size:${2.3*k}mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:${0.3*k}mm solid #000;
+  padding-top:${0.5*k}mm}
 /* oferta en térmica: recuadro negro, letra blanca */
 .et.oferta .et-precio{${color ? 'background:#e63946;border-color:#e63946;color:#fff' : 'background:#000;color:#fff'}}
 </style></head><body>

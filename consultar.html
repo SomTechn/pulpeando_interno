@@ -234,7 +234,8 @@ button.fila-l:active{transform:scale(.995)}
 .gpie b{display:block;font-weight:700;color:var(--tinta);font-size:11.5px}
 .graf-tot{display:flex;justify-content:space-between;gap:12px;margin-top:12px;
   padding-top:11px;border-top:1px solid var(--linea);font-size:13px}
-.graf-tot b{font-family:var(--num);font-weight:700}
+.graf-tot b{font-family:var(--num);font-weight:700;white-space:nowrap}
+.graf-tot{flex-wrap:wrap}
 
 /* vencimientos */
 .lote{display:flex;align-items:center;gap:12px;padding:10px 0;
@@ -254,6 +255,59 @@ button.fila-l:active{transform:scale(.995)}
 .dato small{display:block;font-size:11.5px;color:var(--tenue);margin-bottom:3px}
 .dato b{font-family:var(--num);font-size:14.5px;font-weight:700;overflow-wrap:anywhere}
 
+/* barra del inventario: piso de venta + bodega, con la raya del mínimo */
+.inv-barra{margin-top:30px}
+.inv-pista{position:relative;display:flex;height:16px;border-radius:8px;background:var(--fondo);overflow:visible;
+  box-shadow:inset 0 0 0 1px var(--linea)}
+.inv-pista i{display:block;height:100%}
+.inv-pista i:first-child{border-radius:8px 0 0 8px}
+.inv-pdv{background:var(--marca)}
+.inv-bod{background:#7C9CC4}
+.inv-min{position:absolute;top:-5px;bottom:-5px;width:0;border-left:2px dashed var(--tinta)}
+.inv-min em{position:absolute;top:-19px;left:50%;transform:translateX(-50%);font-style:normal;font-size:11px;font-weight:800;
+  white-space:nowrap;color:var(--tinta)}
+.inv-barra.bajo .inv-min{border-color:var(--rojo)}
+.inv-barra.bajo .inv-min em{color:var(--rojo)}
+.inv-ley{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px;font-size:13px;color:var(--tenue)}
+.inv-ley span{display:inline-flex;align-items:center;gap:6px}
+.inv-ley span > i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.inv-ley .pdv > i{background:var(--marca)}
+.inv-ley .bod > i{background:#7C9CC4}
+.inv-ley .pdv svg{color:var(--marca-tinta)}
+.inv-ley .bod svg{color:#4A6E99}
+.inv-ley b{font-family:var(--num);color:var(--tinta)}
+.inv-ley .min{margin-left:auto}
+.inv-ley .min.alerta,.inv-ley .min.alerta b{color:var(--rojo);font-weight:700}
+@media (max-width:520px){ .inv-ley .min{margin-left:0;width:100%} }
+
+/* promedios de venta */
+.promedios{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.promedios div{background:var(--fondo);border-radius:var(--r-sm);padding:10px 12px;text-align:center}
+.promedios small{display:block;font-size:11.5px;font-weight:700;color:var(--tenue)}
+.promedios b{display:block;font-family:var(--num);font-size:19px;font-weight:700;margin-top:2px}
+
+/* el botón flotante con lo que se hace al producto */
+.fab-acc{position:fixed;right:max(18px, env(safe-area-inset-right));bottom:max(22px, env(safe-area-inset-bottom));z-index:30;
+  display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.fab-btn{width:58px;height:58px;border-radius:50%;background:var(--marca);color:var(--marca-sobre);display:grid;place-items:center;
+  box-shadow:0 10px 24px -8px var(--marca-sombra),0 2px 6px rgba(15,23,41,.18);transition:transform .15s}
+.fab-acc.abierto .fab-btn{transform:rotate(90deg)}
+.fab-menu{display:flex;flex-direction:column;gap:6px;background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);
+  padding:6px;box-shadow:0 18px 40px -16px rgba(15,23,41,.4);min-width:240px;animation:fab-entra .14s ease-out}
+.fab-menu[hidden]{display:none}
+.fab-menu button{display:flex;align-items:center;gap:12px;height:48px;padding:0 14px;border-radius:9px;font-size:15px;
+  font-weight:700;color:var(--tinta);text-align:left}
+.fab-menu button:hover{background:var(--marca-suave)}
+.fab-menu button svg{color:var(--marca-tinta);flex:0 0 auto}
+@keyframes fab-entra{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.cuerpo{padding-bottom:96px}
+
+/* la hoja de conteo, dentro de Editar inventario */
+.ed-hoja{display:flex;align-items:center;gap:12px;margin-top:16px;padding:12px 14px;border-radius:var(--r-md);
+  background:var(--fondo);font-size:13px;color:var(--tenue)}
+.ed-hoja span{flex:1;min-width:0}
+.ed-hoja .btn{flex:0 0 auto;height:42px}
+.et-bod-campos{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0 4px}
 .acciones-ficha{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 /* Estos dos botones van sobre el fondo de la pagina, no sobre un panel
    blanco: con el gris de .secundario se perderian y parecerian texto. */
@@ -779,7 +833,6 @@ function pintarFicha(){
 
   const pie = [
     Number(p.apartado) > 0 ? `Apartado <b>${cant(p.apartado)}</b>` : '',
-    `Mínimo <b>${cant(p.stock_minimo)}</b>`,
     p.stock_maximo ? `Máximo <b>${cant(p.stock_maximo)}</b>` : '',
     ve ? `Costo <b>${money(p.costo_promedio)}</b>` : ''
   ].filter(Boolean).join(' · ');
@@ -885,10 +938,6 @@ function pintarFicha(){
       }).join('')}
     </div>` : '';
 
-  const abierto = p.conteo_abierto;
-  const textoConteo = abierto
-    ? `Agregar a la hoja ${abierto.numero}`
-    : 'Hoja de conteo';
 
   /* Lo que este producto tiene esperando aprobacion. Va arriba del todo:
      sin esto dos personas piden el mismo ajuste y la segunda solo se entera
@@ -948,6 +997,7 @@ function pintarFicha(){
         </button>
       </div>
       <div class="tiles n${Math.min(lugares.length + 1, 6)}">${tiles}</div>
+      ${barraInventario(p)}
       ${pie ? `<div class="tile-pie">${pie}</div>` : ''}
       ${avisoBodega}
       ${notaLugar}
@@ -957,12 +1007,6 @@ function pintarFicha(){
 
     ${bloqueConteos}
 
-    <div class="acciones-ficha">
-      <button class="btn secundario" id="btn-merma">Registrar merma</button>
-      <button class="btn secundario" id="btn-mover">Mover de lugar</button>
-      <button class="btn secundario" id="btn-conteo">${escapar(textoConteo)}</button>
-      <button class="btn secundario" id="btn-etiqueta">Imprimir etiqueta</button>
-    </div>
 
     <div class="ficha">
       <div class="titulin">Ventas de las últimas 5 semanas</div>
@@ -974,13 +1018,22 @@ function pintarFicha(){
     <div class="ficha">
       <div class="titulin">Datos</div>
       <div class="datos">${datos}</div>
+    </div>
+
+    <div class="fab-acc" id="fab">
+      <div class="fab-menu" id="fab-menu" role="menu" hidden>
+        <button role="menuitem" data-fab="merma">${ICO_FAB.merma}<span>Registrar merma</span></button>
+        <button role="menuitem" data-fab="mover">${ICO_FAB.mover}<span>Mover de lugar</span></button>
+        <button role="menuitem" data-fab="piso">${ICO_FAB.piso}<span>Etiqueta de piso de venta</span></button>
+        <button role="menuitem" data-fab="bodega">${ICO_FAB.bodega}<span>Etiqueta de bodega</span></button>
+      </div>
+      <button class="fab-btn" id="fab-btn" aria-label="Más acciones" aria-haspopup="menu" aria-expanded="false">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="19" cy="12" r="2.2"/></svg>
+      </button>
     </div>`;
 
   $('#btn-editar').addEventListener('click', () => hojaEditar());
-  $('#btn-merma').addEventListener('click', hojaMerma);
-  $('#btn-mover').addEventListener('click', hojaMover);
-  $('#btn-conteo').addEventListener('click', hojaConteo);
-  $('#btn-etiqueta').addEventListener('click', () => hojaEtiqueta());
+  conectarFab();
   $$('.tiles button.tile').forEach(b =>
     b.addEventListener('click', () => hojaLugares(b.dataset.u || null)));
   // El código de barras: tocarlo lo agranda (para leerlo de lejos); los
@@ -988,6 +1041,61 @@ function pintarFicha(){
   $('#barras-caja')?.addEventListener('click', e => e.currentTarget.classList.toggle('grande'));
   $$('.barras-otros [data-cod]').forEach(b => b.addEventListener('click', () => {
     S.codigoVisto = b.dataset.cod; pintarFicha(); }));
+}
+
+/* ---------- la barra del inventario ----------
+   Una sola barra: el piso de ventas y la bodega, cada uno con su color, y
+   una raya donde está el mínimo. Se ve de un vistazo si hay que bajar de
+   bodega (el piso corto, la bodega llena) o comprar (las dos cortas). */
+const ICO_PDV = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M3 9h18"/><path d="M9 20v-6h6v6"/></svg>';
+const ICO_BOD = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5v12H3z"/><path d="M7 20v-8h10v8"/><path d="M7 16h10"/></svg>';
+
+function barraInventario(p){
+  const lugares = p.ubicaciones || [];
+  const bodega = lugares.filter(u => u.tipo === 'bodega').reduce((a, u) => a + Math.max(0, Number(u.cantidad) || 0), 0);
+  const piso = Math.max(0, (Number(p.existencia) || 0) - bodega);
+  const min = Math.max(0, Number(p.stock_minimo) || 0);
+  const total = piso + bodega;
+  // La escala deja ver el mínimo aunque no haya nada, y el máximo si lo tiene.
+  const escala = Math.max(total, min * 1.4, Number(p.stock_maximo) || 0, 1);
+  const w = v => (v / escala * 100).toFixed(2) + '%';
+  const bajo = min > 0 && total < min;
+  return `<div class="inv-barra ${bajo ? 'bajo' : ''}">
+    <div class="inv-pista" role="img" aria-label="Piso de ventas ${cant(piso)}, bodega ${cant(bodega)}, mínimo ${cant(min)}">
+      <i class="inv-pdv" style="width:${w(piso)}"></i><i class="inv-bod" style="width:${w(bodega)}"></i>
+      ${min > 0 ? `<span class="inv-min" style="left:${w(min)}"><em>Mín ${cant(min)}</em></span>` : ''}
+    </div>
+    <div class="inv-ley">
+      <span class="pdv">${ICO_PDV}<i></i>Piso de venta <b>${cant(piso)}</b></span>
+      <span class="bod">${ICO_BOD}<i></i>Bodega <b>${cant(bodega)}</b></span>
+      <span class="min ${bajo ? 'alerta' : ''}">${bajo ? `Faltan <b>${cant(min - total)}</b> para el mínimo` : min > 0 ? `Mínimo <b>${cant(min)}</b>` : 'Sin mínimo'}</span>
+    </div>
+  </div>`;
+}
+
+/* ---------- el botón flotante: lo que se hace con el producto ---------- */
+const ICO_FAB = {
+  merma: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18l-1.5 13a2 2 0 0 1-2 1.8H6.5a2 2 0 0 1-2-1.8z"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+  mover: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h13l-3-3M17 17H4l3 3"/></svg>',
+  piso:  ICO_PDV.replace(/16/g, '20'),
+  bodega: ICO_BOD.replace(/16/g, '20')
+};
+
+function conectarFab(){
+  const fab = $('#fab'), btn = $('#fab-btn'), menu = $('#fab-menu');
+  if (!fab) return;
+  const abrirMenu = si => {
+    menu.hidden = !si; fab.classList.toggle('abierto', si);
+    btn.setAttribute('aria-expanded', String(si));
+  };
+  btn.addEventListener('click', ev => { ev.stopPropagation(); abrirMenu(menu.hidden); });
+  menu.addEventListener('click', ev => {
+    const b = ev.target.closest('[data-fab]'); if (!b) return;
+    abrirMenu(false);
+    ({ merma:hojaMerma, mover:hojaMover, piso:() => hojaEtiqueta('piso'), bodega:() => hojaEtiqueta('bodega') })[b.dataset.fab]();
+  });
+  document.addEventListener('click', ev => { if (!fab.contains(ev.target)) abrirMenu(false); });
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape') abrirMenu(false); });
 }
 
 /* El código de barras del producto en pantalla. Con el de fábrica (EAN/UPC)
@@ -1033,11 +1141,23 @@ function pintarGrafica(){
     return `<div><b>${semanaCorta(s.semana_inicio)}</b>${ahora ? 'esta semana' : money(s.importe).replace(S.moneda + ' ', '')}</div>`;
   }).join('');
 
+  // Días que cubren las 5 semanas: 4 enteras más lo que va de esta (desde el lunes)
+  const hoy = new Date();
+  const diasEsta = ((hoy.getDay() + 6) % 7) + 1;
+  const dias = (sem.length - 1) * 7 + diasEsta;
+  const diario = dias > 0 ? unidades / dias : 0;
+  const prom = v => (Math.round(v * 10) / 10).toLocaleString('es-HN', { maximumFractionDigits:1 });
+
   return `
     <div class="graf">${barras}</div>
     <div class="gpie">${pies}</div>
+    <div class="promedios">
+      <div><small>Promedio diario</small><b>${prom(diario)}</b></div>
+      <div><small>Semanal</small><b>${prom(diario * 7)}</b></div>
+      <div><small>Mensual</small><b>${prom(diario * 30)}</b></div>
+    </div>
     <div class="graf-tot">
-      <span>Total de las 5 semanas</span>
+      <span>Total de las 5 semanas · ${dias} días</span>
       <b>${cant(unidades)} ${escapar(S.prod.unidad)} · ${money(importe)}</b>
     </div>`;
 }
@@ -1219,6 +1339,16 @@ function hojaMerma(){
        punta y junto a la caja, asi que se va sumando con "Agregar mas" y al
        final se manda un solo numero.
 */
+/* Agregar el producto a una hoja de conteo: vive dentro de Editar inventario,
+   no suelto en la ficha. */
+function botonHojaConteo(){
+  const abierto = S.prod?.conteo_abierto;
+  return `<div class="ed-hoja">
+    <span>${abierto ? `Hay una hoja de conteo abierta: <b>${escapar(abierto.numero)}</b>` : '¿Va a contar varios productos?'}</span>
+    <button class="btn secundario" id="ed-hoja">${abierto ? 'Agregar a la hoja' : 'Abrir hoja de conteo'}</button>
+  </div>`;
+}
+
 function hojaEditar(loteElegido){
   const p = S.prod;
   const lotes = p.lotes || [];
@@ -1246,9 +1376,11 @@ function hojaEditar(loteElegido){
         <button class="btn secundario" id="ed-no">Cerrar</button>
         <a class="btn principal-b" href="auditoria.html"
            style="display:grid;place-items:center">Ir a auditar</a>
-      </div>`;
+      </div>
+      ${botonHojaConteo()}`;
     ver('#velo');
     $('#ed-no').onclick = cerrarHoja;
+    $('#ed-hoja').onclick = hojaConteo;
     return;
   }
 
@@ -1286,8 +1418,10 @@ function hojaEditar(loteElegido){
     <div class="acciones">
       <button class="btn secundario" id="ed-no">Cancelar</button>
       <button class="btn principal-b" id="ed-si">Guardar</button>
-    </div>`;
+    </div>
+    ${botonHojaConteo()}`;
   ver('#velo');
+  $('#ed-hoja').onclick = hojaConteo;
 
   S.sumados = [];
   const campo = $('#ed-cant');
@@ -1812,7 +1946,8 @@ const masDias = (iso, n) => {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 };
 
-function hojaEtiqueta(){
+async function hojaEtiqueta(tipo = 'piso'){
+  if (tipo === 'bodega') return hojaEtiquetaBodega();
   const e = S.etq;
   if (!e){
     aviso('No se pudo armar la etiqueta', 'Vuelva a abrir el producto e intente de nuevo.');
@@ -1853,8 +1988,8 @@ function hojaEtiqueta(){
       Si el precio normal ya es más barato, se queda el normal.</div>`;
 
   $('#hoja').innerHTML = `
-    <h2>Imprimir etiqueta</h2>
-    <p class="sub">${escapar(e.nombre)}</p>
+    <h2>Etiqueta de piso de venta</h2>
+    <p class="sub">${escapar(e.nombre)} · con precio, para el estante</p>
     <div class="et-vista" id="et-vista"></div>
     <div class="campo-g">
       <label>Tamaño</label>
@@ -1925,7 +2060,7 @@ function hojaEtiqueta(){
       { p_producto_id:e.producto_id, p_sucursal_id:S.sucursal });
     if (data) S.etq = data;
     await recargarFicha();
-    hojaEtiqueta();
+    hojaEtiqueta('piso');
   };
 
   $('#of-poner').onclick = async () => {
@@ -1953,6 +2088,99 @@ function hojaEtiqueta(){
     if (err){ b.disabled = false; return error(limpiarError(err)); }
     await recargar();
   });
+}
+
+/* ---------- etiqueta de bodega ----------
+   Sin precio. Lleva empaque, tamaño y color del producto, y la cantidad y el
+   vencimiento de ESA caja, que se escriben aquí antes de imprimir. */
+async function hojaEtiquetaBodega(){
+  const p = S.prod, e = S.etq || {};
+  $('#hoja').innerHTML = '<div class="vacio" style="padding:30px"><span class="girando"></span></div>';
+  ver('#velo');
+  let extra = {};
+  try {
+    const { data } = await sb.from('productos').select('unidades_empaque,tamano,color').eq('id', p.producto_id || p.id).single();
+    extra = data || {};
+  } catch(err){ /* sin esos datos la etiqueta sale igual */ }
+  // El vencimiento que se sugiere: el lote más próximo a vencer que todavía tiene existencia
+  const proximo = (p.lotes || []).filter(l => l.vence && Number(l.cantidad) > 0)
+    .sort((a, b) => String(a.vence).localeCompare(String(b.vence)))[0];
+  const datos = {
+    nombre: p.nombre, sku: p.sku, codigo: e.codigo || (p.codigos || [])[0] || null, unidad: p.unidad,
+    unidades_empaque: extra.unidades_empaque, tamano: extra.tamano, color: extra.color,
+    cantidad: extra.unidades_empaque || null, vence: proximo?.vence || null
+  };
+  let tam = tamanoGuardado();
+  let copias = 1;
+  $('#hoja').innerHTML = `
+    <h2>Etiqueta de bodega</h2>
+    <p class="sub">${escapar(p.nombre)} · sin precio, para pegar en la caja</p>
+    <div class="et-vista" id="et-vista"></div>
+    <div class="et-bod-campos">
+      <div class="campo-g"><label for="eb-cant">Cantidad en la caja</label>
+        <input class="entrada num" id="eb-cant" inputmode="decimal" value="${datos.cantidad ?? ''}" placeholder="0"></div>
+      <div class="campo-g"><label for="eb-vence">Vence</label>
+        <input class="entrada" id="eb-vence" type="date" value="${escapar(datos.vence || '')}"></div>
+    </div>
+    <p class="et-nota">Empaque, tamaño y color salen del producto${[extra.unidades_empaque && 'empaque', extra.tamano && 'tamaño', extra.color && 'color'].filter(Boolean).length < 3
+      ? ' (lo que falte se llena en Catálogos)' : ''}. Cantidad y vencimiento son de cada caja.</p>
+    <div class="campo-g">
+      <label>Tamaño</label>
+      <div class="et-tams" id="et-tams">${Object.entries(TAMANOS).map(([k, t]) => `
+        <button data-tam="${k}" class="${k === tam ? 'si' : ''}">${escapar(t.nombre.split(' (')[0])}
+          <small>${t.termica ? 'Térmica' : 'Impresora normal'}</small></button>`).join('')}
+      </div>
+    </div>
+    <div class="campo-g" style="margin-top:12px">
+      <label for="et-copias">Copias (una por caja)</label>
+      <div class="et-copias">
+        <button id="et-menos" aria-label="Una menos">−</button>
+        <input class="entrada num" id="et-copias" inputmode="numeric" value="1">
+        <button id="et-mas" aria-label="Una más">+</button>
+      </div>
+    </div>
+    <div class="acciones">
+      <button class="btn secundario" id="et-no">Cerrar</button>
+      <button class="btn principal-b" id="et-si">Imprimir</button>
+    </div>`;
+
+  const leer = () => {
+    const c = Number(String($('#eb-cant').value).replace(',', '.'));
+    datos.cantidad = c > 0 ? c : null;
+    datos.vence = $('#eb-vence').value || null;
+  };
+  const vista = () => {
+    leer();
+    const t = TAMANOS[tam];
+    const caja = $('#et-vista');
+    const w = t.ancho * 3.78, h = t.alto * 3.78;
+    const ancho = Math.min(caja.clientWidth || 320, 420) - 20;
+    const esc = Math.max(1, Math.min(2.4, ancho / w));
+    caja.style.height = (h * esc + 36) + 'px';
+    caja.innerHTML = `<iframe title="Vista previa" style="width:${w}px;height:${h}px;transform:scale(${esc})"></iframe>`;
+    caja.querySelector('iframe').srcdoc = htmlEtiqueta(datos, { tamano:tam, copias:1, vista:true, tipo:'bodega' });
+  };
+  vista();
+  $('#eb-cant').addEventListener('input', vista);
+  $('#eb-vence').addEventListener('change', vista);
+  $('#et-tams').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-tam]'); if (!b) return;
+    tam = b.dataset.tam; guardarTamano(tam);
+    $$('#et-tams button').forEach(x => x.classList.toggle('si', x === b));
+    vista();
+  });
+  const fijarCopias = n => { copias = Math.max(1, Math.min(200, Math.floor(Number(n) || 1))); $('#et-copias').value = copias; };
+  $('#et-menos').onclick = () => fijarCopias(copias - 1);
+  $('#et-mas').onclick = () => fijarCopias(copias + 1);
+  $('#et-copias').addEventListener('change', ev => fijarCopias(ev.target.value));
+  $('#et-no').onclick = cerrarHoja;
+  $('#et-si').onclick = async () => {
+    fijarCopias($('#et-copias').value); leer();
+    const b = $('#et-si');
+    b.disabled = true; b.innerHTML = '<span class="girando"></span>';
+    try { await imprimirEtiquetas(datos, { tamano:tam, copias, tipo:'bodega' }); }
+    finally { b.disabled = false; b.textContent = 'Imprimir'; }
+  };
 }
 
 /* ================= clics de la lista ================= */

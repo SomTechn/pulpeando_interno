@@ -148,7 +148,9 @@ async function montar(estado){
       const h = estado.rpc[fn];
       if (h === undefined) return { data:null, error:{ message:'sin simular: ' + fn } };
       return typeof h === 'function' ? h(args) : h;
-    }
+    },
+    from: t => { const q = { select(){ return q; }, eq(){ return q; },
+      single: async () => ({ data:(estado.tablas || {})[t] || null, error:null }) }; return q; }
   };
 
   const menu = await import(BASE + 'menu.js');
@@ -527,15 +529,24 @@ console.log('\n=== MOVER DE LUGAR ===');
   chk('y no muestra el formulario', d.querySelector('#mv-desde') === null);
 }
 
+/* El menú flotante: abrirlo y escoger */
+function abrirFab(d, cual){
+  d.querySelector('#fab-btn').click();
+  d.querySelector(`#fab-menu [data-fab="${cual}"]`).click();
+}
+
 console.log('\n=== GENERAR CONTEO DESDE EL PRODUCTO ===');
 {
   const estado = base();
   const { d, p } = await montar(estado);
   await p.abrir('p1');
   await esperar(120);
-  chk('sin hoja abierta el botón ofrece abrirla',
-      /Hoja de conteo/.test(d.querySelector('#btn-conteo').textContent));
-  p.hojaConteo();
+  chk('la ficha ya no tiene botón suelto de conteo', !d.querySelector('#btn-conteo'));
+  d.querySelector('#btn-editar').click(); await esperar();
+  chk('sin hoja abierta, Editar inventario ofrece abrirla',
+      /Abrir hoja de conteo/.test(d.querySelector('#ed-hoja')?.textContent || ''));
+  d.querySelector('#ed-hoja').click();
+  await esperar();
   await esperar();
   chk('explica que sólo lleva lo que se agregue',
       /solo los productos que usted agregue/.test(d.querySelector('#hoja').textContent));
@@ -563,8 +574,9 @@ console.log('\n=== GENERAR CONTEO DESDE EL PRODUCTO ===');
   const { d, p } = await montar(estado);
   await p.abrir('p1');
   await esperar(120);
-  chk('con una hoja abierta el botón la nombra',
-      /C-S01-000001/.test(d.querySelector('#btn-conteo').textContent));
+  d.querySelector('#btn-editar').click(); await esperar();
+  chk('con una hoja abierta, Editar inventario la nombra',
+      /C-S01-000001/.test(d.querySelector('#hoja .ed-hoja')?.textContent || '') && /Agregar a la hoja/.test(d.querySelector('#ed-hoja').textContent));
   p.hojaConteo();
   await esperar();
   chk('avisa que se suma a la que ya está abierta',
@@ -719,7 +731,13 @@ console.log('\n=== LA TARJETA DE INVENTARIO ===');
   chk('ya no está en la fila de botones',
       !d.querySelector('.acciones-ficha #btn-editar'));
   chk('cuatro cifras: total y tres lugares', d.querySelectorAll('.tile').length === 4);
-  chk('el pie dice el mínimo', /Mínimo/.test(d.querySelector('.tile-pie').textContent));
+  chk('el mínimo va en la barra', /Mínimo 10/.test(d.querySelector('.inv-ley').textContent.replace(/\s+/g, ' ')) && /Mín 10/.test(d.querySelector('.inv-min').textContent));
+  const ley = d.querySelector('.inv-ley').textContent.replace(/\s+/g, ' ');
+  chk('la barra separa piso de venta (30) y bodega (30)', /Piso de venta 30/.test(ley) && /Bodega 30/.test(ley));
+  chk('con sus íconos', d.querySelectorAll('.inv-ley svg').length === 2);
+  const wPdv = parseFloat(d.querySelector('.inv-pdv').style.width), wBod = parseFloat(d.querySelector('.inv-bod').style.width);
+  chk('piso y bodega llenan la barra en partes iguales', Math.abs(wPdv - 50) < 0.1 && Math.abs(wBod - 50) < 0.1);
+  chk('la raya del mínimo en su lugar (10 de 60)', Math.abs(parseFloat(d.querySelector('.inv-min').style.left) - 16.67) < 0.1);
   chk('y lo apartado', /Apartado/.test(d.querySelector('.tile-pie').textContent));
   chk('el gerente ve el costo ahí mismo',
       /Costo/.test(d.querySelector('.tile-pie').textContent));
@@ -963,9 +981,9 @@ console.log('\n=== REGISTRAR MERMA DESDE EL PRODUCTO ===');
       e.llamadas.some(l => l.fn === 'fn_causas_merma'));
   await p.abrir('p1');
   await esperar(120);
-  chk('hay botón de merma', !!d.querySelector('#btn-merma'));
+  chk('el menú flotante ofrece la merma', !!d.querySelector('#fab-menu [data-fab="merma"]') && d.querySelector('#fab-menu').hidden);
 
-  d.querySelector('#btn-merma').click();
+  abrirFab(d, 'merma');
   await esperar();
   chk('abre la hoja', !!d.querySelector('#mr-causa'));
   chk('las causas van agrupadas por clase',
@@ -1015,7 +1033,7 @@ console.log('\n=== REGISTRAR MERMA DESDE EL PRODUCTO ===');
   const { d, p, w } = await montar(estado);
   await p.abrir('p1');
   await esperar(120);
-  d.querySelector('#btn-merma').click();
+  abrirFab(d, 'merma');
   await esperar();
   const campo = d.querySelector('#mr-cant');
   campo.value = '2'; campo.dispatchEvent(new w.Event('input', { bubbles:true }));
@@ -1033,7 +1051,7 @@ console.log('\n=== REGISTRAR MERMA DESDE EL PRODUCTO ===');
   const { d, p, w } = await montar(estado);
   await p.abrir('p1');
   await esperar(120);
-  d.querySelector('#btn-merma').click();
+  abrirFab(d, 'merma');
   await esperar();
   const campo = d.querySelector('#mr-cant');
   campo.value = '9'; campo.dispatchEvent(new w.Event('input', { bubbles:true }));
@@ -1049,7 +1067,7 @@ console.log('\n=== REGISTRAR MERMA DESDE EL PRODUCTO ===');
   const { d, p } = await montar(estado);
   await p.abrir('p1');
   await esperar(120);
-  d.querySelector('#btn-merma').click();
+  abrirFab(d, 'merma');
   await esperar();
   chk('sin causas en el catálogo explica qué falta',
       /Faltan las causas de merma/.test(d.querySelector('#hoja').textContent));
@@ -1228,10 +1246,10 @@ console.log('\n=== ETIQUETA Y OFERTA ===');
   chk('pide la etiqueta al abrir', estado.llamadas.some(l => l.fn === 'fn_etiqueta_producto'));
   chk('la ficha dice Oferta', !!d.querySelector('.ficha-precio.en-oferta .tag-oferta'));
   chk('y tacha el precio de antes', /32\.00/.test(d.querySelector('.ficha-precio s')?.textContent || ''));
-  chk('hay botón de imprimir etiqueta', !!d.querySelector('#btn-etiqueta'));
-  d.querySelector('#btn-etiqueta').click();
+  chk('el menú flotante ofrece las dos etiquetas', !!d.querySelector('[data-fab="piso"]') && !!d.querySelector('[data-fab="bodega"]'));
+  abrirFab(d, 'piso');
   await esperar();
-  chk('abre la hoja de la etiqueta', /Imprimir etiqueta/.test(d.querySelector('#hoja h2').textContent));
+  chk('abre la hoja de la etiqueta de piso', /Etiqueta de piso de venta/.test(d.querySelector('#hoja h2').textContent));
   const vista = d.querySelector('#et-vista iframe')?.getAttribute('srcdoc') || '';
   chk('la vista previa trae el nombre', /Leche entera 1 L/.test(vista));
   chk('las barras', /<svg[^>]*shape-rendering="crispEdges"/.test(vista));
@@ -1310,6 +1328,46 @@ console.log('\n=== EL CÓDIGO DE BARRAS EN PANTALLA ===');
   otros[1].click();
   await esperar(30);
   chk('y cambia el dibujo', /LEC1L-VIEJO/.test(d.querySelector('#barras-caja').textContent));
+}
+
+console.log('\n=== BAJO EL MÍNIMO, PROMEDIOS Y ETIQUETA DE BODEGA ===');
+{
+  const estado = base();
+  const perfil = PERFIL(true);
+  perfil.existencia = 4; perfil.stock_minimo = 10;
+  perfil.ubicaciones = [{ ubicacion_id:'u1', nombre:'Piso de ventas', predeterminada:true, cantidad:4, tipo:'piso' },
+                        { ubicacion_id:'u3', nombre:'Bodega', predeterminada:false, cantidad:0, tipo:'bodega' }];
+  estado.rpc.fn_consultar_producto = { data:perfil, error:null };
+  const { d, p } = await montar(estado);
+  await p.abrir('p1'); await esperar(120);
+  chk('bajo el mínimo dice cuánto falta', /Faltan 6 para el mínimo/.test(d.querySelector('.inv-ley').textContent.replace(/\s+/g, ' '))
+      && d.querySelector('.inv-barra').classList.contains('bajo'));
+}
+{
+  const estado = base();
+  const { d, w, p } = await montar(estado);
+  await p.abrir('p1'); await esperar(120);
+  const pr = d.querySelectorAll('.promedios b');
+  chk('tres promedios: diario, semanal y mensual', pr.length === 3 && /Promedio diario/.test(d.querySelector('.promedios').textContent));
+  const dia = Number(pr[0].textContent.replace(',', '')), sem = Number(pr[1].textContent.replace(',', ''));
+  chk('el semanal es 7 veces el diario (con redondeo)', Math.abs(sem - dia * 7) <= 0.5);
+  chk('cuenta los días de las semanas', /· \d+ días/.test(d.querySelector('.graf-tot').textContent));
+
+  d.querySelector('#fab-btn').click();
+  chk('el menú flotante se abre', !d.querySelector('#fab-menu').hidden && d.querySelector('#fab').classList.contains('abierto'));
+  d.body.click();
+  chk('y se cierra al tocar afuera', d.querySelector('#fab-menu').hidden);
+  estado.tablas = { productos:{ unidades_empaque:24, tamano:'1 L', color:'Blanco' } };
+  abrirFab(d, 'bodega'); await esperar(150);
+  chk('abre la etiqueta de bodega', /Etiqueta de bodega/.test(d.querySelector('#hoja h2').textContent));
+  chk('la cantidad arranca con lo que trae el empaque', d.querySelector('#eb-cant').value === '24');
+  chk('y el vencimiento con el lote próximo que tiene existencia', d.querySelector('#eb-vence').value === PERFIL(true).lotes[0].vence);
+  const v = () => d.querySelector('#et-vista iframe')?.getAttribute('srcdoc') || '';
+  chk('sin precio', !/et-precio"/.test(v()) && !/L 28/.test(v()));
+  chk('con empaque, tamaño y color', /Empaque <b>24/.test(v()) && /1 L/.test(v()) && /Blanco/.test(v()));
+  d.querySelector('#eb-cant').value = '12';
+  d.querySelector('#eb-cant').dispatchEvent(new w.Event('input'));
+  chk('la cantidad de la caja se ve en la vista', /<b>12<\/b>/.test(v()));
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);
