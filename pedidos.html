@@ -702,11 +702,13 @@ function pintarPasos(p){
     } else if (p.venta_id){
       b.push(['entregado','principal-b','Entregado en tienda']);
     }
-    if (p.incidencia && !p.venta_id && (S.ctx?.usuario?.nivel || 0) >= 2)
-      b.push(['cancelar','secundario','Cancelar pedido']);
   } else if (p.estado === 'en_ruta'){
     b.push(['entregado','principal-b','Marcar entregado']);
   }
+  /* Cancelar: el supervisor, en cualquier punto antes de entregarse. Si ya
+     se cobró, la base anula la venta en el mismo paso (antes quedaba pegado). */
+  if (['listo','en_ruta'].includes(p.estado) && (S.ctx?.usuario?.nivel || 0) >= 2)
+    b.push(['cancelar','secundario', p.venta_id ? 'Cancelar y anular la venta' : 'Cancelar pedido']);
 
   z.innerHTML = b.map(([a,clase,texto]) =>
     `<button class="btn ${clase}" data-a="${a}">${texto}</button>`).join('');
@@ -752,13 +754,22 @@ $('#hoja').addEventListener('click', async e => {
 
     if (a === 'rechazar' || a === 'cancelar'){
       listo();
-      const motivo = await modalTexto('Cancelar pedido',
-        'Se libera la mercadería apartada. El cliente verá el motivo.', 'Motivo');
+      const motivo = await modalTexto(a === 'rechazar' ? 'Rechazar pedido' : 'Cancelar pedido',
+        p?.venta_id
+          ? 'Ya se cobró: se anula esa venta y la mercadería vuelve al inventario. El cliente verá el motivo.'
+          : 'Se libera la mercadería apartada. El cliente verá el motivo.', 'Motivo');
       if (motivo === null) return;
-      const { error } = await sb.rpc('fn_cambiar_estado_pedido',
-        { p_pedido_id:id, p_estado:'cancelado', p_nota:motivo });
+      const { data:r, error } = await sb.rpc('fn_cancelar_pedido', { p_pedido_id:id, p_motivo:motivo });
       if (error) return modalAviso('No se pudo cancelar', limpiarError(error), 'malo');
       ver('#velo', false);
+      if (r?.venta_anulada){
+        const ef = Number(r.efectivo) || 0;
+        await modalAviso('Pedido cancelado',
+          `Se anuló la venta ${r.venta}.` +
+          (ef > 0 ? ` Si el cliente ya pagó, devuélvale L ${ef.toFixed(2)} en efectivo.` : '') +
+          (r.turno_cerrado ? ' Esa venta ya estaba en un cierre de caja: el reporte de ese día cambia.' : ''),
+          r.turno_cerrado ? 'ojo' : 'bueno');
+      }
     }
 
     if (a === 'repartidor'){

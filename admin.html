@@ -377,10 +377,30 @@ async function pintarConfig(){
           <input class="entrada num" id="c-wa" inputmode="tel" placeholder="50499999999" value="${escapar(c.whatsapp || '')}"></div>
       </div>
       <div class="pie-ficha"><button class="btn principal-b" id="c-guardar">Guardar</button></div>
+    </div>
+    <div class="ficha">
+      <h3>Mi contraseña</h3>
+      <p class="sub">Cámbiela si entró con una contraseña temporal.</p>
+      <div class="campos">
+        <div class="campo-g"><label for="c-clave1">Contraseña nueva</label>
+          <input class="entrada" id="c-clave1" type="password" autocomplete="new-password" placeholder="10 caracteres o más"></div>
+        <div class="campo-g"><label for="c-clave2">Repítala</label>
+          <input class="entrada" id="c-clave2" type="password" autocomplete="new-password"></div>
+      </div>
+      <div class="pie-ficha"><button class="btn secundario" id="c-clave">Cambiar contraseña</button></div>
     </div>`;
   const conectar = () => $('#c-planes').querySelectorAll('[data-quitar]').forEach(b => b.onclick = () => b.parentElement.remove());
   conectar();
   $('#c-mas-plan').onclick = () => { $('#c-planes').insertAdjacentHTML('beforeend', filaPlan({})); conectar(); };
+  $('#c-clave').onclick = async () => {
+    const a = $('#c-clave1').value, b = $('#c-clave2').value;
+    if (a.length < 10) return toast('La contraseña lleva 10 caracteres o más', true);
+    if (a !== b) return toast('Las dos contraseñas no son iguales', true);
+    const { error } = await sb.auth.updateUser({ password:a });
+    if (error) return toast(limpiar(error), true);
+    $('#c-clave1').value = ''; $('#c-clave2').value = '';
+    toast('Contraseña cambiada');
+  };
   $('#c-guardar').onclick = async () => {
     const planes = [...$('#c-planes').querySelectorAll('.plan-fila')].map(f => {
       const v = k => f.querySelector(`[data-k="${k}"]`).value.trim();

@@ -97,7 +97,8 @@ async function montarPagina(archivo, estado, reemplazos = []){
   w.__sb = {
     auth:{ getSession: async () => ({ data:{ session: estado.sesion === false ? null : { user:{ id:'u1' } } } }),
            signInWithPassword: async c => { estado.entradas.push(c); return { error:null }; },
-           signOut: async () => {}, onAuthStateChange(){} },
+           signOut: async () => {}, onAuthStateChange(){},
+           updateUser: async c => { estado.claves = (estado.claves || []).concat(c.password); return { error:null }; } },
     rpc: async (fn, args) => {
       estado.llamadas.push({ fn, args });
       const h = estado.rpc?.[fn];
@@ -333,6 +334,13 @@ const CONF = () => ({ registro_abierto:true, dias_prueba:14, dias_gracia:3, what
   const g = e.llamadas.find(l => l.fn === 'fn_admin_guardar_config')?.args.p_datos;
   chk('guarda los planes que quedaron, id en minúsculas', g && g.planes.map(p => p.id).join() === 'negocio,grande' && g.planes[1].precio === 1500);
   chk('días de prueba y WhatsApp limpio', g?.dias_prueba === 30 && g?.whatsapp === '50499990000');
+  d.querySelector('#c-clave1').value = 'corta'; d.querySelector('#c-clave').click(); await esperar(40);
+  chk('contraseña corta no se manda', !e.claves);
+  d.querySelector('#c-clave1').value = 'NuevaClave2026'; d.querySelector('#c-clave2').value = 'otra';
+  d.querySelector('#c-clave').click(); await esperar(40);
+  chk('si no coinciden no se manda', !e.claves);
+  d.querySelector('#c-clave2').value = 'NuevaClave2026'; d.querySelector('#c-clave').click(); await esperar(60);
+  chk('el admin cambia su contraseña', e.claves?.[0] === 'NuevaClave2026' && d.querySelector('#c-clave1').value === '');
 }
 
 console.log(`\n${ok} bien, ${mal} mal`);

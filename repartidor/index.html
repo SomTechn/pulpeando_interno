@@ -361,7 +361,12 @@ async function cargar(silencioso = false){
   if (!silencioso && !S.entregas.length)
     $('#lista').innerHTML = '<div class="vacio"><span class="girando"></span></div>';
 
-  const [ent, jor] = await Promise.all([sb.rpc('fn_mis_entregas'), sb.rpc('fn_mi_jornada')]);
+  // v2 trae la tienda, el envío y la incidencia (049); la vieja queda de respaldo
+  const misEntregas = async () => {
+    const r = await sb.rpc('fn_mis_entregas_v2');
+    return r.error && /fn_mis_entregas_v2|schema cache|does not exist/i.test(r.error.message || '') ? sb.rpc('fn_mis_entregas') : r;
+  };
+  const [ent, jor] = await Promise.all([misEntregas(), sb.rpc('fn_mi_jornada')]);
   if (ent.error){
     if (!silencioso) $('#lista').innerHTML = `<div class="vacio"><div class="ico">📡</div>
       <b>No se pudo cargar</b><p>${escapar(limpiarError(ent.error))}</p></div>`;
