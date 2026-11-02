@@ -150,6 +150,11 @@ textarea.entrada{height:auto;min-height:70px;padding:11px 13px;resize:vertical;f
 .acceso .pais{display:inline-block;font-size:11.5px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--fondo)}
 .acceso.fuera .pais{background:#FFE4EA;color:#B4123A}
 .acceso.fuera b{color:#B4123A}
+.teclas{display:flex;flex-direction:column;gap:8px}
+.tecla-fila{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;align-items:center}
+.tecla-fila kbd{font-family:var(--num);font-size:13px;font-weight:800;text-align:center;padding:8px 6px;
+  border:1px solid var(--linea);border-bottom-width:3px;border-radius:8px;background:#fff}
+.tecla-fila select{min-width:0}
 </style>
 </head>
 <body>
@@ -469,6 +474,13 @@ function pintarNegocio(){
     </div>
 
     <div class="ficha">
+      <h3>Teclas rápidas de la caja</h3>
+      <p class="sub">Para lo que no tiene código de barras (pan, verdura, dulces…): cada tecla de arriba de
+        las flechas abre una categoría y la cajera escoge con un número.</p>
+      <div id="n-teclas"></div>
+    </div>
+
+    <div class="ficha">
       <h3>La caja bloqueada</h3>
       <p class="sub">Lo que se ve en la caja entre un cliente y otro: el logo del negocio y
         las imágenes de las promociones. PNG, JPG o WEBP, de 2 MB como mucho.</p>
@@ -674,6 +686,34 @@ function pintarPermisos(){
   }));
 }
 
+/* ---------- teclas rápidas de la caja ---------- */
+const TECLAS_CAJA = [['Insert','Insert'],['Home','Inicio'],['End','Fin'],['PageUp','Re Pág'],['PageDown','Av Pág']];
+async function pintarTeclas(){
+  const z = $('#n-teclas'); if (!z) return;
+  if (!S.categorias){
+    const { data } = await sb.from('categorias').select('id,nombre').order('nombre');
+    S.categorias = data || [];
+  }
+  const t = (S.org.config || {}).teclas_rapidas || {};
+  z.innerHTML = `<div class="teclas">${TECLAS_CAJA.map(([k, nom]) => `
+      <div class="tecla-fila"><kbd>${nom}</kbd>
+        <select class="entrada" data-tecla="${k}">
+          <option value="">— Sin usar —</option>
+          ${S.categorias.map(c => `<option value="${escapar(c.id)}" ${t[k]?.categoria_id === c.id ? 'selected' : ''}>${escapar(c.nombre)}</option>`).join('')}
+        </select></div>`).join('')}</div>
+    <div class="pie-ficha" style="margin-top:12px"><button class="btn principal-b" id="tk-guardar">Guardar teclas</button></div>`;
+  $('#tk-guardar').onclick = async () => {
+    const nuevo = {};
+    z.querySelectorAll('[data-tecla]').forEach(sel => {
+      if (!sel.value) return;
+      const c = S.categorias.find(x => x.id === sel.value);
+      nuevo[sel.dataset.tecla] = { categoria_id:sel.value, nombre:c?.nombre || '' };
+    });
+    try{ await anotarImagenes({ teclas_rapidas:nuevo }); pintarTeclas(); aviso('Teclas guardadas', 'La caja las toma la próxima vez que se desbloquee.'); }
+    catch(err){ aviso('No se pudo guardar', limpiarError(err)); }
+  };
+}
+
 /* ---------- la balanza ---------- */
 function pintarBalanza(){
   const z = $('#n-balanza'); if (!z) return;
@@ -718,6 +758,7 @@ function pintarImagenes(){
   pintarColor();
   pintarPermisos();
   pintarBalanza();
+  pintarTeclas();
   const c = S.org.config || {};
   const logo = c.logo_path;
   const promos = Array.isArray(c.promos_caja) ? c.promos_caja : [];

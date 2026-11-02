@@ -32,6 +32,7 @@ function tablas(){
       { id:'s2', codigo:'S02', nombre:'Choloma', direccion:null, telefono:null,
       es_principal:false, activa:true, acepta_domicilio:false, costo_envio:0, pedido_minimo:0 }],
     cajas:[{ id:'c1', sucursal_id:'s1', codigo:'C01', nombre:'Caja 1', activa:true }],
+    categorias:[{ id:'k1', nombre:'Pan' }, { id:'k2', nombre:'Verduras' }],
     impuestos:[{ id:'i0', nombre:'Exento', tasa:0, incluido_en_precio:true, es_predeterminado:false, activo:true },
                { id:'i1', nombre:'ISV 15%', tasa:0.15, incluido_en_precio:true, es_predeterminado:true, activo:true }]
   };
@@ -682,6 +683,23 @@ console.log('\n=== ACCESOS ===');
   d.querySelector('#ac-fuera').dispatchEvent(new d.defaultView.Event('change', { bubbles:true }));
   await esperar(80);
   chk('se puede ver solo lo de fuera', d.querySelectorAll('.acceso').length === 1);
+}
+
+console.log('\n=== TECLAS RÁPIDAS DE LA CAJA ===');
+{
+  const estado = base();
+  const { d } = await montar(estado);
+  await esperar(80);
+  const sels = d.querySelectorAll('#n-teclas [data-tecla]');
+  chk('cinco teclas de arriba de las flechas', sels.length === 5);
+  chk('cada una ofrece las categorías', /Verduras/.test(sels[0].textContent));
+  sels[0].value = 'k1'; sels[3].value = 'k2';
+  d.querySelector('#tk-guardar').click();
+  await esperar();
+  const up = escrito(estado, 'organizaciones', 'update').pop();
+  chk('guarda la tecla con su categoría', up && up.datos.config.teclas_rapidas.Insert.categoria_id === 'k1'
+      && up.datos.config.teclas_rapidas.PageUp.nombre === 'Verduras' && !up.datos.config.teclas_rapidas.Home);
+  chk('sin perder lo demás de la configuración', up.datos.config.mensaje_ticket === 'Vuelva pronto');
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);

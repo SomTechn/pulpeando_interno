@@ -49,6 +49,7 @@ const ICONOS = {
   conteo:    '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>',
   promo:     '<path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"/><path d="m9.5 14.5 5-5"/><circle cx="9.5" cy="9.5" r=".9"/><circle cx="14.5" cy="14.5" r=".9"/>',
   importar:  '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
+  cajeros:   '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a5 5 0 0 1 3.5 6"/>',
   candado:   '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   reloj:     '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/>',
   plataforma:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
@@ -74,7 +75,8 @@ const GRUPOS = [
     { id:'ventas',  nombre:'Ventas',      url:'ventas.html',  icono:'reportes', nivel:1 },
     { id:'pedidos', nombre:'Pedidos',     url:'pedidos.html', icono:'pedidos',  nivel:1 },
     { id:'fiado',   nombre:'Fiado',       url:'fiado.html',   icono:'fiado',    nivel:1 },
-    { id:'promociones', nombre:'Promociones', url:'promociones.html', icono:'promo', nivel:2 } ] },
+    { id:'promociones', nombre:'Promociones', url:'promociones.html', icono:'promo', nivel:2 },
+    { id:'cajeros', nombre:'Cajeros', url:'cajeros.html', icono:'cajeros', nivel:2 } ] },
   { titulo:'Inventario', modulos:[
     { id:'consultar', nombre:'Consultar', url:'consultar.html', icono:'lupa',   nivel:1 },
     { id:'catalogo', nombre:'Catálogos',  url:'catalogo.html', icono:'inventario', nivel:1 },

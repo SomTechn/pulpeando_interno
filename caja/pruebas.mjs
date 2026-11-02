@@ -419,7 +419,7 @@ console.log('\n=== MOVERSE Y QUITAR CON EL TECLADO ===');
 
   tecla(w, d, '-');
   chk('- no le baja a una de antes', C.S.ticket.find(l => l.producto_id === 'p2').cantidad === 1);
-  chk('y explica qué usar', /F4 o F1/.test(d.body.textContent));
+  chk('y explica qué usar', /F1 restar o F4 quitar línea/.test(d.body.textContent));
   tecla(w, d, 'F4');
   await esperar();
   chk('F4 quita la línea donde está parado', !C.S.ticket.some(l => l.producto_id === 'p2'));
@@ -2209,6 +2209,77 @@ console.log('\n=== LA CAJERA EN LA BARRA DE ABAJO ===');
   const { d, C } = await montar(estado);
   C.pintarEstado();
   chk('dice el nombre de la cajera', /Ana Maradiaga/.test(d.querySelector('#ec-cajero').textContent));
+}
+
+console.log('\n=== TECLADO: COBRO, ORDEN Y MENOS SIN PERMISO ===');
+{
+  const ctx = JSON.parse(JSON.stringify(CTX));
+  ctx.organizacion.caja_autoriza = { quitar:true };
+  const { w, d, C } = await montar(base());
+  C.S.ctx = ctx;
+  C.agregar('p1'); C.agregar('p1'); C.agregar('p1');
+  await esperar();
+  tecla(w, d, '-');
+  await esperar();
+  chk('el menos no pide supervisor aunque quitar lo pida', C.S.ticket[0].cantidad === 2
+      && !/Autoriza un supervisor/.test(d.querySelector('#hoja').textContent));
+  tecla(w, d, 'F10');
+  await esperar(80);
+  chk('al abrir el cobro el cursor ya está en «Recibe»', d.activeElement === d.querySelector('#recibido'));
+  d.querySelector('#cancelar-cobro').click();
+  const orden = [...d.querySelectorAll('#atajos [data-k]')].map(b => Number(b.dataset.k.slice(1)));
+  chk('las teclas van en orden de F1 a F12', orden.length > 5 && orden.every((n, i) => !i || n > orden[i - 1]) && orden[0] === 1);
+}
+{
+  const { w, d, C } = await montar(base());
+  C.agregar('p1');
+  await esperar();
+  w.document.body.dispatchEvent(new w.KeyboardEvent('keydown', { key:'3', altKey:true, bubbles:true }));
+  await esperar(60);
+  chk('Alt+3 abre el cobro con transferencia y el foco en cobrar', C.S.metodo === 'transferencia');
+}
+
+console.log('\n=== TECLAS RÁPIDAS ===');
+{
+  const estado = base();
+  estado.catalogo.push({ producto_id:'p9', sku:'PAN', nombre:'Pan francés', imagen_url:null, unidad_base:'UND',
+    categoria_id:'pan', categoria:'Pan', precio:3, existencia:100, codigos:[], tasa_impuesto:0 },
+    { producto_id:'p8', sku:'PANDULCE', nombre:'Pan dulce', imagen_url:null, unidad_base:'UND',
+    categoria_id:'pan', categoria:'Pan', precio:5, existencia:100, codigos:[], tasa_impuesto:0 });
+  const { w, d, C } = await montar(estado);
+  C.S.teclas = { Insert:{ categoria_id:'pan', nombre:'Pan' } };
+  C.pintar();
+  chk('la tecla rápida sale en la tira de atajos', /Ins\s*Pan/.test(d.querySelector('#atajos').textContent));
+  tecla(w, d, 'Insert');
+  await esperar(60);
+  chk('Insert abre la categoría Pan', /Pan dulce/.test(d.querySelector('#hoja').textContent)
+      && !d.querySelector('#velo-hoja').classList.contains('oculto'));
+  d.querySelector('#hoja').dispatchEvent(new w.KeyboardEvent('keydown', { key:'2', bubbles:true }));
+  await esperar(60);
+  chk('el 2 agrega el segundo de la lista (por nombre)', C.S.ticket.some(l => l.producto_id === 'p9'));
+  chk('y queda como el último escaneado', C.S.ultimo === 'p9');
+  tecla(w, d, 'Home');
+  chk('una tecla sin configurar no hace nada', d.querySelector('#velo-hoja').classList.contains('oculto'));
+}
+
+console.log('\n=== TIEMPO DE LA VENTA ===');
+{
+  const estado = base({ fn_anotar_tiempo_venta:{ data:30, error:null } });
+  const { w, d, C } = await montar(estado);
+  C.agregar('p1');
+  await esperar();
+  chk('al primer producto se anota cuándo empezó', !!C.S.inicioVenta);
+  tecla(w, d, 'F10');
+  await esperar();
+  const r = d.querySelector('#recibido');
+  r.value = '100'; r.dispatchEvent(new w.Event('input', { bubbles:true }));
+  d.querySelector('#confirmar-cobro').click();
+  await esperar(200);
+  const t = estado.llamadas.find(l => l.fn === 'fn_anotar_tiempo_venta');
+  chk('al cobrar manda el inicio con la venta', t && t.args.p_venta_id === 'v-123' && !!t.args.p_inicio);
+  d.querySelector('#btn-terminar').click();
+  await esperar(60);
+  chk('y la siguiente arranca de cero', C.S.inicioVenta === null);
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1729">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="icono-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icono-192.png">
+<title>Cajeros · Pulpeando</title>
+<script src="config.js"></script>
+<script src="tema.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ui.css">
+<style>
+/* ==========================================================================
+   Cajeros: quién atiende, cuánto y qué tan rápido.
+   ========================================================================== */
+.zona-cj{flex:1;overflow-y:auto;padding:18px 20px 40px}
+.cj-in{max-width:1180px;margin:0 auto}
+.filtros{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+.rangos{display:flex;gap:4px;background:var(--panel);border:1px solid var(--linea);border-radius:12px;padding:4px}
+.rangos button{min-height:38px;padding:0 13px;border-radius:9px;font-size:13px;font-weight:700;color:var(--tenue)}
+.rangos button.si{background:var(--tinta);color:#fff}
+.fechas{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--tenue)}
+.fechas input,.filtros select{height:42px;border:1px solid var(--linea);border-radius:10px;padding:0 10px;font:inherit;background:var(--panel);min-width:0}
+.cifras{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:16px}
+.cifra{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);padding:13px 15px}
+.cifra small{display:block;font-size:11.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--tenue)}
+.cifra b{display:block;font-size:24px;font-weight:800;margin-top:4px;font-family:var(--num)}
+.cifra span{display:block;font-size:12px;color:var(--tenue);margin-top:2px}
+.tabla{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);overflow-x:auto}
+.tabla table{width:100%;border-collapse:collapse;font-size:13.5px}
+.tabla th{text-align:right;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--tenue);padding:11px 12px;border-bottom:1px solid var(--linea);white-space:nowrap;cursor:pointer;user-select:none}
+.tabla th:first-child,.tabla td:first-child{text-align:left}
+.tabla th.orden{color:var(--tinta)}
+.tabla td{padding:11px 12px;border-bottom:1px solid var(--fondo);text-align:right;font-family:var(--num);white-space:nowrap}
+.tabla tr:last-child td{border-bottom:0}
+.tabla td:first-child{font-family:var(--ui)}
+.cj-nom b{display:block;font-size:14.5px}
+.cj-nom small{display:block;font-size:12px;color:var(--tenue);margin-top:2px}
+.punto{display:inline-block;width:8px;height:8px;border-radius:50%;background:#16A34A;margin-right:6px;vertical-align:1px}
+.malo{color:var(--rojo)} .ojo{color:#B45309} .bien{color:#15803D}
+.ayuda{font-size:12.5px;color:var(--tenue);line-height:1.5;margin-top:12px}
+.vacio{padding:30px;text-align:center;color:var(--tenue)}
+@media (max-width:700px){ .zona-cj{padding:14px} .rangos{width:100%;overflow-x:auto} }
+</style>
+</head>
+<body>
+
+<div class="oscura oculto" id="p-config">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Configuración</div>
+    <div class="titulo-o">Falta conectar el proyecto</div>
+  </div>
+</div>
+
+<div class="oscura oculto" id="p-sesion">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Pulpeando</div>
+    <div class="titulo-o">Iniciar sesión</div>
+    <input class="campo-o" id="s-email" type="email" placeholder="correo@negocio.hn" autocomplete="username">
+    <input class="campo-o" id="s-clave" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <div class="error-o" id="s-error"></div>
+    <button class="btn-o" id="s-entrar">Entrar</button>
+  </div>
+</div>
+
+<div class="oscura oculto" id="p-bloqueado">
+  <div class="tarjeta-oscura">
+    <div class="marca"><span>◧</span> Pulpeando</div>
+    <div class="titulo-o">Cajeros es para supervisor o gerente</div>
+    <a class="btn-o" href="index.html" style="display:grid;place-items:center;text-decoration:none">Volver al panel</a>
+  </div>
+</div>
+
+<div class="armazon oculto" id="app">
+  <aside id="menu"></aside>
+  <div class="principal">
+    <header class="barra">
+      <button class="hamburguesa" id="abrir-menu" aria-label="Menú">
+        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="barra-titulo"><b>Cajeros</b><small id="h-negocio">—</small></div>
+      <div class="barra-fin"><span class="pill" id="h-usuario">—</span></div>
+    </header>
+    <div class="zona-cj"><div class="cj-in">
+      <div class="filtros">
+        <div class="rangos" id="rangos">
+          <button data-r="hoy">Hoy</button><button data-r="7">7 días</button>
+          <button data-r="30">30 días</button><button data-r="mes">Este mes</button>
+        </div>
+        <div class="fechas"><input type="date" id="f-desde" aria-label="Desde"><span>a</span><input type="date" id="f-hasta" aria-label="Hasta"></div>
+        <select id="f-sucursal" class="oculto" aria-label="Sucursal"></select>
+      </div>
+      <div id="contenido"><div class="vacio"><span class="girando"></span></div></div>
+    </div></div>
+  </div>
+</div>
+
+<script type="module">
+const CFG = window.SUPABASE_CONFIG || {};
+const SUPABASE_URL = CFG.url || 'PEGUE_AQUI_LA_URL';
+const SUPABASE_KEY = CFG.key || 'PEGUE_AQUI_LA_LLAVE';
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const ver = (id, si = true) => $(id).classList.toggle('oculto', !si);
+if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin configurar'); }
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { montarMenu, escapar } from './menu.js';
+
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth:{ persistSession:true, autoRefreshToken:true } });
+
+const S = { ctx:null, menu:null, moneda:'L', rango:'7', desde:null, hasta:null, sucursal:'',
+            datos:null, orden:'ventas', pidiendo:0 };
+
+const n2 = v => (Number(v) || 0).toLocaleString('es-HN', { minimumFractionDigits:2, maximumFractionDigits:2 });
+const n1 = v => v === null || v === undefined ? '—' : Number(v).toLocaleString('es-HN', { maximumFractionDigits:1 });
+const money = v => S.moneda + ' ' + n2(v);
+const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+// 95 → «1:35»
+const mmss = s => s === null || s === undefined ? '—' : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+const ROL = { auxiliar:'Cajera', supervisor:'Supervisor', gerente:'Gerente' };
+
+function limpiarError(e){
+  const m = (e?.message || String(e)).replace(/^(?:[0-9A-Z]{5}|error|Error|ERROR):\s*/, '');
+  if (/JWT|token/i.test(m)) return 'La sesión venció. Vuelva a entrar.';
+  return m;
+}
+
+function calcularRango(r){
+  const hoy = new Date(); hoy.setHours(12, 0, 0, 0);
+  if (r === 'hoy') return [iso(hoy), iso(hoy)];
+  if (r === 'mes') return [iso(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), iso(hoy)];
+  const d = new Date(hoy); d.setDate(d.getDate() - (Number(r) - 1));
+  return [iso(d), iso(hoy)];
+}
+function fijarRango(r){
+  S.rango = r; [S.desde, S.hasta] = calcularRango(r);
+  $('#f-desde').value = S.desde; $('#f-hasta').value = S.hasta;
+  $$('#rangos button').forEach(b => b.classList.toggle('si', b.dataset.r === r));
+}
+
+$('#s-entrar').addEventListener('click', async () => {
+  const { error } = await sb.auth.signInWithPassword({ email:$('#s-email').value.trim(), password:$('#s-clave').value });
+  if (error){ $('#s-error').textContent = 'Correo o contraseña incorrectos'; return; }
+  arrancar();
+});
+
+async function arrancar(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session){ ver('#p-sesion'); return; }
+  ver('#p-sesion', false);
+  const { data, error } = await sb.rpc('fn_pos_contexto');
+  if (error){ ver('#p-sesion'); return; }
+  S.ctx = data;
+  S.moneda = data.organizacion?.moneda === 'HNL' || !data.organizacion?.moneda ? 'L' : data.organizacion.moneda;
+  if ((data.usuario?.nivel ?? 0) < 2){ ver('#p-bloqueado'); return; }
+  $('#h-usuario').textContent = data.usuario.nombre;
+  $('#h-negocio').textContent = data.organizacion?.nombre || '';
+  ver('#app');
+  S.menu = montarMenu({ sb, contenedor:'#menu', modulo:'cajeros', ctx:S.ctx,
+    alSalir: async () => { await sb.auth.signOut(); location.reload(); } });
+  $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
+  const sucs = data.sucursales || [];
+  if (sucs.length > 1){
+    $('#f-sucursal').innerHTML = '<option value="">Todas las sucursales</option>' +
+      sucs.map(s => `<option value="${escapar(s.id)}">${escapar(s.nombre)}</option>`).join('');
+    ver('#f-sucursal');
+  }
+  fijarRango('7');
+  await cargar();
+}
+
+async function cargar(){
+  const turno = ++S.pidiendo;
+  $('#contenido').innerHTML = '<div class="vacio"><span class="girando"></span></div>';
+  const { data, error } = await sb.rpc('fn_cajeros_indicadores',
+    { p_desde:S.desde, p_hasta:S.hasta, p_sucursal_id:S.sucursal || null });
+  if (turno !== S.pidiendo) return;
+  if (error){ $('#contenido').innerHTML = `<div class="aviso malo">${escapar(limpiarError(error))}</div>`; return; }
+  S.datos = data;
+  pintar();
+}
+
+const COLS = [
+  ['ventas', 'Ventas'], ['total', 'Vendido'], ['ticket_promedio', 'Ticket prom.'],
+  ['articulos_hora', 'Artículos / hora'], ['segundos_venta', 'Tiempo / venta'],
+  ['horas_activas', 'Horas con ventas'], ['quitadas', 'Quitados'], ['canceladas', 'Canceladas'],
+  ['anuladas', 'Anuladas'], ['descuadre', 'Descuadre']
+];
+
+function pintar(){
+  const C = (S.datos?.cajeros || []).slice();
+  const con = C.filter(c => c.ventas > 0);
+  const tot = k => C.reduce((a, c) => a + (Number(c[k]) || 0), 0);
+  const horas = tot('horas_activas'), lineas = tot('lineas');
+  const medidas = C.reduce((a, c) => a + (c.ventas_medidas || 0), 0);
+  const segProm = medidas ? Math.round(C.reduce((a, c) => a + (c.segundos_venta || 0) * (c.ventas_medidas || 0), 0) / medidas) : null;
+  const k = S.orden;
+  C.sort((a, b) => (Number(b[k]) || 0) - (Number(a[k]) || 0) || a.nombre.localeCompare(b.nombre));
+  const clase = (key, v) => {
+    if (key === 'descuadre') return Number(v) < 0 ? 'malo' : Number(v) > 0 ? 'ojo' : '';
+    if (['quitadas', 'canceladas', 'anuladas'].includes(key)) return Number(v) > 0 ? 'ojo' : '';
+    return '';
+  };
+  const celda = (c, key) => {
+    const v = c[key];
+    if (key === 'total' || key === 'ticket_promedio') return v === null || v === undefined ? '—' : money(v);
+    if (key === 'descuadre') return Number(v) ? money(v) : '—';
+    if (key === 'segundos_venta') return mmss(v);
+    if (key === 'articulos_hora' || key === 'horas_activas') return n1(v);
+    return n1(v);
+  };
+  $('#contenido').innerHTML = `
+    <div class="cifras">
+      <div class="cifra destacada"><small>Ventas en caja</small><b>${tot('ventas').toLocaleString('es-HN')}</b><span>${money(tot('total'))}</span></div>
+      <div class="cifra"><small>Artículos por hora</small><b>${horas > 0 ? n1(lineas / horas) : '—'}</b><span>${lineas.toLocaleString('es-HN')} artículos en ${n1(horas)} h con ventas</span></div>
+      <div class="cifra"><small>Tiempo por venta</small><b>${mmss(segProm)}</b><span>desde el primer producto hasta cobrar</span></div>
+      <div class="cifra"><small>Cajeros con ventas</small><b>${con.length}</b><span>${C.filter(c => c.en_turno).length} en turno ahora</span></div>
+    </div>
+    <div class="tabla">
+      <table>
+        <thead><tr><th>Cajero</th>${COLS.map(([key, t]) => `<th data-orden="${key}" class="${key === k ? 'orden' : ''}">${t}${key === k ? ' ▾' : ''}</th>`).join('')}</tr></thead>
+        <tbody>${C.length ? C.map(c => `<tr>
+          <td class="cj-nom"><b>${c.en_turno ? '<i class="punto" title="En turno"></i>' : ''}${escapar(c.nombre)}</b>
+            <small>${escapar(ROL[c.rol] || c.rol)}${c.numero != null ? ' · ID ' + String(c.numero).padStart(3, '0') : ''}${c.codigo ? ' · ' + escapar(c.codigo) : ''}${c.activo ? '' : ' · inactivo'}</small></td>
+          ${COLS.map(([key]) => `<td class="${clase(key, c[key])}">${celda(c, key)}</td>`).join('')}</tr>`).join('')
+          : `<tr><td colspan="${COLS.length + 1}" class="vacio">Nadie ha vendido en estas fechas.</td></tr>`}</tbody>
+      </table>
+    </div>
+    <p class="ayuda">Artículos por hora = líneas de ticket ÷ horas en que vendió. Tiempo por venta = del primer producto al cobro.</p>`;
+  $$('#contenido [data-orden]').forEach(th => th.onclick = () => { S.orden = th.dataset.orden; pintar(); });
+}
+
+$('#rangos').addEventListener('click', e => { const b = e.target.closest('[data-r]'); if (!b) return; fijarRango(b.dataset.r); cargar(); });
+$('#f-desde').addEventListener('change', e => { S.desde = e.target.value; $$('#rangos button').forEach(b => b.classList.remove('si')); cargar(); });
+$('#f-hasta').addEventListener('change', e => { S.hasta = e.target.value; $$('#rangos button').forEach(b => b.classList.remove('si')); cargar(); });
+$('#f-sucursal').addEventListener('change', e => { S.sucursal = e.target.value; cargar(); });
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+arrancar();
+</script>
+</body>
+</html>
