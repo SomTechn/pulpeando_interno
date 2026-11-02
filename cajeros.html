@@ -47,6 +47,18 @@
 .malo{color:var(--rojo)} .ojo{color:#B45309} .bien{color:#15803D}
 .ayuda{font-size:12.5px;color:var(--tenue);line-height:1.5;margin-top:12px}
 .vacio{padding:30px;text-align:center;color:var(--tenue)}
+.vistas{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--linea)}
+.vistas button{min-height:42px;padding:0 14px;font-size:14px;font-weight:700;color:var(--tenue);border-bottom:3px solid transparent;margin-bottom:-1px}
+.vistas button.si{color:var(--tinta);border-bottom-color:var(--marca)}
+.sello{display:inline-block;font-family:var(--ui);font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+  border-radius:999px;padding:2px 8px;margin-left:6px;background:#FEF3C7;color:#92400E;vertical-align:1px}
+.tabla tr.ci{cursor:pointer}
+.tabla.cie th,.tabla.cie td{padding-left:9px;padding-right:9px}
+.tabla tr.ci:hover td,.tabla tr.ci.abierto td{background:#F8FAFC}
+.tabla tr.ci-det td{background:#F8FAFC;text-align:left;font-family:var(--ui);white-space:normal;padding:4px 14px 14px}
+.det{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px 18px;font-size:13px;max-width:820px}
+.det small{display:block;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--tenue)}
+.det b{font-family:var(--num);font-weight:700}
 @media (max-width:700px){ .zona-cj{padding:14px} .rangos{width:100%;overflow-x:auto} }
 </style>
 </head>
@@ -90,6 +102,9 @@
       <div class="barra-fin"><span class="pill" id="h-usuario">—</span></div>
     </header>
     <div class="zona-cj"><div class="cj-in">
+      <div class="vistas" id="vistas">
+        <button data-v="indicadores">Indicadores</button><button data-v="cierres">Cierres de caja</button>
+      </div>
       <div class="filtros">
         <div class="rangos" id="rangos">
           <button data-r="hoy">Hoy</button><button data-r="7">7 días</button>
@@ -118,7 +133,9 @@ import { montarMenu, escapar } from './menu.js';
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth:{ persistSession:true, autoRefreshToken:true } });
 
 const S = { ctx:null, menu:null, moneda:'L', rango:'7', desde:null, hasta:null, sucursal:'',
-            datos:null, orden:'ventas', pidiendo:0 };
+            datos:null, orden:'ventas', pidiendo:0,
+            vista:new URLSearchParams(location.search).get('vista') === 'cierres' ? 'cierres' : 'indicadores',
+            cierres:null, abierto:null };
 
 const n2 = v => (Number(v) || 0).toLocaleString('es-HN', { minimumFractionDigits:2, maximumFractionDigits:2 });
 const n1 = v => v === null || v === undefined ? '—' : Number(v).toLocaleString('es-HN', { maximumFractionDigits:1 });
@@ -165,7 +182,7 @@ async function arrancar(){
   $('#h-usuario').textContent = data.usuario.nombre;
   $('#h-negocio').textContent = data.organizacion?.nombre || '';
   ver('#app');
-  S.menu = montarMenu({ sb, contenedor:'#menu', modulo:'cajeros', ctx:S.ctx,
+  S.menu = montarMenu({ sb, contenedor:'#menu', modulo:S.vista === 'cierres' ? 'cierres' : 'cajeros', ctx:S.ctx,
     alSalir: async () => { await sb.auth.signOut(); location.reload(); } });
   $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
   const sucs = data.sucursales || [];
@@ -175,12 +192,26 @@ async function arrancar(){
     ver('#f-sucursal');
   }
   fijarRango('7');
+  marcarVista();
   await cargar();
+}
+function marcarVista(){
+  $$('#vistas button').forEach(b => b.classList.toggle('si', b.dataset.v === S.vista));
+  $('.barra-titulo b').textContent = S.vista === 'cierres' ? 'Cierres de caja' : 'Cajeros';
 }
 
 async function cargar(){
   const turno = ++S.pidiendo;
   $('#contenido').innerHTML = '<div class="vacio"><span class="girando"></span></div>';
+  if (S.vista === 'cierres'){
+    const { data, error } = await sb.rpc('fn_cierres_caja',
+      { p_desde:S.desde, p_hasta:S.hasta, p_sucursal_id:S.sucursal || null });
+    if (turno !== S.pidiendo) return;
+    if (error){ $('#contenido').innerHTML = `<div class="aviso malo">${escapar(limpiarError(error))}</div>`; return; }
+    S.cierres = data; S.abierto = null;
+    pintarCierres();
+    return;
+  }
   const { data, error } = await sb.rpc('fn_cajeros_indicadores',
     { p_desde:S.desde, p_hasta:S.hasta, p_sucursal_id:S.sucursal || null });
   if (turno !== S.pidiendo) return;
@@ -238,6 +269,75 @@ function pintar(){
     <p class="ayuda">Artículos por hora = líneas de ticket ÷ horas en que vendió. Tiempo por venta = del primer producto al cobro.</p>`;
   $$('#contenido [data-orden]').forEach(th => th.onclick = () => { S.orden = th.dataset.orden; pintar(); });
 }
+
+/* ================= cierres de caja ================= */
+const METODO = { efectivo:'Efectivo', tarjeta:'Tarjeta', transferencia:'Transferencia', credito:'Fiado', otro:'Otro' };
+const cuando = t => t ? new Date(t).toLocaleString('es-HN', { day:'numeric', month:'short', hour:'numeric', minute:'2-digit' }) : '—';
+const dif = v => v === null || v === undefined ? '—' : (Number(v) > 0 ? '+' : '') + money(v);
+const claseDif = v => v === null || v === undefined ? '' : Number(v) < 0 ? 'malo' : Number(v) > 0 ? 'ojo' : 'bien';
+
+function pintarCierres(){
+  const L = S.cierres?.cierres || [];
+  const tot = k => L.reduce((a, c) => a + (Number(c[k]) || 0), 0);
+  const contados = L.filter(c => c.declarado !== null && c.declarado !== undefined);
+  const difTot = contados.reduce((a, c) => a + (Number(c.diferencia) || 0), 0);
+  const auto = L.filter(c => c.automatico).length;
+  const met = k => c => Number(c.metodos?.[k]) || 0;
+  // Solo las formas de pago que se usaron en el período: la tabla cabe en pantalla.
+  const cols = ['efectivo', 'tarjeta', 'transferencia', 'credito', 'otro']
+    .filter(k => k === 'efectivo' || L.some(c => met(k)(c)));
+  $('#contenido').innerHTML = `
+    <div class="cifras">
+      <div class="cifra destacada"><small>Cierres</small><b>${L.length}</b><span>${money(tot('total'))} vendido</span></div>
+      <div class="cifra"><small>Diferencia</small><b class="${contados.length ? claseDif(difTot) : ''}">${contados.length ? dif(difTot) : '—'}</b><span>${contados.length} contados</span></div>
+      <div class="cifra"><small>Automáticos</small><b class="${auto ? 'ojo' : ''}">${auto}</b><span>cerrados a medianoche, sin conteo</span></div>
+      <div class="cifra"><small>Abiertos ahora</small><b>${S.cierres?.abiertos ?? 0}</b><span>se cierran solos a las 12</span></div>
+    </div>
+    <div class="tabla cie">
+      <table>
+        <thead><tr><th>Cierre</th><th>Vendido</th>${cols.map(k => `<th>${METODO[k]}</th>`).join('')}
+          <th>Retiros</th><th>Esperado</th><th>Contado</th><th>Diferencia</th></tr></thead>
+        <tbody>${L.length ? L.map(c => `<tr class="ci${S.abierto === c.turno_id ? ' abierto' : ''}" data-t="${escapar(c.turno_id)}" tabindex="0">
+          <td class="cj-nom"><b>${escapar(cuando(c.cerrado_en))}${c.automatico ? '<span class="sello">Automático</span>' : ''}</b>
+            <small>${escapar(c.caja)} · ${escapar(c.cajero)}${(S.ctx?.sucursales || []).length > 1 ? ' · ' + escapar(c.sucursal) : ''}</small></td>
+          <td class="cj-nom" style="text-align:right">${money(c.total)}<small>${n1(c.ventas)} venta${Number(c.ventas) === 1 ? '' : 's'}</small></td>
+          ${cols.map(k => `<td>${met(k)(c) ? money(met(k)(c)) : '—'}</td>`).join('')}
+          <td>${Number(c.retiros) ? money(c.retiros) : '—'}</td>
+          <td>${money(c.esperado)}</td>
+          <td>${c.declarado === null || c.declarado === undefined ? '<span class="ojo">Sin contar</span>' : money(c.declarado)}</td>
+          <td class="${claseDif(c.diferencia)}">${dif(c.diferencia)}</td></tr>
+          ${S.abierto === c.turno_id ? `<tr class="ci-det"><td colspan="${cols.length + 6}"><div class="det">
+            <div><small>Abrió</small>${escapar(cuando(c.abierto_en))}</div>
+            <div><small>Fondo inicial</small><b>${money(c.monto_inicial)}</b></div>
+            <div><small>Abonos de fiado</small><b>${money(c.abonos)}</b></div>
+            <div><small>Devoluciones</small><b>${money(c.devoluciones)}</b></div>
+            <div><small>Fondos metidos</small><b>${money(c.fondos)}</b></div>
+            <div><small>Retiros</small><b>${money(c.retiros)}</b></div>
+            <div><small>Cerró</small>${c.automatico ? 'El sistema, a medianoche' : escapar(c.cerro || '—')}</div>
+            ${c.notas ? `<div><small>Notas</small>${escapar(c.notas)}</div>` : ''}
+          </div></td></tr>` : ''}`).join('')
+          : `<tr><td colspan="${cols.length + 6}" class="vacio">No hay cierres en estas fechas.</td></tr>`}</tbody>
+      </table>
+    </div>
+    <p class="ayuda">Esperado = fondo + efectivo cobrado + abonos + fondos − devoluciones − retiros.</p>`;
+  $$('#contenido tr.ci').forEach(tr => {
+    const abrir = () => { S.abierto = S.abierto === tr.dataset.t ? null : tr.dataset.t; pintarCierres();
+                          $(`#contenido tr.ci[data-t="${tr.dataset.t}"]`)?.focus(); };
+    tr.onclick = abrir;
+    tr.onkeydown = e => {
+      if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); abrir(); }
+      if (e.key === 'ArrowDown'){ e.preventDefault(); let n = tr.nextElementSibling; if (n?.classList.contains('ci-det')) n = n.nextElementSibling; n?.focus(); }
+      if (e.key === 'ArrowUp'){ e.preventDefault(); let n = tr.previousElementSibling; if (n?.classList.contains('ci-det')) n = n.previousElementSibling; n?.focus(); }
+    };
+  });
+}
+
+$('#vistas').addEventListener('click', e => {
+  const b = e.target.closest('[data-v]'); if (!b || b.dataset.v === S.vista) return;
+  S.vista = b.dataset.v;
+  history.replaceState(null, '', S.vista === 'cierres' ? '?vista=cierres' : location.pathname);
+  marcarVista(); cargar();
+});
 
 $('#rangos').addEventListener('click', e => { const b = e.target.closest('[data-r]'); if (!b) return; fijarRango(b.dataset.r); cargar(); });
 $('#f-desde').addEventListener('change', e => { S.desde = e.target.value; $$('#rangos button').forEach(b => b.classList.remove('si')); cargar(); });

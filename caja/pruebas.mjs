@@ -2167,10 +2167,11 @@ console.log('\n=== EL PRODUCTO EN GRANDE ===');
   const tf = () => f.textContent.replace(/\s+/g, ' ');
   chk('enseña el último producto en grande, en la tarjeta de color', !f.classList.contains('oculto')
       && !!f.querySelector('.fc-tarjeta') && /Arroz de primera 5 lb/.test(tf()));
-  chk('con cantidad × precio = importe', /2 × 98\.00 = 196\.00/.test(tf()));
+  chk('al centro, cantidad × precio', f.querySelector('.fc-cant').textContent.trim() === '2 × 98.00');
+  chk('ya no la cuenta con el igual', !/= 196/.test(tf()));
   chk('el código de barras', /7501001/.test(tf()));
   chk('la oferta con el precio de antes', /Oferta hasta 8 nov, antes L 120\.00/.test(tf()));
-  chk('y el ahorro de ese producto', /Ahorra L 44\.00/.test(tf()));
+  chk('a la derecha, el ahorro de ese producto', /Ahorro\s*L 44\.00/.test(f.querySelector('.fc-ah').textContent));
   chk('abajo, en negro, el ahorro de la compra', /Usted ha ahorrado L 44\.00 en esta compra/.test(d.querySelector('.fc-ahorro').textContent.replace(/\s+/g, ' ')));
   chk('y el total lo pone como Descuentos', /Descuentos/.test(d.querySelector('#t-ahorro-fila').textContent) && /44\.00/.test(d.querySelector('#t-ahorro').textContent)
       && !d.querySelector('#t-ahorro-fila').classList.contains('oculto'));
@@ -2185,7 +2186,7 @@ console.log('\n=== EL PRODUCTO EN GRANDE ===');
   chk('la cantidad antes de escanear se ve en la tarjeta', /24 ×/.test(d.querySelector('#foco').textContent));
   teclear(w, d, '7501003', { pistola:true });
   await esperar(120);
-  chk('y al escanear queda 24 × precio', /24 × 20\.00 = 480\.00/.test(d.querySelector('#foco').textContent.replace(/\s+/g, ' ')));
+  chk('y al escanear queda 24 × precio', d.querySelector('#foco .fc-cant').textContent.trim() === '24 × 20.00');
   chk('la línea enseña el código escaneado', /7501003/.test(d.querySelector('#lineas').textContent));
 }
 
@@ -2250,6 +2251,7 @@ console.log('\n=== TECLAS RÁPIDAS ===');
   C.S.teclas = { Insert:{ categoria_id:'pan', nombre:'Pan' } };
   C.pintar();
   chk('la tecla rápida sale en la tira de atajos', /Ins\s*Pan/.test(d.querySelector('#atajos').textContent));
+  chk('en su propia fila, después de un salto', d.querySelector('#atajos .salto + [data-rapida]') !== null);
   tecla(w, d, 'Insert');
   await esperar(60);
   chk('Insert abre la categoría Pan', /Pan dulce/.test(d.querySelector('#hoja').textContent)
@@ -2280,6 +2282,37 @@ console.log('\n=== TIEMPO DE LA VENTA ===');
   d.querySelector('#btn-terminar').click();
   await esperar(60);
   chk('y la siguiente arranca de cero', C.S.inicioVenta === null);
+}
+
+console.log('\n=== TURNO CERRADO A MEDIANOCHE ===');
+{
+  const estado = base({ fn_desbloquear_caja:{ data:null, error:{ message:'El turno de caja no está abierto' } } });
+  const { w, d, C } = await montar(estado);
+  C.agregar('p1');
+  C.S.turno = 't-viejo';
+  C.bloquear();
+  await esperar();
+  for (const ch of '12345'){ tecla(w, d, ch); await esperar(90); }
+  await esperar(300);
+  chk('al desbloquear un turno cerrado, vuelve a abrir turno', !d.querySelector('#p-turno').classList.contains('oculto')
+      && d.querySelector('#p-bloqueo').classList.contains('oculto'));
+  chk('y lo dice corto', /se cerró a medianoche/.test(d.querySelector('#t-error').textContent));
+  chk('el turno viejo se olvida', C.S.turno === null);
+  chk('la venta en pantalla no se pierde', C.S.ticket.length === 1);
+}
+{
+  const estado = base({ fn_registrar_venta:{ data:null, error:{ message:'El turno de caja esta cerrado' } } });
+  const { w, d, C } = await montar(estado);
+  C.agregar('p1');
+  await esperar();
+  tecla(w, d, 'F10');
+  await esperar();
+  const r = d.querySelector('#recibido');
+  r.value = '100'; r.dispatchEvent(new w.Event('input', { bubbles:true }));
+  d.querySelector('#confirmar-cobro').click();
+  await esperar(250);
+  chk('al cobrar en un turno ya cerrado, pide abrir otro', !d.querySelector('#p-turno').classList.contains('oculto')
+      && /se cerró a medianoche/.test(d.querySelector('#t-error').textContent));
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);
