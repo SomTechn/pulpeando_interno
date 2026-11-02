@@ -155,12 +155,13 @@ function dibujar(doc, d, op){
 
   for (const l of d.lineas || []){
     izq(l.producto + (l.exento ? ' (E)' : ''));
+    if (l.codigo || l.sku) izq(String(l.codigo || l.sku), fs * 0.85);
     fila(`${cant(l.cantidad)} x ${n2(l.precio)}`, n2(l.total));
     if (Number(l.descuento)) fila('  Descuento', '-' + n2(l.descuento));
     y += 0.5;
   }
   if ((d.rebajas || []).length){
-    izq('ANULADO EN CAJA', fs * 0.9);
+    izq('ANULADO', fs * 0.9);
     for (const r of d.rebajas) fila(`-${cant(r.cantidad)} x ${r.producto}`, '-' + n2(r.total));
   }
   raya();

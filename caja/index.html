@@ -863,29 +863,25 @@
 /* ==========================================================================
    EL PRODUCTO EN GRANDE Y LAS REBAJAS (2 de noviembre)
    ========================================================================== */
-.foco{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--panel);
-  border-bottom:1px solid var(--linea);min-height:84px;flex:0 0 auto}
-.foco.solo-ahorro{min-height:0;justify-content:flex-end;padding:8px 16px}
-.fc-img{flex:0 0 auto;width:64px;height:64px;border-radius:12px;background:var(--fondo);
+.foco{flex:0 0 auto;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--linea)}
+.fc-tarjeta{display:flex;align-items:center;gap:14px;background:var(--marca);color:var(--marca-sobre);
+  border-radius:var(--r-md);padding:10px 14px;min-height:72px}
+.fc-img{flex:0 0 auto;width:56px;height:56px;border-radius:10px;background:rgba(255,255,255,.16);
   background-size:cover;background-position:center;display:grid;place-items:center;
-  font-size:26px;font-weight:800;color:#A6B2C4}
+  font-size:24px;font-weight:800;color:inherit}
 .fc-txt{flex:1;min-width:0}
-.fc-txt b{display:block;font-size:clamp(19px,2.1vw,26px);font-weight:800;line-height:1.15;
+.fc-txt b{display:block;font-size:clamp(20px,2.2vw,28px);font-weight:800;line-height:1.15;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fc-txt small{display:block;font-size:13px;color:var(--tenue);margin-top:3px}
-.fc-etq{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.fc-oferta{font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:999px;background:#FFE4E6;color:#BE123C}
-.fc-promo{font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:999px;background:var(--marca-suave);color:var(--marca-tinta)}
-.fc-precio{flex:0 0 auto;text-align:right}
-.fc-precio s{display:block;font-size:13px;color:var(--tenue)}
-.fc-precio b{display:block;font-size:clamp(24px,2.6vw,32px);font-weight:800;letter-spacing:-.02em;line-height:1.05}
-.fc-precio small{display:block;font-size:12px;color:var(--tenue);font-family:var(--num);margin-top:2px}
-.fc-ahorro{flex:0 0 auto;text-align:right;background:#E7F7EE;color:#0F5E36;border-radius:12px;padding:8px 12px;margin-left:4px}
-.fc-ahorro small{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
-.fc-ahorro b{display:block;font-size:20px;font-weight:800}
-.foco.rebajando{background:#FFF1F4;border-bottom-color:#F6C3CE}
-.foco.rebajando b{color:#BE123C}
-.foco.rebajando kbd{font-family:var(--num);font-size:10.5px;background:#fff;border:1px solid #F6C3CE;border-radius:5px;padding:1px 5px}
+.fc-txt small{display:block;font-size:12.5px;opacity:.85;margin-top:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fc-cuenta{flex:0 0 auto;text-align:right;font-size:clamp(18px,2vw,24px);font-weight:600;white-space:nowrap}
+.fc-cuenta b{font-weight:800}
+.fc-cuenta small{font-family:var(--ui);font-size:12.5px;font-weight:800;margin-top:4px;
+  background:rgba(255,255,255,.2);border-radius:999px;padding:2px 9px;display:inline-block}
+.fc-ahorro{margin-top:8px;background:#0F1729;color:#FACC15;border-radius:var(--r-sm);padding:9px 14px;
+  font-size:15px;font-weight:700;text-align:center}
+.fc-ahorro b{font-weight:800}
+.foco.rebajando .fc-tarjeta{background:#BE123C;color:#fff}
 .qty.fija span{color:var(--tenue);cursor:default}
 .qty.fija span:hover{background:none}
 .rebajas{margin:10px 0 6px;border:1px dashed #F6C3CE;border-radius:10px;padding:8px 12px;background:#FFF7F8}
@@ -893,9 +889,11 @@
 .rb{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;color:#9F1239;padding:2px 0}
 .rb span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:line-through}
 @media (max-width:820px){
-  .foco{padding:8px 14px;min-height:0;gap:10px}
-  .fc-img{width:46px;height:46px}
-  .fc-ahorro{display:none}
+  .foco{padding:8px 12px}
+  .fc-tarjeta{gap:10px;padding:8px 10px;min-height:0;flex-wrap:wrap}
+  .fc-img{width:42px;height:42px}
+  .fc-cuenta{flex-basis:100%;text-align:left;font-size:17px}
+  .fc-ahorro{font-size:13px;padding:7px 10px}
 }
 </style>
 </head>
@@ -1091,7 +1089,7 @@
         <div class="panel-venta" id="panel-venta">
           <div class="pv-total">
             <div class="tot"><span>Subtotal</span><b class="num" id="t-sub2">—</b></div>
-            <div class="tot ahorro oculto" id="t-ahorro-fila"><span>Ahorro (ofertas y promociones)</span><b class="num" id="t-ahorro">—</b></div>
+            <div class="tot ahorro oculto" id="t-ahorro-fila"><span>Descuentos</span><b class="num" id="t-ahorro">—</b></div>
             <div class="tot"><span>Impuesto</span><b class="num" id="t-isv">—</b></div>
             <div class="tot grande"><span>Total<small id="t-arts"></small></span><b class="num" id="t-total">—</b></div>
           </div>
@@ -1958,7 +1956,7 @@ $('#buscar').addEventListener('keydown', e => {
 
 function porCodigo(cod, cuanto){
   const p = S.catalogo.find(x => (x.codigos||[]).includes(cod) || x.sku === cod);
-  if (p) return agregar(p.producto_id, cuanto);
+  if (p){ S.codigoLeido = cod; return agregar(p.producto_id, cuanto); }
   // ¿Etiqueta de balanza? Va después del código exacto: los 21x de la
   // muestra también empiezan con 2.
   const b = deBalanza(cod);
@@ -1976,6 +1974,7 @@ function deBalanza(cod){
   if (!r) return null;
   if (!r.producto){ avisoCaja('Etiqueta de balanza: el PLU ' + r.plu + ' no es de ningún producto'); return { ok:false, texto:'PLU ' + r.plu + ' sin producto' }; }
   if (!(r.cantidad > 0)){ avisoCaja(r.producto.nombre + ' no tiene precio'); return { ok:false, texto:r.producto.nombre + ' sin precio' }; }
+  S.codigoLeido = 'PLU ' + r.plu;
   const ok = agregar(r.producto.producto_id, r.cantidad);
   if (!ok) avisoCaja(r.producto.nombre + (Number(r.producto.existencia) <= 0 ? ' está agotado' : ' no se pudo agregar'));
   return { ok, producto:r.producto, cantidad:r.cantidad };
@@ -2034,8 +2033,10 @@ function agregar(id, cuanto){
   S.multi = null;
 
   const l = S.ticket.find(x => x.producto_id === id);
-  if (l) l.cantidad = Math.min(tres(l.cantidad + suma), Number(p.existencia));
-  else   S.ticket.push({ producto_id:id, cantidad:Math.min(suma, Number(p.existencia)) });
+  const cod = S.codigoLeido || codigoDe(p);
+  S.codigoLeido = null;
+  if (l){ l.cantidad = Math.min(tres(l.cantidad + suma), Number(p.existencia)); if (!l.codigo) l.codigo = cod; }
+  else   S.ticket.push({ producto_id:id, cantidad:Math.min(suma, Number(p.existencia)), codigo:cod });
   S.puesto = id;
   S.ultimo = id;
   pintar();
@@ -2048,7 +2049,7 @@ function fijarCant(id, n){
   if (!puedeCambiar(id)) return;
   const p = S.catalogo.find(x => x.producto_id === id);
   const v = tres(n);
-  if (v <= 0){ quitarLinea(id); return; }
+  if (v <= 0){ avisoCaja('Para quitar el producto use F4'); return; }
   l.cantidad = Math.min(v, Number(p.existencia));
   S.puesto = id;
   pintar();
@@ -2071,7 +2072,12 @@ function quitarLinea(id){
 function quitarYa(id, aut){
   const j = S.ticket.findIndex(x => x.producto_id === id);
   if (j < 0) return;
-  anotarEvento('linea_quitada', [S.ticket[j]], null, aut);
+  const l = S.ticket[j], p = S.catalogo.find(x => x.producto_id === id) || {};
+  anotarEvento('linea_quitada', [l], null, aut);
+  S.rebajas.push({ producto_id:id, nombre:p.nombre || '', cantidad:l.cantidad, precio:Number(p.precio) || 0,
+                   codigo:l.codigo || null, ocurrida_en:new Date().toISOString(),
+                   autorizacion_id:aut?.autorizacion_id || null });
+  if (S.ultimo === id) S.ultimo = null;
   S.ticket.splice(j, 1);
   quitada(j);
 }
@@ -2085,7 +2091,8 @@ function quitada(i){
 function cambiarCant(id, d){
   const l = S.ticket.find(x => x.producto_id === id); if (!l) return;
   if (!puedeCambiar(id)) return;
-  if (d < 0 && tres(l.cantidad + d) <= 0){ quitarLinea(id); return; }
+  // El menos baja hasta 1; dejarlo en cero es F4 (Quitar), que queda anotado.
+  if (d < 0 && tres(l.cantidad + d) <= 0){ avisoCaja('Para quitar el producto use F4'); return; }
   if (d < 0 && pidePermiso('quitar')){
     return pedirSupervisor('quitar', `Bajar ${nombreDe(id)} de ${cantTxt(l.cantidad)} a ${cantTxt(tres(l.cantidad + d))}.`)
       .then(aut => { if (aut !== null) cambiarCantYa(id, d, aut); });
@@ -2114,13 +2121,17 @@ function mover(paso){
   $(`.linea[data-l="${S.puesto}"]`)?.scrollIntoView?.({ block:'nearest' });
 }
 
+/* El código que se enseña en la línea: el escaneado, o el de barras del
+   producto, o su item (PLU). */
+const codigoDe = p => (p?.codigos && p.codigos[0]) || p?.sku || '';
+
 /* ================= rebajar =================
    La cantidad solo se cambia en el producto que se acaba de escanear. Si el
    cliente devuelve algo de antes, se escanea otra vez en modo «Rebajar»
    (F4): baja del ticket, queda anotado y sale en el ticket impreso. */
 function puedeCambiar(id){
   if (id === S.ultimo) return true;
-  avisoCaja('Solo se cambia la cantidad del último producto. Para quitar uno de antes, use Rebajar (F4) y escanéelo.');
+  avisoCaja('Solo se cambia la cantidad del último producto. Para uno de antes: F4 o F1');
   return false;
 }
 function modoRebajar(si = !S.rebajando){
@@ -2128,7 +2139,7 @@ function modoRebajar(si = !S.rebajando){
   S.rebajando = si;
   S.multi = null; pintarMulti();
   pintarFoco(); pintarAtajos();
-  $('#buscar').placeholder = si ? 'Escanee el producto que el cliente devuelve' : 'Escanee el código o escriba el nombre';
+  $('#buscar').placeholder = si ? 'Escanee el producto a anular' : 'Escanee el código o escriba el nombre';
   $('#buscar').focus();
 }
 function rebajar(id, cuanto){
@@ -2139,22 +2150,22 @@ function rebajar(id, cuanto){
   S.multi = null; pintarMulti();
   if (!(q > 0)) return true;
   if (!pidePermiso('quitar')){ rebajarYa(id, q, null); return true; }
-  pedirSupervisor('quitar', `Rebajar ${cantTxt(q)} × ${nom} del ticket.`)
+  pedirSupervisor('quitar', `Anular ${cantTxt(q)} × ${nom}.`)
     .then(aut => { if (aut !== null) rebajarYa(id, q, aut); else modoRebajar(false); });
   return true;
 }
 function rebajarYa(id, q, aut){
   const i = S.ticket.findIndex(x => x.producto_id === id); if (i < 0) return;
   const l = S.ticket[i], p = S.catalogo.find(x => x.producto_id === id) || {};
-  anotarEvento('linea_quitada', [{ ...l, cantidad:q }], 'Rebajado escaneando (el cliente lo devolvió)', aut);
-  S.rebajas.push({ producto_id:id, nombre:p.nombre || '', cantidad:q, precio:Number(p.precio) || 0,
+  anotarEvento('linea_quitada', [{ ...l, cantidad:q }], 'Anulado escaneando', aut);
+  S.rebajas.push({ producto_id:id, nombre:p.nombre || '', cantidad:q, precio:Number(p.precio) || 0, codigo:l.codigo || null,
                    ocurrida_en:new Date().toISOString(), autorizacion_id:aut?.autorizacion_id || null });
   l.cantidad = tres(l.cantidad - q);
   if (l.cantidad <= 0){ S.ticket.splice(i, 1); if (S.ultimo === id) S.ultimo = null; }
   S.rebajando = false;
   $('#buscar').placeholder = 'Escanee el código o escriba el nombre';
   pintar();
-  avisoCaja(`Rebajado: ${cantTxt(q)} × ${p.nombre || 'producto'}`);
+  avisoCaja(`Anulado: ${cantTxt(q)} × ${p.nombre || 'producto'}`);
 }
 /* Lo que se ahorra por las ofertas (precio de siempre menos el de oferta). */
 function ahorroOfertas(){
@@ -2169,16 +2180,20 @@ const fechaOferta = v => { const [a, m, d] = String(v).slice(0,10).split('-').ma
 function pintarFoco(){
   const z = $('#foco'); if (!z) return;
   const ah = dos(totales().ahorro + ahorroOfertas());
-  if (S.rebajando){
-    z.className = 'foco rebajando';
-    z.innerHTML = `<div class="fc-txt"><b>Rebajar</b><small>Escanee el producto que el cliente devuelve.
-      Sale en el ticket como anulado. <kbd>Esc</kbd> para salir.</small></div>`;
+  const pieAhorro = ah > 0.004
+    ? `<div class="fc-ahorro">Usted ha ahorrado <b class="num">${money(ah)}</b> en esta compra</div>` : '';
+  // La cantidad escrita antes de escanear (24 ×) se ve siempre en la tarjeta.
+  if (S.rebajando || S.multi != null){
+    z.className = 'foco' + (S.rebajando ? ' rebajando' : '');
+    z.innerHTML = `<div class="fc-tarjeta">
+      <div class="fc-txt"><b>${S.rebajando ? 'Anular' : ''}${S.multi != null ? ` <span class="num">${cantTxt(S.multi)} ×</span>` : ''}</b>
+        <small>${S.rebajando ? 'Escanee el producto a anular' : 'Escanee el producto'}</small></div></div>${pieAhorro}`;
     return;
   }
   const l = S.ticket.find(x => x.producto_id === S.ultimo);
   if (!l){
-    z.className = 'foco' + (ah > 0.004 ? ' solo-ahorro' : ' oculto');
-    z.innerHTML = ah > 0.004 ? `<div class="fc-ahorro"><small>Ahorro en esta compra</small><b class="num">${money(ah)}</b></div>` : '';
+    z.className = 'foco' + (ah > 0.004 ? '' : ' oculto');
+    z.innerHTML = pieAhorro;
     return;
   }
   const p = S.catalogo.find(x => x.producto_id === l.producto_id);
@@ -2188,24 +2203,19 @@ function pintarFoco(){
   const promos = (pr.porLinea[ix] || []).map(id => (S.promos || []).find(x => x.id === id)).filter(Boolean);
   const normal = Number(p.precio_normal) || 0;
   const oferta = normal > Number(p.precio);
-  const u = p.unidad_base && p.unidad_base !== 'UND' ? ' por ' + p.unidad_base : '';
+  const ahLinea = dos((oferta ? (normal - p.precio) * l.cantidad : 0) + d);
   const foto = p.imagen_url ? `style="background-image:url('${escapar(p.imagen_url)}')"` : '';
+  const n2 = v => (Number(v) || 0).toLocaleString('es-HN', { minimumFractionDigits:2, maximumFractionDigits:2 });
   z.className = 'foco';
-  z.innerHTML = `
+  z.innerHTML = `<div class="fc-tarjeta">
     <div class="fc-img" ${foto}>${p.imagen_url ? '' : escapar(p.nombre[0] || '·')}</div>
     <div class="fc-txt">
       <b>${escapar(p.nombre)}</b>
-      <div class="fc-etq">
-        ${oferta ? `<span class="fc-oferta">Oferta${p.oferta_hasta ? ' hasta ' + fechaOferta(p.oferta_hasta) : ''}</span>` : ''}
-        ${promos.map(x => `<span class="fc-promo">${escapar(nombreCorto(x))} · ${escapar(x.nombre)}</span>`).join('')}
-        ${d > 0 ? `<span class="fc-promo">−${money(d)}</span>` : ''}
-      </div>
+      <small class="num">${escapar(l.codigo || codigoDe(p))}${oferta ? ` · Oferta${p.oferta_hasta ? ' hasta ' + fechaOferta(p.oferta_hasta) : ''}, antes ${money(normal)}` : ''}${promos.length ? ' · ' + promos.map(x => escapar(nombreCorto(x))).join(', ') : ''}</small>
     </div>
-    <div class="fc-precio">
-      ${oferta ? `<s class="num">${money(normal)}</s>` : ''}
-      <b class="num">${money(p.precio)}</b><small>${cantTxt(l.cantidad)}${escapar(u ? ' ' + p.unidad_base : ' und.')} · ${money(p.precio * l.cantidad - d)}</small>
-    </div>
-    ${ah > 0.004 ? `<div class="fc-ahorro"><small>Ahorro en esta compra</small><b class="num">${money(ah)}</b></div>` : ''}`;
+    <div class="fc-cuenta num">${cantTxt(l.cantidad)} × ${n2(p.precio)} = <b>${n2(p.precio * l.cantidad - d)}</b>
+      ${ahLinea > 0.004 ? `<small>Ahorra ${money(ahLinea)}</small>` : ''}</div>
+  </div>${pieAhorro}`;
 }
 
 function lineaPuesto(){
@@ -2253,7 +2263,7 @@ function pintarTicket(){
           ? `style="background-image:url('${escapar(p.imagen_url)}')"` : '';
         return `<div class="linea ${aqui ? 'puesto' : ''}" data-l="${p.producto_id}">
           <div class="linea-img" ${foto}>${p.imagen_url ? '' : escapar(p.nombre[0] || '·')}</div>
-          <div class="linea-nom">${escapar(p.nombre)}<small class="num">${money(p.precio)}
+          <div class="linea-nom">${escapar(p.nombre)}<small class="num">${escapar(l.codigo || codigoDe(p))} · ${money(p.precio)}
             ${u ? 'por ' + escapar(u) : 'c/u'}</small></div>
           ${l.producto_id === S.ultimo ? `<div class="qty">
             <button data-menos="${p.producto_id}" aria-label="Quitar uno">−</button>
@@ -2268,7 +2278,7 @@ function pintarTicket(){
             : cerca ? `<div class="linea-promo cerca"><span>${escapar(nombreCorto(cerca))} · ${escapar(cerca.nombre)}</span></div>` : ''}
         </div>`;
       }).join('') + (S.rebajas.length ? `<div class="rebajas">
-        <div class="rb-tit">Rebajado (sale en el ticket)</div>
+        <div class="rb-tit">Anulado</div>
         ${S.rebajas.map(r => `<div class="rb"><span>−${cantTxt(r.cantidad)} × ${escapar(r.nombre)}</span>
           <b class="num">−${money(r.cantidad * r.precio)}</b></div>`).join('')}</div>` : '');
   }
@@ -2342,7 +2352,8 @@ const ATAJOS = [
      estaba: parecía que no hacía nada. Ahora abre la búsqueda de verdad, con
      precios y existencia, como la de Maxi. */
   { k:'F3',  t:'Buscar',    fn:() => abrirBuscador('vender', $('#buscar').value.trim()) },
-  { k:'F4',  t:'Rebajar',   fn:() => modoRebajar(), linea:true },
+  { k:'F1',  t:'Anular escaneando', fn:() => modoRebajar(), linea:true },
+  { k:'F4',  t:'Quitar',    fn:() => { const l = lineaPuesto(); if (l) quitarLinea(l.producto_id); }, linea:true },
   { k:'F5',  t:'Cliente',   fn:() => { S.fiarDespues = false; abrirClientes(); } },
   { k:'F6',  t:'Gaveta',    fn:() => abrirGaveta() },
   { k:'F7',  t:'Suspender', fn:() => suspender(), linea:true },
@@ -2374,6 +2385,7 @@ function pintarMulti(){
   const z = $('#multi');
   ver('#multi', S.multi != null);
   if (S.multi != null) z.textContent = '× ' + cantTxt(S.multi);
+  pintarFoco();
 }
 
 const hojaAbierta = () => [...document.querySelectorAll('.velo')]
@@ -2412,8 +2424,7 @@ document.addEventListener('keydown', e => {
   }
   if (e.key === 'Delete' && S.ticket.length){
     e.preventDefault();
-    const l = lineaPuesto();
-    if (l && puedeCambiar(l.producto_id)) quitarLinea(l.producto_id);
+    const l = lineaPuesto(); if (l) quitarLinea(l.producto_id);
     return;
   }
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){

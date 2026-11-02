@@ -39,3 +39,15 @@ select has_table_privilege('authenticated','venta_rebajas','select') a1,
        has_function_privilege('anon','fn_anotar_rebajas(uuid,jsonb)','execute') a2,
        has_function_privilege('anon','fn_ofertas_caja(uuid)','execute') a3;
 \echo '--- esperado: 2 ; 0 ; 2 | Arroz 5lb (el nombre del producto) | 50 | Pan suelto ; error solo quien cobró ; error otro negocio ; f f f ---'
+
+\echo ''
+\echo '=== P3 (055): el código de barras en cada línea ==='
+set role postgres;
+insert into producto_codigos (organizacion_id, producto_id, codigo, es_principal)
+values ('aaaaaaaa-0000-0000-0000-000000000001','eeeeeeee-0000-0000-0000-000000000001','7421000000017', true)
+on conflict do nothing;
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+select fn_venta_completa(:'v'::uuid)->'lineas'->0->>'codigo' as codigo;
+reset role;
+\echo '--- esperado: 7421000000017 ---'

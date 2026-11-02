@@ -231,10 +231,11 @@ ${dev ? `${fila(nc ? 'Factura que corrige:' : 'Venta:', esc(dev.referencia))}
 <hr>
 ${lineas.map(l => `<div class="it">
   <div class="n">${esc(l.producto)}${l.exento ? ' (E)' : ''}</div>
+  ${l.codigo || l.sku ? `<div class="chico">${esc(l.codigo || l.sku)}</div>` : ''}
   ${fila(`${cant(l.cantidad)} x ${n2(l.precio)}`, n2(l.total))}
   ${Number(l.descuento) ? fila('  Descuento', '-' + n2(l.descuento)) : ''}
 </div>`).join('')}
-${(d.rebajas || []).length ? `<div class="chico" style="margin-top:4px"><b>ANULADO EN CAJA</b></div>
+${(d.rebajas || []).length ? `<div class="chico" style="margin-top:4px"><b>ANULADO</b></div>
 ${d.rebajas.map(r => fila(`-${cant(r.cantidad)} x ${esc(r.producto)}`, '-' + n2(r.total))).join('')}` : ''}
 <hr>
 ${fiscal ? `

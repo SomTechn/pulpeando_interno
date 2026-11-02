@@ -35,9 +35,11 @@ console.log('\n=== COMPROBANTE ===');
 console.log('\n=== LO ANULADO EN CAJA ===');
 {
   const t = texto(htmlTicket(base({ documento:'ticket' }, { rebajas:[{ producto:'Coca-Cola 600 ml', cantidad:1, precio:20, total:20 }] })));
-  chk('el ticket enseña lo rebajado antes de cobrar', /ANULADO EN CAJA/.test(t) && /-1 x Coca-Cola 600 ml -20\.00/.test(t));
+  chk('el ticket enseña lo anulado antes de cobrar', /ANULADO/.test(t) && /-1 x Coca-Cola 600 ml -20\.00/.test(t));
+  const cc = texto(htmlTicket(base({ documento:'ticket' }, { lineas:[{ producto:'Arroz 5 lb', codigo:'7421000000017', cantidad:1, precio:115, total:115 }] })));
+  chk('cada línea lleva su código de barras', /Arroz 5 lb 7421000000017/.test(cc));
   const sin = texto(htmlTicket(base({ documento:'ticket' })));
-  chk('sin rebajas no sale nada', !/ANULADO EN CAJA/.test(sin));
+  chk('sin anulaciones no sale nada', !/ANULADO/.test(sin));
 }
 
 console.log('\n=== FACTURA ===');

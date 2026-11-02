@@ -417,16 +417,16 @@ console.log('\n=== MOVERSE Y QUITAR CON EL TECLADO ===');
   tecla(w, d, 'ArrowDown');
   chk('la flecha baja', C.S.puesto === 'p2');
 
-  tecla(w, d, 'Delete');
-  await esperar();
-  chk('Supr en una línea de antes no la quita', C.S.ticket.length === 3);
-  chk('y explica cómo rebajar', /Rebajar \(F4\)/.test(d.body.textContent));
   tecla(w, d, '-');
-  chk('- tampoco le baja a una de antes', C.S.ticket.find(l => l.producto_id === 'p2').cantidad === 1);
-  tecla(w, d, 'ArrowDown');
+  chk('- no le baja a una de antes', C.S.ticket.find(l => l.producto_id === 'p2').cantidad === 1);
+  chk('y explica qué usar', /F4 o F1/.test(d.body.textContent));
+  tecla(w, d, 'F4');
+  await esperar();
+  chk('F4 quita la línea donde está parado', !C.S.ticket.some(l => l.producto_id === 'p2'));
+  chk('y queda como anulada', C.S.rebajas.length === 1 && C.S.rebajas[0].producto_id === 'p2');
   tecla(w, d, 'Delete');
   await esperar();
-  chk('Supr sí quita la última escaneada', !C.S.ticket.some(l => l.producto_id === 'p3'));
+  chk('Supr hace lo mismo', C.S.ticket.length === 1 && C.S.rebajas.length === 2);
 }
 {
   const { w, d, C } = await montar(base());
@@ -438,7 +438,8 @@ console.log('\n=== MOVERSE Y QUITAR CON EL TECLADO ===');
   chk('- la baja', C.S.ticket[0].cantidad === 1);
   tecla(w, d, '-');
   await esperar();
-  chk('y bajando de uno se quita la línea', C.S.ticket.length === 0);
+  chk('el menos no baja de uno', C.S.ticket.length === 1 && C.S.ticket[0].cantidad === 1);
+  chk('y dice que para quitar es F4', /F4/.test(d.body.textContent));
 }
 {
   const { w, d, C } = await montar(base());
@@ -2087,7 +2088,7 @@ console.log('\n=== LA CENTRAL PULPEANDO EN LA CAJA ===');
       rg.classList.contains('amarillo') && /···2345/.test(rg.textContent));
 }
 
-console.log('\n=== SOLO EL ÚLTIMO CAMBIA; LO DE ANTES SE REBAJA ESCANEANDO ===');
+console.log('\n=== SOLO EL ÚLTIMO CAMBIA; LO DE ANTES SE QUITA (F4) O SE ANULA ESCANEANDO (F1) ===');
 {
   const { w, d, C } = await montar(base());
   C.agregar('p1'); C.agregar('p1'); C.agregar('p3');
@@ -2097,24 +2098,24 @@ console.log('\n=== SOLO EL ÚLTIMO CAMBIA; LO DE ANTES SE REBAJA ESCANEANDO ==='
   chk('las de antes enseñan la cantidad fija', !!d.querySelector('#lineas .qty.fija'));
   C.fijarCant('p1', 1);
   chk('no se puede bajar la cantidad de una de antes', C.S.ticket.find(l => l.producto_id === 'p1').cantidad === 2);
-  tecla(w, d, 'F4');
+  tecla(w, d, 'F1');
   await esperar();
-  chk('F4 entra en modo rebajar', C.S.rebajando && /Rebajar/.test(d.querySelector('#foco').textContent));
+  chk('F1 entra en modo anular', C.S.rebajando && /Anular/.test(d.querySelector('#foco').textContent));
   teclear(w, d, '7501001', { pistola:true });
   await esperar(120);
   chk('escanear el de antes le baja uno', C.S.ticket.find(l => l.producto_id === 'p1').cantidad === 1);
   chk('y sale del modo', !C.S.rebajando);
   chk('queda anotado como rebaja', C.S.rebajas.length === 1 && C.S.rebajas[0].producto_id === 'p1'
       && C.S.rebajas[0].cantidad === 1 && C.S.rebajas[0].precio === 98);
-  chk('y se ve en el ticket', /Rebajado/.test(d.querySelector('#lineas').textContent)
+  chk('y se ve en el ticket', /Anulado/.test(d.querySelector('#lineas').textContent)
       && /Arroz de primera/.test(d.querySelector('.rebajas').textContent));
   chk('el total ya no lo cuenta', Math.abs(C.totales().total - (98 + 20)) < 0.001);
-  tecla(w, d, 'F4');
+  tecla(w, d, 'F1');
   teclear(w, d, '7501002', { pistola:true });
   await esperar(120);
   chk('rebajar algo que no está en el ticket lo avisa', /no está en el ticket/.test(d.body.textContent)
       && C.S.rebajas.length === 1);
-  tecla(w, d, 'F4');
+  tecla(w, d, 'F1');
   tecla(w, d, 'Escape');
   chk('Esc sale del modo rebajar', !C.S.rebajando);
 }
@@ -2123,7 +2124,7 @@ console.log('\n=== SOLO EL ÚLTIMO CAMBIA; LO DE ANTES SE REBAJA ESCANEANDO ==='
   const { w, d, C } = await montar(estado);
   C.agregar('p1'); C.agregar('p3');
   await esperar();
-  tecla(w, d, 'F4');
+  tecla(w, d, 'F1');
   teclear(w, d, '7501001', { pistola:true });
   await esperar(120);
   chk('rebajar todo lo de una línea la quita', !C.S.ticket.some(l => l.producto_id === 'p1'));
@@ -2145,7 +2146,7 @@ console.log('\n=== SOLO EL ÚLTIMO CAMBIA; LO DE ANTES SE REBAJA ESCANEANDO ==='
   const { w, d, C } = await montar(base());
   C.agregar('p1'); C.agregar('p3');
   await esperar();
-  tecla(w, d, 'F4');
+  tecla(w, d, 'F1');
   teclear(w, d, '7501001', { pistola:true });
   await esperar(120);
   C.suspender();
@@ -2163,15 +2164,29 @@ console.log('\n=== EL PRODUCTO EN GRANDE ===');
   C.agregar('p1'); C.agregar('p1');
   await esperar();
   const f = d.querySelector('#foco');
-  chk('enseña el último producto en grande', !f.classList.contains('oculto') && /Arroz de primera 5 lb/.test(f.textContent));
-  chk('con su precio', /L 98\.00/.test(f.textContent));
-  chk('y la oferta con el precio de antes', /Oferta hasta 8 nov/.test(f.textContent) && /L 120\.00/.test(f.querySelector('s').textContent));
-  chk('arriba el ahorro de la compra', /Ahorro en esta compra/.test(f.textContent) && /L 44\.00/.test(f.textContent));
-  chk('y el total también lo cuenta', /44\.00/.test(d.querySelector('#t-ahorro').textContent)
+  const tf = () => f.textContent.replace(/\s+/g, ' ');
+  chk('enseña el último producto en grande, en la tarjeta de color', !f.classList.contains('oculto')
+      && !!f.querySelector('.fc-tarjeta') && /Arroz de primera 5 lb/.test(tf()));
+  chk('con cantidad × precio = importe', /2 × 98\.00 = 196\.00/.test(tf()));
+  chk('el código de barras', /7501001/.test(tf()));
+  chk('la oferta con el precio de antes', /Oferta hasta 8 nov, antes L 120\.00/.test(tf()));
+  chk('y el ahorro de ese producto', /Ahorra L 44\.00/.test(tf()));
+  chk('abajo, en negro, el ahorro de la compra', /Usted ha ahorrado L 44\.00 en esta compra/.test(d.querySelector('.fc-ahorro').textContent.replace(/\s+/g, ' ')));
+  chk('y el total lo pone como Descuentos', /Descuentos/.test(d.querySelector('#t-ahorro-fila').textContent) && /44\.00/.test(d.querySelector('#t-ahorro').textContent)
       && !d.querySelector('#t-ahorro-fila').classList.contains('oculto'));
   C.agregar('p3');
   await esperar();
   chk('al escanear otro cambia', /Refresco 600 ml/.test(f.textContent) && !/Oferta/.test(f.textContent));
+}
+{
+  const { w, d, C } = await montar(base());
+  teclear(w, d, '24'); tecla(w, d, '*', d.querySelector('#buscar'));
+  await esperar();
+  chk('la cantidad antes de escanear se ve en la tarjeta', /24 ×/.test(d.querySelector('#foco').textContent));
+  teclear(w, d, '7501003', { pistola:true });
+  await esperar(120);
+  chk('y al escanear queda 24 × precio', /24 × 20\.00 = 480\.00/.test(d.querySelector('#foco').textContent.replace(/\s+/g, ' ')));
+  chk('la línea enseña el código escaneado', /7501003/.test(d.querySelector('#lineas').textContent));
 }
 
 console.log('\n=== CANCELAR O ANULAR BLOQUEA LA CAJA ===');
