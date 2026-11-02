@@ -76,8 +76,7 @@ const GRUPOS = [
     { id:'pedidos', nombre:'Pedidos',     url:'pedidos.html', icono:'pedidos',  nivel:1 },
     { id:'fiado',   nombre:'Fiado',       url:'fiado.html',   icono:'fiado',    nivel:1 },
     { id:'promociones', nombre:'Promociones', url:'promociones.html', icono:'promo', nivel:2 },
-    { id:'cajeros', nombre:'Cajeros', url:'cajeros.html', icono:'cajeros', nivel:2 },
-    { id:'cierres', nombre:'Cierres de caja', url:'cajeros.html?vista=cierres', icono:'caja', nivel:2 } ] },
+    { id:'cajeros', nombre:'Cajeros', url:'cajeros.html', icono:'cajeros', nivel:2 } ] },
   { titulo:'Inventario', modulos:[
     { id:'consultar', nombre:'Consultar', url:'consultar.html', icono:'lupa',   nivel:1 },
     { id:'catalogo', nombre:'Catálogos',  url:'catalogo.html', icono:'inventario', nivel:1 },
