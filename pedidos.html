@@ -372,7 +372,7 @@ async function arrancar(){
   $('#h-sucursal').textContent = data.sucursales[0].nombre;
   $('#app').classList.remove('oculto');
 
-  S.menu = montarMenu({
+  S.menu = montarMenu({ sb,
     contenedor:'#menu', modulo:'pedidos', ctx:S.ctx,
     alSalir: async () => { await sb.auth.signOut(); location.reload(); },
     secciones:[{

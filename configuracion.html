@@ -136,6 +136,20 @@ textarea.entrada{height:auto;min-height:70px;padding:11px 13px;resize:vertical;f
   .zona{padding:12px 12px 40px}
   .ficha{padding:15px}
 }
+.horario{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.hor-fila{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center}
+.hor-fila label{display:flex;gap:8px;align-items:center;font-size:13.5px;font-weight:600}
+.hor-fila label input{width:18px;height:18px;accent-color:var(--marca)}
+.hor-fila input[type=time]{min-width:0;height:40px;padding:0 8px}
+.hor-fila span{font-size:12.5px;color:var(--tenue)}
+.hor-fila.cerrado input[type=time]{opacity:.35;pointer-events:none}
+.accesos{display:flex;flex-direction:column}
+.acceso{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--linea)}
+.acceso b{display:block;font-size:14px} .acceso small{display:block;font-size:12px;color:var(--tenue);margin-top:2px}
+.acceso .der{text-align:right}
+.acceso .pais{display:inline-block;font-size:11.5px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--fondo)}
+.acceso.fuera .pais{background:#FFE4EA;color:#B4123A}
+.acceso.fuera b{color:#B4123A}
 </style>
 </head>
 <body>
@@ -293,7 +307,7 @@ async function arrancar(){
   $('#h-negocio').textContent = data.organizacion.nombre;
   $('#app').classList.remove('oculto');
 
-  S.menu = montarMenu({
+  S.menu = montarMenu({ sb,
     contenedor:'#menu', modulo:'configuracion', ctx:S.ctx,
     alSalir: async () => { await sb.auth.signOut(); location.reload(); },
     secciones:[{ id:'config', titulo:'Configuración', items:[
@@ -302,20 +316,21 @@ async function arrancar(){
       { valor:'sucursales',  nombre:'Sucursales y cajas', icono:'caja' },
       { valor:'aparatos',    nombre:'Aparatos de caja', icono:'caja' },
       { valor:'impuestos',   nombre:'Impuestos', icono:'etiqueta' },
+      { valor:'accesos',     nombre:'Accesos', icono:'candado' },
       { valor:'plan',        nombre:'Plan y pago', icono:'finanzas' } ] }]
   });
   S.menu.alElegir(abrir);
   $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
 
   await cargarTodo();
-  abrir(location.hash === '#plan' ? 'plan' : 'negocio');
+  abrir(location.hash === '#plan' ? 'plan' : location.hash === '#accesos' ? 'accesos' : 'negocio');
 }
 
 async function cargarTodo(){
   const [o, s, c, i, f] = await Promise.all([
     sb.from('organizaciones').select('id,nombre,identificacion_fiscal,facturacion_fiscal_activa,config,moneda,codigo_tienda')
       .eq('id', S.ctx.organizacion.id).single(),
-    sb.from('sucursales').select('id,codigo,nombre,direccion,telefono,es_principal,activa,acepta_domicilio,costo_envio,pedido_minimo')
+    sb.from('sucursales').select('id,codigo,nombre,direccion,telefono,es_principal,activa,acepta_domicilio,costo_envio,pedido_minimo,horario')
       .order('es_principal', { ascending:false }).order('nombre'),
     sb.from('cajas').select('id,sucursal_id,codigo,nombre,activa,numero').order('codigo'),
     sb.from('impuestos').select('id,nombre,tasa,incluido_en_precio,es_predeterminado,activo').order('tasa'),
@@ -331,7 +346,7 @@ async function cargarTodo(){
 
 const TITULOS = { negocio:'Negocio y ticket', facturacion:'Facturación (CAI)',
                   sucursales:'Sucursales y cajas', aparatos:'Aparatos de caja',
-                  impuestos:'Impuestos', plan:'Plan y pago' };
+                  impuestos:'Impuestos', plan:'Plan y pago', accesos:'Accesos' };
 
 function abrir(v){
   S.vista = v;
@@ -339,7 +354,68 @@ function abrir(v){
   $('#h-titulo').textContent = TITULOS[v];
   ({ negocio:pintarNegocio, facturacion:pintarFacturacion,
      sucursales:pintarSucursales, aparatos:pintarAparatos,
-     impuestos:pintarImpuestos, plan:pintarPlan })[v]();
+     impuestos:pintarImpuestos, plan:pintarPlan, accesos:pintarAccesos })[v]();
+}
+
+
+/* ================= horario de la sucursal ================= */
+const DIAS_H = [['1','Lunes'],['2','Martes'],['3','Miércoles'],['4','Jueves'],['5','Viernes'],['6','Sábado'],['0','Domingo']];
+function filasHorario(h){
+  return DIAS_H.map(([d, nom]) => {
+    const x = h && h[d] ? h[d] : null;
+    const abre = x ? x.abre : (h ? '' : '07:00'), cierra = x ? x.cierra : (h ? '' : '21:00');
+    const abierto = h ? !!x : d !== '0';
+    return `<div class="hor-fila ${abierto ? '' : 'cerrado'}" data-dia="${d}">
+      <label><input type="checkbox" data-abre-dia ${abierto ? 'checked' : ''}> ${nom}</label>
+      <input type="time" class="entrada hor-abre" value="${abre || '07:00'}" aria-label="${nom}: abre">
+      <span>a</span>
+      <input type="time" class="entrada hor-cierra" value="${cierra || '21:00'}" aria-label="${nom}: cierra">
+    </div>`;
+  }).join('') + '<button type="button" class="mas" id="hor-copiar" style="margin-top:6px">Copiar el lunes a los demás días</button>';
+}
+// null = no enseñar horario; false = hay un error
+function leerHorario(){
+  if (!$('#su-hor-si')?.checked) return null;
+  const h = {};
+  let bien = true;
+  $('#su-horario').querySelectorAll('.hor-fila').forEach(f => {
+    if (!f.querySelector('[data-abre-dia]').checked){ h[f.dataset.dia] = null; return; }
+    const a = f.querySelector('.hor-abre').value, c = f.querySelector('.hor-cierra').value;
+    if (!/^\d\d:\d\d$/.test(a) || !/^\d\d:\d\d$/.test(c) || a === c) bien = false;
+    h[f.dataset.dia] = { abre:a, cierra:c };
+  });
+  return bien ? h : false;
+}
+
+/* ================= accesos =================
+   Quién entró, desde qué IP y desde qué país. Lo de fuera de Honduras se
+   marca: si nadie del negocio está de viaje, alguien tiene una contraseña. */
+async function pintarAccesos(){
+  $('#cuerpo').innerHTML = '<div class="ficha"><span class="girando"></span></div>';
+  const { data, error } = await sb.rpc('fn_accesos', { p_dias:30, p_fuera:!!S.soloFuera });
+  if (S.vista !== 'accesos') return;
+  if (error){ $('#cuerpo').innerHTML = `<div class="aviso malo">${escapar(limpiarError(error))}</div>`; return; }
+  const F = data.filas || [];
+  const cuando = v => new Date(v).toLocaleString('es-HN', { day:'numeric', month:'short', hour:'numeric', minute:'2-digit' });
+  $('#cuerpo').innerHTML = `
+    <div class="ficha">
+      <h3>Accesos de los últimos 30 días</h3>
+      <p class="sub">Cada vez que alguien entra al panel o a la caja queda anotado con su IP y el país.
+        ${data.fuera_7d ? `<b style="color:var(--rojo)">En los últimos 7 días hubo ${data.fuera_7d}
+          ${data.fuera_7d === 1 ? 'entrada' : 'entradas'} desde fuera de Honduras.</b> Si nadie está de viaje,
+          cambie las contraseñas de esas personas.` : 'Ninguna entrada desde fuera de Honduras en los últimos 7 días.'}</p>
+      <label style="display:flex;gap:8px;align-items:center;font-size:13.5px;font-weight:600;margin:4px 0 12px">
+        <input type="checkbox" id="ac-fuera" ${S.soloFuera ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--marca)">
+        Solo las de fuera de Honduras</label>
+      <div class="accesos">
+        ${F.length ? F.map(a => `<div class="acceso ${a.fuera ? 'fuera' : ''}">
+          <div><b>${escapar(a.nombre)}</b><small>${escapar(a.donde === 'caja' ? 'Caja' : 'Panel')} · ${escapar(a.aparato || '—')}</small></div>
+          <div class="der"><span class="pais">${escapar(a.pais || '¿?')}</span>
+            <small class="num">${escapar(a.ip || 'sin IP')} · ${cuando(a.creado_en)}</small></div>
+        </div>`).join('') : '<p class="sub" style="margin:0">Nada todavía.</p>'}
+      </div>
+    </div>`;
+  $('#ac-fuera').onchange = e => { S.soloFuera = e.target.checked; pintarAccesos(); };
 }
 
 /* ================= negocio y ticket ================= */
@@ -1001,6 +1077,14 @@ function hojaSucursal(s){
         <input class="entrada num" id="su-env" inputmode="decimal" value="${s ? Number(s.costo_envio) : 0}"></div>
       <div class="campo-g"><label for="su-min">Pedido mínimo</label>
         <input class="entrada num" id="su-min" inputmode="decimal" value="${s ? Number(s.pedido_minimo) : 0}"></div>
+      <div class="campo-g ancho-total">
+        <label class="interruptor" style="padding:10px 12px;cursor:pointer">
+          <div><b style="font-size:13.5px">Horario de atención</b>
+            <small style="display:block;font-size:12px;color:var(--tenue)">La app del cliente dice si está abierta ahora</small></div>
+          <input type="checkbox" id="su-hor-si" ${s?.horario ? 'checked' : ''}
+                 style="width:20px;height:20px;accent-color:var(--marca)"></label>
+        <div id="su-horario" class="horario ${s?.horario ? '' : 'oculto'}">${filasHorario(s?.horario)}</div>
+      </div>
       ${s && !s.es_principal ? `<label class="ancho-total" style="display:flex;gap:9px;align-items:center;font-size:14px;font-weight:600">
         <input type="checkbox" id="su-act" ${s.activa ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--marca)">
         Activa</label>` : ''}
@@ -1011,6 +1095,22 @@ function hojaSucursal(s){
       <button class="btn principal-b" id="su-si">Guardar</button>
     </div>`;
   ver('#velo');
+  $('#su-hor-si').onchange = e => $('#su-horario').classList.toggle('oculto', !e.target.checked);
+  $('#su-horario').addEventListener('change', e => {
+    const c = e.target.closest('[data-abre-dia]');
+    if (c) c.closest('.hor-fila').classList.toggle('cerrado', !c.checked);
+  });
+  $('#su-horario').addEventListener('click', e => {
+    if (!e.target.closest('#hor-copiar')) return;
+    const f0 = $('#su-horario .hor-fila[data-dia="1"]');
+    $('#su-horario').querySelectorAll('.hor-fila').forEach(f => {
+      if (f === f0 || f.dataset.dia === '0') return;
+      f.querySelector('[data-abre-dia]').checked = f0.querySelector('[data-abre-dia]').checked;
+      f.querySelector('.hor-abre').value = f0.querySelector('.hor-abre').value;
+      f.querySelector('.hor-cierra').value = f0.querySelector('.hor-cierra').value;
+      f.classList.toggle('cerrado', !f0.querySelector('[data-abre-dia]').checked);
+    });
+  });
   $('#su-no').onclick = cerrarHoja;
   $('#su-si').onclick = async () => {
     const err = $('#su-err');
@@ -1021,6 +1121,11 @@ function hojaSucursal(s){
       acepta_domicilio:$('#su-dom').checked, costo_envio:Math.max(0, num($('#su-env').value)),
       pedido_minimo:Math.max(0, num($('#su-min').value)) };
     if ($('#su-act')) datos.activa = $('#su-act').checked;
+    if (s && 'horario' in s){
+      const h = leerHorario();
+      if (h === false){ err.textContent = 'Revise el horario: la hora de abrir y la de cerrar no pueden ser iguales.'; err.classList.remove('oculto'); return; }
+      datos.horario = h;
+    }
     const b = $('#su-si'); b.disabled = true; b.innerHTML = '<span class="girando"></span>';
     const { error } = s
       ? await sb.from('sucursales').update(datos).eq('id', s.id)

@@ -472,7 +472,7 @@ async function arrancar(){
   }
   $('#app').classList.remove('oculto');
 
-  S.menu = montarMenu({
+  S.menu = montarMenu({ sb,
     contenedor:'#menu', modulo:'movimientos', ctx:S.ctx,
     alSalir: async () => { await sb.auth.signOut(); location.reload(); }
   });

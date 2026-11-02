@@ -285,7 +285,7 @@ async function arrancar(){
   $('#h-sub').textContent = data.organizacion?.nombre || '';
   ver('#app');
   S.seccion = location.hash === '#precios' ? 'precios' : 'importar';
-  S.menu = montarMenu({ contenedor:'#menu', modulo:'importar', ctx:S.ctx,
+  S.menu = montarMenu({ sb, contenedor:'#menu', modulo:'importar', ctx:S.ctx,
     alSalir: async () => { await sb.auth.signOut(); location.reload(); },
     secciones:[{ id:'importar', titulo:'Importar y precios', items:[
       { valor:'importar', nombre:'Importar productos', icono:'importar', activo:S.seccion === 'importar' },

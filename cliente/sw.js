@@ -5,7 +5,7 @@
    muestra al cliente precios que ya no son, o productos que se acabaron, y
    eso termina en un pedido que la pulperia no puede surtir. Mejor la pantalla
    diciendo que no hay conexion. */
-const CACHE = 'pulpeando-cliente-v1';
+const CACHE = 'pulpeando-cliente-v2';
 const CONCHA = [
   './',
   './index.html',

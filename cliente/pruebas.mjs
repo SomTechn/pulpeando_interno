@@ -78,6 +78,7 @@ async function montar(estado){
     ; window.__caja.plata = plata;
     ; window.__caja.mensaje = mensaje;
     ; window.__caja.cargarTiendas = cargarTiendas;
+    ; window.__caja.textoHorario = textoHorario;
   })()`);
   await new Promise(r => setTimeout(r, 60));
   return { w, d:w.document, caja:w.__caja, estado };
@@ -565,6 +566,59 @@ console.log('\n=== CASOS FEOS ===');
       !/TypeError|fetch/.test(d.querySelector('#vista').textContent));
   chk('traduce el JWT vencido',
       /sesión venció/i.test(caja.mensaje({ message:'JWT expired' })));
+}
+
+console.log('\n=== HORARIO Y ABIERTA AHORA ===');
+{
+  const H = { '1':{ abre:'07:00', cierra:'21:00' }, '2':{ abre:'07:00', cierra:'21:00' }, '0':null,
+              '5':{ abre:'18:00', cierra:'02:00' }, '6':{ abre:'08:00', cierra:'12:00' } };
+  const estado = { sesion:true, alertas:[], rpc:{
+    fn_tiendas_cerca:{ data:TIENDAS.map((t, i) => ({ ...t, horario:H, abierta:i === 0 })), error:null },
+    fn_mis_pedidos:{ data:[], error:null } } };
+  const { d, caja } = await montar(estado);
+  await esperar(80);
+  chk('usa la lista con horario', estado.llamadas.some(l => l.fn === 'fn_tiendas_cerca')
+      && !estado.llamadas.some(l => l.fn === 'fn_tiendas_disponibles'));
+  chk('la abierta lo dice', /Abierta/.test(d.querySelectorAll('.rotulo')[0].textContent));
+  // lunes 2 de nov. 2026, 10:00
+  const lun10 = new Date(2026, 10, 2, 10, 0);
+  chk('abierta: dice a qué hora cierra', caja.textoHorario({ horario:H, abierta:true }, lun10) === 'Abierta · cierra 9:00 p. m.');
+  chk('cerrada temprano: dice a qué hora abre', caja.textoHorario({ horario:H, abierta:false }, new Date(2026, 10, 2, 6, 0)) === 'Cerrada · abre 7:00 a. m.');
+  chk('cerrada de noche: abre mañana', caja.textoHorario({ horario:H, abierta:false }, new Date(2026, 10, 2, 22, 0)) === 'Cerrada · abre mañana 7:00 a. m.');
+  chk('domingo cerrada: abre el lunes', caja.textoHorario({ horario:H, abierta:false }, new Date(2026, 10, 1, 9, 0)) === 'Cerrada · abre mañana 7:00 a. m.');
+  chk('abierta desde el viernes en la madrugada del sábado', caja.textoHorario({ horario:H, abierta:true }, new Date(2026, 10, 7, 1, 0)) === 'Abierta · cierra 2:00 a. m.');
+  chk('sin horario no dice nada', caja.textoHorario({ horario:null, abierta:null }) === '');
+}
+
+console.log('\n=== MI FIADO Y MI CENTRAL ===');
+{
+  const estado = { sesion:true, alertas:[], rpc:{
+    fn_tiendas_disponibles:{ data:TIENDAS, error:null },
+    fn_mis_pedidos:{ data:[], error:null },
+    fn_mi_fiado:{ data:[{ negocio:'Pulpería La Esquina', moneda:'HNL', debe:250, limite:800, disponible:550,
+      movimientos:[{ fecha:'2026-10-30T15:00:00Z', tipo:'abono', monto:50 }, { fecha:'2026-10-20T15:00:00Z', tipo:'compra', monto:300 }] }], error:null },
+    fn_mi_central:{ data:{ verificado:true, senal:'amarillo', texto:'Debe en una pulpería, al día',
+      negocios_detalle:[{ negocio:'Pulpería La Esquina', debe:250, atrasado:false }, { negocio:'Pulpería Doña Chus', debe:0, atrasado:false }],
+      reclamos:[] }, error:null },
+    fn_reclamar_central: a => a.p_texto.length < 10 ? { data:null, error:{ message:'Cuente qué está mal (al menos 10 letras)' } } : { data:null, error:null }
+  }};
+  const { d } = await montar(estado);
+  await esperar(80);
+  d.querySelector('#btn-cuenta').click();
+  await esperar(80);
+  const t = d.querySelector('#vista').textContent.replace(/\s+/g, ' ');
+  chk('dice cuánto debe en cada pulpería', /Pulpería La Esquina/.test(t) && /L 250\.00/.test(t));
+  chk('y cuánto le queda', /Le quedan L 550\.00 de L 800\.00/.test(t));
+  chk('con sus abonos', /Abonó/.test(t) && /−L 50\.00/.test(t));
+  chk('su señal de la Central, con el detalle que solo él ve', /Con deudas al día/.test(t) && /Doña Chus/.test(t) && /al día/.test(t));
+  d.querySelector('#rc-texto').value = 'mal';
+  d.querySelector('#rc-enviar').click();
+  await esperar(60);
+  chk('un reclamo muy corto se explica', /al menos 10/.test(d.querySelector('#rc-error').textContent));
+  d.querySelector('#rc-texto').value = 'Ya le pagué a La Esquina el lunes';
+  d.querySelector('#rc-enviar').click();
+  await esperar(80);
+  chk('el reclamo se manda', estado.llamadas.some(l => l.fn === 'fn_reclamar_central' && /lunes/.test(l.args.p_texto)));
 }
 
 console.log('\n' + ok + ' bien, ' + mal + ' mal');

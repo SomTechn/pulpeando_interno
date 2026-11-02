@@ -167,12 +167,13 @@ async function arrancar(){
   S.ctx = data;
   $('#h-usuario').textContent = data.usuario.nombre;
   $('#app').classList.remove('oculto');
-  S.menu = montarMenu({
+  S.menu = montarMenu({ sb,
     contenedor:'#menu', modulo:'admin', ctx:S.ctx,
     alSalir: async () => { await sb.auth.signOut(); location.reload(); },
     secciones:[{ id:'admin', titulo:'Pulpeando', items:[
       { valor:'negocios', nombre:'Negocios', icono:'inicio', activo:true },
-      { valor:'config', nombre:'Planes y registro', icono:'ajustes' } ] }]
+      { valor:'config', nombre:'Planes y registro', icono:'ajustes' },
+      { valor:'central', nombre:'Reclamos de la Central', icono:'fiado' } ] }]
   });
   S.menu.alElegir(abrir);
   $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
@@ -181,8 +182,9 @@ async function arrancar(){
 
 function abrir(v){
   S.vista = v; S.menu?.marcar?.(v);
-  $('#h-titulo').textContent = v === 'config' ? 'Planes y registro' : 'Negocios';
-  (v === 'config' ? pintarConfig : pintarNegocios)();
+  $('#h-titulo').textContent = v === 'config' ? 'Planes y registro'
+    : v === 'central' ? 'Reclamos de la Central' : 'Negocios';
+  (v === 'config' ? pintarConfig : v === 'central' ? pintarCentral : pintarNegocios)();
 }
 
 async function cargar(){
@@ -190,6 +192,48 @@ async function cargar(){
   if (n.error) throw n.error;
   S.negocios = n.data || [];
   S.config = c.data || {};
+}
+
+
+/* ================= reclamos de la Central =================
+   La persona reclama desde su app; aquí se ve con quién debe (negocio,
+   ficha y saldo) para llamar y aclarar. La respuesta le llega a su app. */
+async function pintarCentral(){
+  $('#cuerpo').innerHTML = '<div class="ficha"><span class="girando"></span></div>';
+  const { data, error } = await sb.rpc('fn_admin_reclamos_central');
+  if (S.vista !== 'central') return;
+  if (error){ $('#cuerpo').innerHTML = `<div class="aviso malo">${escapar(limpiar(error))}</div>`; return; }
+  const R = data || [];
+  const abiertos = R.filter(r => r.estado === 'abierto').length;
+  $('#cuerpo').innerHTML = `
+    <div class="cifras">
+      <div class="cifra destacada"><small>Abiertos</small><b>${abiertos}</b></div>
+      <div class="cifra"><small>Atendidos</small><b>${R.length - abiertos}</b></div>
+    </div>
+    ${R.length ? R.map(r => `
+      <div class="ficha rc" data-rc="${escapar(r.id)}">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">
+          <b>${escapar(fecha(r.creado_en))}</b>
+          <span class="estado ${r.estado === 'abierto' ? 'pronto' : 'aldia'}">${escapar(r.estado)}</span></div>
+        <p style="margin:8px 0 10px;line-height:1.5">${escapar(r.texto)}</p>
+        <small class="sub">${(r.negocios || []).map(n => `${escapar(n.negocio)}: ${escapar(n.cliente)}
+          ${n.telefono ? '(' + escapar(n.telefono) + ')' : ''} · debe L ${Number(n.debe).toFixed(2)}`).join('<br>')}</small>
+        ${r.estado === 'abierto' ? `
+          <textarea class="entrada" rows="2" placeholder="Respuesta para la persona" style="margin-top:10px;width:100%"></textarea>
+          <div class="aviso malo oculto" style="margin-top:8px"></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn secundario" data-res="rechazado">No procede</button>
+            <button class="btn principal-b" data-res="resuelto">Resuelto</button></div>`
+          : `<p class="sub" style="margin:10px 0 0">Respuesta: ${escapar(r.respuesta || '')}</p>`}
+      </div>`).join('')
+      : '<div class="ficha"><p class="sub" style="margin:0">Nadie ha reclamado todavía.</p></div>'}`;
+  $('#cuerpo').querySelectorAll('[data-res]').forEach(b => b.onclick = async () => {
+    const f = b.closest('[data-rc]'), err = f.querySelector('.aviso');
+    const { error } = await sb.rpc('fn_admin_resolver_reclamo', { p_id:f.dataset.rc,
+      p_estado:b.dataset.res, p_respuesta:f.querySelector('textarea').value });
+    if (error){ err.textContent = limpiar(error); err.classList.remove('oculto'); return; }
+    pintarCentral();
+  });
 }
 
 /* ================= lista de negocios ================= */

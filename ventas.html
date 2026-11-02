@@ -448,7 +448,7 @@ async function arrancar(){
   montarMulti($('[data-fa="cajero_id"]'), { todos:'Todos los cajeros', unidad:'cajeros' });
   montarMulti($('[data-fa="metodo"]'), { todos:'Todas las formas', unidad:'formas' });
 
-  S.menu = montarMenu({
+  S.menu = montarMenu({ sb,
     contenedor:'#menu', modulo:'ventas', ctx:S.ctx,
     alSalir: async () => { await sb.auth.signOut(); location.reload(); }
   });

@@ -49,6 +49,7 @@ const ICONOS = {
   conteo:    '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>',
   promo:     '<path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"/><path d="m9.5 14.5 5-5"/><circle cx="9.5" cy="9.5" r=".9"/><circle cx="14.5" cy="14.5" r=".9"/>',
   importar:  '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
+  candado:   '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   reloj:     '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/>',
   plataforma:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
   inicio:    '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
@@ -110,8 +111,27 @@ function urlLogo(ctx){
   return `${base}/storage/v1/object/public/marca/${ruta}`;
 }
 
-export function montarMenu({ contenedor, modulo, ctx, alSalir, secciones = [] }){
+/* Cada entrada al panel queda anotada (IP y país) una vez por sesión del
+   navegador. Si la base no tiene la 053, no pasa nada. */
+export function registrarAcceso(sb, donde = 'panel'){
+  try{
+    if (!sb || typeof sessionStorage === 'undefined') return;
+    const k = 'pulp:acceso:' + donde;
+    if (sessionStorage.getItem(k)) return;
+    sessionStorage.setItem(k, '1');
+    const ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+    const aparato = /Android/i.test(ua) ? 'Android' : /iPhone|iPad/i.test(ua) ? 'iPhone/iPad'
+      : /Windows/i.test(ua) ? 'Windows' : /Mac/i.test(ua) ? 'Mac' : /Linux/i.test(ua) ? 'Linux' : 'Otro';
+    const nav = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox'
+      : /Safari\//.test(ua) ? 'Safari' : '';
+    Promise.resolve(sb.rpc('fn_registrar_acceso', { p_aparato:(nav ? nav + ' en ' : '') + aparato, p_donde:donde }))
+      .catch(() => {});
+  }catch(e){}
+}
+
+export function montarMenu({ contenedor, modulo, ctx, alSalir, secciones = [], sb = null }){
   const raiz = typeof contenedor === 'string' ? document.querySelector(contenedor) : contenedor;
+  registrarAcceso(sb);
   const nivel = ctx?.usuario?.nivel ?? 0;
 
   // El color del negocio, en cuanto se sabe cuál es.

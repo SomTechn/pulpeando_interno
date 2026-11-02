@@ -130,6 +130,8 @@
   .cajon{width:100%}
   .tj b{font-size:19px}
 }
+.rg-punto{display:inline-block;width:10px;height:10px;border-radius:50%;margin-left:4px;vertical-align:1px}
+.rg-punto.verde{background:#16A34A} .rg-punto.amarillo{background:#F59E0B} .rg-punto.rojo{background:#E11D48}
 </style>
 </head>
 <body>
@@ -383,7 +385,7 @@ async function arrancar(){
   $('#h-sucursal').textContent = data.sucursales[0]?.nombre || '';
   $('#app').classList.remove('oculto');
 
-  S.menu = montarMenu({
+  S.menu = montarMenu({ sb,
     contenedor:'#menu', modulo:'fiado', ctx:S.ctx,
     alSalir: async () => { await sb.auth.signOut(); location.reload(); }
   });
@@ -405,10 +407,14 @@ function leerTurnos(){
 }
 
 async function cargar(){
-  const [fi, re] = await Promise.all([
+  const [fi, re, rg] = await Promise.all([
     sb.from('v_fiado').select('*').order('debe', { ascending:false }),
-    sb.rpc('fn_fiado_resumen')
+    sb.rpc('fn_fiado_resumen'),
+    sb.rpc('fn_riesgo_clientes')
   ]);
+  // La señal de la Central Pulpeando (sin la 052, simplemente no aparece)
+  S.riesgo = {};
+  (rg && !rg.error ? rg.data || [] : []).forEach(r => { S.riesgo[r.cliente_id] = r; });
 
   if (fi.error){ aviso('No se pudo leer el fiado', limpiarError(fi.error)); return; }
   S.fiados = fi.data || [];
@@ -489,7 +495,8 @@ function pintar(){
       <button class="fila" data-id="${f.cliente_id}">
         <span class="fila-ini">${escapar(iniciales(f.cliente))}</span>
         <span class="fila-txt">
-          <b>${escapar(f.cliente)}</b>
+          <b>${escapar(f.cliente)}${(() => { const r = (S.riesgo || {})[f.cliente_id];
+            return r ? ` <i class="rg-punto ${r.senal}" title="Central Pulpeando: ${escapar(r.texto)}"></i>` : ''; })()}</b>
           <small>${escapar(f.telefono || 'sin teléfono')} · ${escapar(ultimo)}${
             f.dias_pago_texto ? ' · paga ' + escapar(f.dias_pago_texto) +
               (f.proximo_pago && !f.le_toca_hoy ? ' (próximo ' + fechaDia(f.proximo_pago) + ')' : '') : ''}

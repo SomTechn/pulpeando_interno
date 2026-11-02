@@ -186,7 +186,7 @@ async function arrancar(){
   $('#h-usuario').textContent = data.usuario.nombre;
   $('#h-sub').textContent = data.organizacion?.nombre || '';
   ver('#app');
-  S.menu = montarMenu({ contenedor:'#menu', modulo:'promociones', ctx:S.ctx,
+  S.menu = montarMenu({ sb, contenedor:'#menu', modulo:'promociones', ctx:S.ctx,
     alSalir: async () => { await sb.auth.signOut(); location.reload(); } });
   $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
   if (S.nivel >= 3) $('#enc-acc').innerHTML = '<button class="btn-chico prin" id="b-nueva">+ Nueva promoción</button>';

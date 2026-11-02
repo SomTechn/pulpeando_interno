@@ -28,7 +28,7 @@ function tablas(){
     organizaciones:{ id:'o1', nombre:'Pulpería La Esquina', identificacion_fiscal:null,
       facturacion_fiscal_activa:false, config:{ mensaje_ticket:'Vuelva pronto' }, moneda:'HNL' },
     sucursales:[{ id:'s1', codigo:'S01', nombre:'Central', direccion:'Col. Las Flores', telefono:'2669-0000',
-      es_principal:true, activa:true, acepta_domicilio:true, costo_envio:25, pedido_minimo:100 },
+      es_principal:true, activa:true, acepta_domicilio:true, costo_envio:25, pedido_minimo:100, horario:null },
       { id:'s2', codigo:'S02', nombre:'Choloma', direccion:null, telefono:null,
       es_principal:false, activa:true, acepta_domicilio:false, costo_envio:0, pedido_minimo:0 }],
     cajas:[{ id:'c1', sucursal_id:'s1', codigo:'C01', nombre:'Caja 1', activa:true }],
@@ -138,7 +138,7 @@ console.log('\n=== QUIÉN ENTRA ===');
 {
   const { d } = await montar(base());
   chk('el gerente sí', !d.querySelector('#app').classList.contains('oculto'));
-  chk('con sus seis secciones (con Plan y pago)', d.querySelectorAll('#menu-secciones [data-valor]').length === 6);
+  chk('con sus siete secciones (con Plan y pago y Accesos)', d.querySelectorAll('#menu-secciones [data-valor]').length === 7);
   chk('y una de ellas es la de los aparatos de caja',
       !!d.querySelector('#menu-secciones [data-valor="aparatos"]'));
 }
@@ -625,6 +625,63 @@ console.log('\n=== PLAN Y PAGO ===');
   const t = txt(d.querySelector('#cuerpo'));
   chk('vencida: sin destacar y con aviso rojo', !d.querySelector('#plan-estado').classList.contains('destacada') && d.querySelector('#plan-estado .aviso.malo'));
   chk('el pago registrado con su periodo', /1 mes/.test(t) && /BAC 9/.test(t) && /L 450.00/.test(t));
+}
+
+console.log('\n=== HORARIO DE LA SUCURSAL ===');
+{
+  const estado = base();
+  const { d } = await montar(estado);
+  await ir(d, 'sucursales');
+  d.querySelector('[data-suc="s1"]').click();
+  await esperar(30);
+  chk('sin horario, el editor está escondido', d.querySelector('#su-horario').classList.contains('oculto'));
+  d.querySelector('#su-hor-si').checked = true;
+  d.querySelector('#su-hor-si').dispatchEvent(new d.defaultView.Event('change', { bubbles:true }));
+  chk('al prenderlo aparecen los siete días', !d.querySelector('#su-horario').classList.contains('oculto')
+      && d.querySelectorAll('.hor-fila').length === 7);
+  chk('el domingo arranca cerrado', d.querySelector('.hor-fila[data-dia="0"]').classList.contains('cerrado'));
+  const lun = d.querySelector('.hor-fila[data-dia="1"]');
+  lun.querySelector('.hor-abre').value = '06:30'; lun.querySelector('.hor-cierra').value = '20:00';
+  d.querySelector('#hor-copiar').click();
+  chk('copiar el lunes llena los demás', d.querySelector('.hor-fila[data-dia="5"] .hor-abre').value === '06:30');
+  d.querySelector('#su-si').click();
+  await esperar();
+  const up = escrito(estado, 'sucursales', 'update')[0];
+  chk('guarda el horario', up && up.datos.horario && up.datos.horario['1'].abre === '06:30'
+      && up.datos.horario['6'].cierra === '20:00' && up.datos.horario['0'] === null);
+}
+{
+  const estado = base();
+  const { d } = await montar(estado);
+  await ir(d, 'sucursales');
+  d.querySelector('[data-suc="s1"]').click();
+  await esperar(30);
+  d.querySelector('#su-hor-si').checked = true;
+  const lun = d.querySelector('.hor-fila[data-dia="1"]');
+  lun.querySelector('.hor-abre').value = '08:00'; lun.querySelector('.hor-cierra').value = '08:00';
+  d.querySelector('#su-si').click();
+  await esperar();
+  chk('abrir y cerrar a la misma hora no se guarda', !escrito(estado, 'sucursales', 'update').length
+      && /Revise el horario/.test(d.querySelector('#su-err').textContent));
+}
+
+console.log('\n=== ACCESOS ===');
+{
+  const estado = base();
+  estado.rpc.fn_accesos = a => ({ data:{ fuera_7d:1, filas:[
+    { nombre:'Ana', rol:'auxiliar', ip:'190.53.10.4', pais:'HN', fuera:false, aparato:'Chrome en Android', donde:'caja', creado_en:'2026-11-01T15:00:00Z' },
+    { nombre:'Gerente', rol:'gerente', ip:'8.8.8.8', pais:'US', fuera:true, aparato:'Windows', donde:'panel', creado_en:'2026-11-01T03:00:00Z' }
+  ].filter(x => !a.p_fuera || x.fuera) }, error:null });
+  const { d } = await montar(estado);
+  await ir(d, 'accesos'); await esperar(80);
+  const t = txt(d.querySelector('#cuerpo'));
+  chk('lista quién entró, con IP y país', /Ana/.test(t) && /190\.53\.10\.4/.test(t) && /US/.test(t));
+  chk('marca lo de fuera de Honduras', d.querySelectorAll('.acceso.fuera').length === 1);
+  chk('y lo avisa arriba', /1 entrada desde fuera de Honduras/.test(t));
+  d.querySelector('#ac-fuera').checked = true;
+  d.querySelector('#ac-fuera').dispatchEvent(new d.defaultView.Event('change', { bubbles:true }));
+  await esperar(80);
+  chk('se puede ver solo lo de fuera', d.querySelectorAll('.acceso').length === 1);
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);

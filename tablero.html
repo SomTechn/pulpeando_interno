@@ -363,7 +363,7 @@ async function arrancar(){
   $('#h-negocio').textContent = data.organizacion?.nombre || '';
   ver('#app');
 
-  S.menu = montarMenu({
+  S.menu = montarMenu({ sb,
     contenedor:'#menu', modulo:'tablero', ctx:S.ctx,
     alSalir: async () => { await sb.auth.signOut(); location.reload(); }
   });

@@ -86,6 +86,10 @@
   background:var(--fondo);font-size:13px;color:var(--tenue)}
 .muestra-fila span{flex:1}
 .muestra-fila button{font-weight:800;color:var(--tinta);font-size:13px}
+.alerta-accesos{display:block;margin:0 0 14px;padding:13px 16px;border-radius:var(--r-md);
+  background:#FFF1F4;border:1px solid #F6C3CE;color:#9F1239;text-decoration:none}
+.alerta-accesos b{display:block;font-size:14.5px}
+.alerta-accesos small{display:block;font-size:12.5px;margin-top:3px;color:#9F1239;opacity:.85}
 </style>
 </head>
 <body>
@@ -138,6 +142,7 @@
         <p id="pa-negocio">—</p>
       </div>
 
+      <div id="alerta-accesos"></div>
       <div id="pasos"></div>
 
       <a class="a-caja" href="caja/">
@@ -258,12 +263,23 @@ async function arrancar(){
     </a>`).join('');
 
   $('#app').classList.remove('oculto');
-  if (S.nivel >= 3) pintarPasos();
-  S.menu = montarMenu({
+  if (S.nivel >= 3){ pintarPasos(); pintarAlertaAccesos(); }
+  S.menu = montarMenu({ sb,
     contenedor:'#menu', modulo:'panel', ctx:S.ctx,
     alSalir: async () => { await sb.auth.signOut(); location.reload(); }
   });
   $('#abrir-menu').addEventListener('click', () => S.menu.alternar());
+}
+
+/* Alguien entró desde fuera de Honduras en la última semana: el gerente lo
+   ve al abrir Inicio. Sin la 053, no aparece nada. */
+async function pintarAlertaAccesos(){
+  const { data, error } = await sb.rpc('fn_accesos', { p_dias:7, p_fuera:true });
+  if (error || !data || !data.fuera_7d){ $('#alerta-accesos').innerHTML = ''; return; }
+  const n = data.fuera_7d, f = (data.filas || [])[0];
+  $('#alerta-accesos').innerHTML = `<a class="alerta-accesos" href="configuracion.html#accesos">
+    <b>${n === 1 ? 'Alguien entró' : n + ' entradas'} desde fuera de Honduras esta semana</b>
+    <small>${f ? escapar(f.nombre) + ' · ' + escapar(f.pais || '') + ' · ' : ''}Si nadie está de viaje, cambie esa contraseña. Ver accesos ›</small></a>`;
 }
 
 /* ================= primeros pasos ================= */

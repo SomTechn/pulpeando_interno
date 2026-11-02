@@ -106,6 +106,7 @@ async function montar(estado){
 
   const menu = await import(BASE + 'menu.js');
   w.montarMenu = menu.montarMenu; w.escapar = menu.escapar; w.iniciales = menu.iniciales;
+  w.registrarAcceso = menu.registrarAcceso;
   const promos = await import(BASE + 'promos.js');
   w.calcularPromos = promos.calcularPromos; w.nombreCorto = promos.nombreCorto;
   const balanza = await import(BASE + 'balanza.js');
@@ -113,7 +114,7 @@ async function montar(estado){
 
   const prep = cuerpo
     .replace(/^import \{ createClient \} from 'https:\/\/esm\.sh\/@supabase\/supabase-js@2';$/m, '')
-    .replace(/^import \{ iniciales, escapar \} from '\.\.\/menu\.js';$/m, '')
+    .replace(/^import \{ iniciales, escapar, registrarAcceso \} from '\.\.\/menu\.js';$/m, '')
     .replace(/^import \{ escanear, hayCamara \} from '\.\.\/escaner\.js';$/m,
              'const escanear = async () => null; const hayCamara = async () => false;')
     .replace(/^import \{ imprimirTicket \} from '\.\.\/ticket\.js';$/m,
@@ -136,6 +137,7 @@ async function montar(estado){
     ; C.aparato = aparato; C.bloquear = bloquear; C.abrirBuscador = abrirBuscador;
     ; C.eventosPendientes = eventosPendientes; C.enviarEventos = enviarEventos;
     ; C.porCodigo = porCodigo; C.hojaAnular = hojaAnular;
+    ; C.pintarEstado = pintarEstado; C.leerFacturacion = leerFacturacion; C.ponerDoc = ponerDoc;
   })()`);
   await new Promise(r => setTimeout(r, 140));
 
@@ -1948,6 +1950,136 @@ const VENTA = (estado = 'completada') => ({ venta:{ id:'v9', numero:'T-S01-00000
   tecla(w, d, 'F11');
   await esperar();
   chk('sin turno abierto avisa', /abrir el turno/.test(d.body.textContent) && !estado.llamadas.some(l => l.fn === 'fn_ventas_turno_caja'));
+}
+
+
+console.log('\n=== EL PANEL DE LA VENTA ===');
+{
+  const { w, d, C } = await montar(base());
+  chk('sin productos los botones de pago están apagados',
+      [...d.querySelectorAll('#pv-pagos button')].every(b => b.disabled));
+  C.agregar('p1'); C.agregar('p3'); C.agregar('p3');
+  await esperar();
+  chk('con productos se prenden', [...d.querySelectorAll('#pv-pagos button')].every(b => !b.disabled));
+  chk('el total dice cuántos artículos', /3 artículos/.test(d.querySelector('#t-arts').textContent));
+  d.querySelector('[data-pago="tarjeta"]').click();
+  await esperar();
+  chk('Tarjeta abre el cobro', !d.querySelector('#velo-cobro').classList.contains('oculto'));
+  chk('con la tarjeta ya puesta', C.S.metodo === 'tarjeta');
+  d.querySelector('#cancelar-cobro').click();
+  await esperar();
+  w.document.body.dispatchEvent(new w.KeyboardEvent('keydown', { key:'3', altKey:true, bubbles:true }));
+  await esperar();
+  chk('Alt+3 cobra con transferencia', C.S.metodo === 'transferencia'
+      && !d.querySelector('#velo-cobro').classList.contains('oculto'));
+  d.querySelector('#cancelar-cobro').click();
+  await esperar();
+  d.querySelector('#pv-suspender').click();
+  await esperar();
+  chk('Suspender del panel deja la venta en espera', C.guardadas().length === 1 && !C.S.ticket.length);
+  chk('y la barra de abajo lo dice', /1 en espera/.test(d.querySelector('#ec-espera').textContent)
+      && !d.querySelector('#ec-espera').classList.contains('oculto'));
+}
+{
+  const ctx = JSON.parse(JSON.stringify(CTX)); ctx.organizacion.factura_fiscal = true;
+  const estado = base({ fn_pos_contexto:{ data:ctx, error:null } });
+  const { w, d, C } = await montar(estado);
+  C.S.ctx = ctx;
+  d.querySelector('#pv-doc').classList.remove('oculto');
+  C.agregar('p1');
+  await esperar();
+  chk('arranca en ticket', C.S.doc === 'ticket');
+  d.querySelector('[data-doc="factura"]').click();
+  chk('se escoge factura', C.S.doc === 'factura'
+      && d.querySelector('[data-doc="factura"]').classList.contains('activo'));
+  d.querySelector('#btn-cobrar').click();
+  await esperar();
+  chk('el cobro sale con la factura puesta', C.S.fiscal === true
+      && d.querySelector('#sw-fiscal').classList.contains('on'));
+  d.querySelector('#sw-fiscal').click();
+  chk('apagarla en el cobro vuelve el panel a ticket', C.S.doc === 'ticket');
+  d.querySelector('#cancelar-cobro').click();
+  await esperar();
+
+  C.S.clientes = [{ id:'k1', nombre:'Pedro Sin RTN', saldo:0, limite_credito:0 },
+                  { id:'k2', nombre:'Ferretería El Clavo', saldo:0, limite_credito:0,
+                    identificacion_fiscal:'08019015123456' }];
+  C.S.clientesLeidos = true;
+  d.querySelector('[data-doc="rtn"]').click();
+  await esperar();
+  chk('Con RTN sin cliente pide el cliente', !d.querySelector('#velo-cliente').classList.contains('oculto')
+      && C.S.doc === 'ticket');
+  d.querySelector('.cl-fila[data-id="k2"]').click();
+  await esperar();
+  chk('al escoger uno con RTN queda puesta', C.S.doc === 'rtn');
+  C.S.cliente = C.S.clientes[0]; C.S.doc = 'factura';
+  C.ponerDoc('rtn');
+  await esperar();
+  chk('un cliente sin RTN no deja escogerla', C.S.doc === 'factura');
+  w.document.body.dispatchEvent(new w.KeyboardEvent('keydown', { key:'d', altKey:true, bubbles:true }));
+  chk('Alt+D pasa al siguiente documento', C.S.doc !== 'factura');
+}
+
+console.log('\n=== LA BARRA DE ABAJO ===');
+{
+  const estado = base({ fn_estado_facturacion:{ data:{ activa:true, rangos:[
+    { tipo:'factura', activa:true, vigente:true, prefijo:'000-001-01', siguiente:12524,
+      quedan:7477, fecha_limite:'2026-12-31', dias:60 }] }, error:null } });
+  const { d, C } = await montar(estado);
+  await C.leerFacturacion();
+  const txt = () => d.querySelector('#estado-caja').textContent.replace(/\s+/g, ' ');
+  chk('dice que hay internet', /En línea/.test(txt()));
+  chk('trae la factura siguiente', /000-001-01-00012524/.test(txt()));
+  chk('cuándo vence el CAI', /31\/12\/2026/.test(txt()));
+  chk('y cuántas quedan', /7,477|7.477/.test(txt()));
+  chk('no dice lo vendido', !/L \d/.test(txt()) && !/vendid/i.test(txt()));
+  C.S.enLinea = false; C.S.porSubir = 2; C.pintarEstado();
+  chk('sin internet dice cuántas faltan por subir', /Sin internet · 2 por subir/.test(txt()));
+  estado.rpc.fn_estado_facturacion = { data:{ activa:true, rangos:[
+    { tipo:'factura', activa:true, vigente:true, prefijo:'000-001-01', siguiente:990,
+      quedan:11, fecha_limite:'2026-11-03', dias:2 }] }, error:null };
+  await C.leerFacturacion();
+  chk('con el rango por acabarse se pinta en rojo', d.querySelector('#ec-fiscal').classList.contains('malo'));
+  estado.rpc.fn_estado_facturacion = { data:{ activa:true, rangos:[] }, error:null };
+  await C.leerFacturacion();
+  chk('sin CAI vigente lo avisa', /Sin CAI vigente/.test(txt()));
+}
+
+console.log('\n=== LA CENTRAL PULPEANDO EN LA CAJA ===');
+{
+  const estado = base({
+    fn_situacion_cliente:{ data:{ debe:0 }, error:null },
+    fn_riesgo_cliente:{ data:{ verificado:false }, error:null },
+    fn_riesgo_verificar: a => ({ data:{ verificado:true, dni_final:a.p_dni.replace(/\D/g,'').slice(-4),
+      senal:'amarillo', texto:'Debe en otro negocio, al día', con_deuda:1 }, error:null }) });
+  const { w, d, C } = await montar(estado);
+  C.S.clientes = [{ id:'k1', nombre:'Juan Pérez', saldo:0, limite_credito:500 }];
+  C.S.clientesLeidos = true;
+  d.querySelector('#btn-cliente').click();
+  await esperar();
+  d.querySelector('.cl-fila[data-id="k1"]').click();
+  await esperar(120);
+  const rg = d.querySelector('#cl-riesgo');
+  chk('con cliente aparece la Central', !rg.classList.contains('oculto') && /Verificar/.test(rg.textContent));
+  rg.click();
+  await esperar();
+  const dni = d.querySelector('#rg-dni');
+  dni.value = '0801199012345'; dni.dispatchEvent(new w.Event('input', { bubbles:true }));
+  chk('el DNI se acomoda con guiones', dni.value === '0801-1990-12345');
+  d.querySelector('#rg-si').click();
+  await esperar();
+  chk('sin el permiso del cliente no verifica', !estado.llamadas.some(l => l.fn === 'fn_riesgo_verificar')
+      && /aceptó/.test(d.querySelector('#rg-error').textContent));
+  d.querySelector('#rg-acepto').checked = true;
+  d.querySelector('#rg-si').click();
+  await esperar(120);
+  const v = estado.llamadas.find(l => l.fn === 'fn_riesgo_verificar');
+  chk('con permiso verifica', v && v.args.p_acepto === true && v.args.p_cliente_id === 'k1');
+  chk('y enseña la señal', /Debe en otro lado/.test(d.querySelector('#hoja').textContent));
+  chk('sin montos', !/L \d/.test(d.querySelector('#hoja').textContent));
+  d.querySelector('#rg-ok').click();
+  chk('el panel queda en amarillo con los últimos 4 del DNI',
+      rg.classList.contains('amarillo') && /···2345/.test(rg.textContent));
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);

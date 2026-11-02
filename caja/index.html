@@ -719,6 +719,146 @@
 @keyframes caja-vista{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
 .an-ventas{max-height:none}
 #velo-cobro .metodo:not(.activo){background:var(--panel)}
+
+/* ==========================================================================
+   EL PANEL DE LA VENTA Y LA BARRA DE ABAJO (1 de noviembre)
+   PC: catálogo angosto a la izquierda, el ticket al centro y el panel a la
+   derecha. Tablet: ticket y panel; el catálogo sale con la pestaña
+   «Productos». Celular: todo dentro del cajón del ticket.
+   ========================================================================== */
+.cuerpo{grid-template-columns:272px minmax(0,1fr)}
+.catalogo{order:-1;border-left:0;border-right:1px solid var(--linea)}
+@media (min-width:1181px){ .grid{grid-template-columns:repeat(auto-fill,minmax(106px,1fr))} }
+.ticket{display:grid;grid-template-columns:minmax(0,1fr) 352px;min-height:0}
+.ticket-izq{display:flex;flex-direction:column;min-width:0;min-height:0}
+.ticket-top{display:none}
+.ticket-tit{font-size:16px;font-weight:800}
+.ticket-izq .atajos{flex-wrap:nowrap;overflow-x:auto;margin:0;padding:8px 14px;gap:5px;
+  border-top:1px solid var(--linea);background:#FCFDFE;scrollbar-width:none;flex:0 0 auto}
+.ticket-izq .atajos::-webkit-scrollbar{display:none}
+.ticket-izq .atajo{min-height:34px;padding:6px 9px;font-size:11.5px;white-space:nowrap;flex:0 0 auto}
+
+.panel-venta{display:flex;flex-direction:column;gap:10px;padding:14px;min-height:0;
+  overflow-y:auto;background:var(--fondo);border-left:1px solid var(--linea)}
+.panel-venta kbd{font-family:var(--num);font-size:10px;font-weight:800;letter-spacing:0;
+  background:rgba(15,23,41,.07);border-radius:5px;padding:1px 5px;color:inherit}
+.pv-total{background:var(--tinta);color:#fff;border-radius:var(--r-md);padding:13px 16px 15px;flex:0 0 auto}
+.pv-total .tot{color:#AEBBD0;font-size:13.5px;padding:3px 0}
+.pv-total .tot b{color:#fff}
+.pv-total .tot.ahorro{color:#86E0B0}
+.pv-total .tot.ahorro b{color:#86E0B0}
+.pv-total .tot.grande{border-top:1px solid rgba(255,255,255,.16);color:#fff;margin-top:6px;padding-top:9px}
+.pv-total .tot.grande span{font-size:15px}
+.pv-total .tot.grande small{display:block;font-size:11.5px;font-weight:600;color:#AEBBD0;margin-top:2px}
+.pv-total .tot.grande b{font-size:clamp(34px,3.4vw,46px);color:#fff}
+.panel-venta .cliente{background:var(--panel);border:1px solid var(--linea);flex:0 0 auto;min-height:52px}
+.panel-venta .cliente .pv-k{margin-left:auto;flex:0 0 auto}
+.panel-venta .cliente #cl-flecha{margin-left:6px}
+.panel-venta .deuda{margin-top:-4px}
+.pv-bloque{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);padding:10px;flex:0 0 auto}
+.pv-tit{display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:800;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--tenue);margin-bottom:8px}
+.pv-docs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.pv-docs button{border:1.5px solid var(--linea);border-radius:var(--r-sm);background:var(--panel);
+  padding:7px 4px;min-height:52px;text-align:center;color:var(--tinta)}
+.pv-docs b{display:block;font-size:13px;font-weight:800}
+.pv-docs small{display:block;font-size:10.5px;line-height:1.2;color:var(--tenue);margin-top:2px}
+.pv-docs button.activo{border-color:var(--marca);background:var(--marca-suave);color:var(--marca-tinta)}
+.pv-docs button.activo small{color:var(--marca-tinta)}
+.pv-pagos{display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:0 0 auto}
+.pv-pagos button{border-radius:var(--r-sm);min-height:54px;padding:8px 6px;color:#fff;text-align:center;
+  transition:filter .12s,transform .08s}
+.pv-pagos button:hover:not(:disabled){filter:brightness(1.07)}
+.pv-pagos button:active:not(:disabled){transform:scale(.98)}
+.pv-pagos b{display:block;font-size:14px;font-weight:800}
+.pv-pagos small{display:block;font-size:10.5px;font-weight:700;opacity:.75;margin-top:2px;font-family:var(--num)}
+.pg-efectivo{background:#13804A}
+.pg-tarjeta{background:#2858C9}
+.pg-transf{background:#6D3FC0}
+.pg-fiado{background:var(--ambar);color:#3D2B00!important}
+.pv-pagos button:disabled{opacity:.38;cursor:default}
+.pv-mas{display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:0 0 auto}
+.pv-mas button{min-height:44px;border-radius:var(--r-sm);background:var(--panel);border:1px solid var(--linea);
+  font-size:13px;font-weight:700;color:var(--tinta);display:flex;align-items:center;justify-content:center;gap:6px}
+.pv-mas button:disabled{opacity:.45}
+.pv-mas .peligro{color:var(--rojo);border-color:#F4C9D3}
+.panel-venta .btn-cobrar{margin-top:0;height:62px;flex:0 0 auto}
+.panel-venta .btn-cobrar kbd{background:rgba(255,255,255,.2);margin-left:6px}
+
+.vista-tabs{display:none;background:var(--fondo);border-radius:11px;padding:3px;gap:3px}
+.vista-tabs button{min-height:40px;padding:0 16px;border-radius:9px;font-size:13.5px;font-weight:700;color:var(--tenue)}
+.vista-tabs button.activo{background:var(--panel);color:var(--tinta);box-shadow:0 1px 3px rgba(15,23,41,.1)}
+.vista-tabs span{display:inline-grid;place-items:center;min-width:22px;height:20px;padding:0 6px;margin-left:4px;
+  border-radius:10px;background:var(--marca);color:var(--marca-sobre);font-size:11px}
+
+.estado-caja{display:flex;align-items:center;gap:20px;height:32px;padding:0 16px;flex:0 0 auto;
+  background:var(--tinta);color:#B3C0D3;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden}
+.estado-caja > span{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.estado-caja b{color:#fff;font-weight:700}
+.ec-red{flex:0 0 auto}
+.ec-red::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;
+  background:#34D399;margin-right:7px;vertical-align:1px}
+.ec-red.off::before{background:#FBBF24}
+.ec-red.off{color:#FDE68A}
+.ec-fiscal.ojo, .ec-fiscal.ojo b{color:#FCD34D}
+.ec-fiscal.malo, .ec-fiscal.malo b{color:#FCA5A5}
+.ec-hora{margin-left:auto;flex:0 0 auto;color:#fff}
+
+/* Sin teclado físico (pantalla táctil) las teclas no dicen nada. */
+@media (hover:none){
+  .panel-venta kbd, .pv-pagos small{display:none}
+}
+@media (max-width:1180px) and (min-width:821px){
+  .cuerpo{grid-template-columns:minmax(0,1fr);position:relative}
+  .catalogo{display:none;position:absolute;top:0;bottom:0;left:0;right:330px;z-index:5;
+    border-right:1px solid var(--linea);background:var(--fondo)}
+  .cuerpo.ver-productos .catalogo{display:flex}
+  .ticket{grid-template-columns:minmax(0,1fr) 330px}
+  .ticket-top{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid var(--linea)}
+  .ticket-tit{display:none}
+  .vista-tabs{display:flex}
+  .linea{grid-template-columns:44px 1fr 116px 96px;gap:0 10px}
+  .linea-img{width:44px;height:44px}
+  #ec-ultimo{display:none}
+}
+@media (max-width:820px){
+  .cuerpo{grid-template-columns:1fr}
+  .catalogo{border-right:0}
+  .ticket{display:flex;flex-direction:column;overflow-y:auto}
+  .ticket-izq{flex:0 0 auto;min-height:auto}
+  .ticket-top{display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:2;
+    background:var(--panel);padding:12px 16px;border-bottom:1px solid var(--linea)}
+  .lineas{flex:0 0 auto;overflow:visible}
+  .panel-venta{border-left:0;overflow:visible;flex:0 0 auto;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+  .estado-caja{display:none}
+  .pv-total .tot.grande b{font-size:40px}
+}
+
+/* La Central Pulpeando: una señal, sin montos ni nombres de otros negocios. */
+.riesgo{display:flex;align-items:center;gap:9px;width:100%;text-align:left;flex:0 0 auto;
+  margin-top:-4px;padding:9px 11px;border-radius:var(--r-sm);border:1px dashed var(--linea);
+  background:var(--panel);font-size:12.5px;font-weight:600;color:var(--tenue);line-height:1.35}
+.riesgo .rg-punto{flex:0 0 auto;width:12px;height:12px;border-radius:50%;background:#CBD5E1}
+.riesgo b{color:var(--tinta)}
+.riesgo small{display:block;font-size:11px;font-weight:600;color:var(--tenue)}
+.riesgo span:nth-child(2){flex:1;min-width:0}
+.riesgo .rg-ir{flex:0 0 auto;font-weight:800;color:var(--azul)}
+.riesgo.verde{border-style:solid;border-color:#BFE8D0;background:#F0FAF4}
+.riesgo.verde .rg-punto{background:#16A34A}
+.riesgo.amarillo{border-style:solid;border-color:#F3DFAE;background:#FFF9EA}
+.riesgo.amarillo .rg-punto{background:#F59E0B}
+.riesgo.rojo{border-style:solid;border-color:#F6C3CE;background:#FFF1F4}
+.riesgo.rojo .rg-punto{background:#E11D48}
+.rg-senal{display:flex;align-items:center;gap:14px;border-radius:var(--r-md);padding:16px;margin:4px 0 14px}
+.rg-senal i{width:22px;height:22px;border-radius:50%;flex:0 0 auto}
+.rg-senal b{display:block;font-size:17px}
+.rg-senal small{display:block;font-size:12.5px;color:var(--tenue);margin-top:2px}
+.rg-senal.verde{background:#F0FAF4} .rg-senal.verde i{background:#16A34A}
+.rg-senal.amarillo{background:#FFF9EA} .rg-senal.amarillo i{background:#F59E0B}
+.rg-senal.rojo{background:#FFF1F4} .rg-senal.rojo i{background:#E11D48}
+.rg-acepto{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.45;
+  background:var(--fondo);border-radius:var(--r-sm);padding:11px 12px;margin:12px 0;cursor:pointer}
+.rg-acepto input{width:20px;height:20px;margin-top:1px;flex:0 0 auto;accent-color:var(--marca)}
 </style>
 </head>
 <body>
@@ -886,31 +1026,67 @@
         </svg>
         <span class="etq-camara">Escanear</span>
       </button>
-      <div class="atajos" id="atajos"></div>
     </div>
 
     <div class="cuerpo">
       <aside class="ticket" id="ticket">
-        <div class="ticket-top">
-          <button class="cerrar-ticket" id="cerrar-ticket">✕</button>
+        <div class="ticket-izq">
+          <div class="ticket-top">
+            <button class="cerrar-ticket" id="cerrar-ticket">✕</button>
+            <b class="ticket-tit">Ticket</b>
+            <div class="vista-tabs" id="vista-tabs">
+              <button data-vt="ticket" class="activo">Ticket <span class="num" id="vt-n">0</span></button>
+              <button data-vt="productos">Productos</button>
+            </div>
+          </div>
+          <div class="lineas" id="lineas"></div>
+          <div class="atajos" id="atajos"></div>
+        </div>
+
+        <!-- El panel de la venta: lo que se mira y lo que se toca para cerrarla.
+             La cifra grande arriba, luego quién compra, qué documento sale y con
+             qué paga. Cada botón de pago abre el cobro con esa forma puesta. -->
+        <div class="panel-venta" id="panel-venta">
+          <div class="pv-total">
+            <div class="tot"><span>Subtotal</span><b class="num" id="t-sub2">—</b></div>
+            <div class="tot ahorro oculto" id="t-ahorro-fila"><span>Ahorro en promociones</span><b class="num" id="t-ahorro">—</b></div>
+            <div class="tot"><span>Impuesto</span><b class="num" id="t-isv">—</b></div>
+            <div class="tot grande"><span>Total<small id="t-arts"></small></span><b class="num" id="t-total">—</b></div>
+          </div>
+
           <button class="cliente" id="btn-cliente">
             <i id="cl-ini">+</i>
             <span class="cl-txt" id="cl-txt">Cliente sin registrar</span>
+            <kbd class="pv-k">F5</kbd>
             <span id="cl-flecha">›</span>
           </button>
           <div class="deuda oculto" id="cl-deuda">
             <div id="cl-deuda-txt"></div>
             <button id="btn-cobrar-deuda">Cobrar</button>
           </div>
-        </div>
-        <div class="lineas" id="lineas"></div>
-        <div class="totales">
-          <div class="tot"><span>Subtotal</span><b class="num" id="t-sub2">—</b></div>
-          <div class="tot"><span>Impuesto</span><b class="num" id="t-isv">—</b></div>
-          <div class="tot ahorro oculto" id="t-ahorro-fila"><span>Ahorro en promociones</span><b class="num" id="t-ahorro">—</b></div>
-          <div class="tot grande"><span>Total</span><b class="num" id="t-total">—</b></div>
+          <button class="riesgo oculto" id="cl-riesgo"></button>
+
+          <div class="pv-bloque oculto" id="pv-doc">
+            <div class="pv-tit">Documento <kbd>Alt+D</kbd></div>
+            <div class="pv-docs">
+              <button data-doc="ticket" class="activo"><b>Ticket</b><small>Sin valor fiscal</small></button>
+              <button data-doc="factura"><b>Factura</b><small>Consumidor final</small></button>
+              <button data-doc="rtn"><b>Con RTN</b><small>A nombre del cliente</small></button>
+            </div>
+          </div>
+
+          <div class="pv-pagos" id="pv-pagos">
+            <button data-pago="efectivo" class="pg-efectivo"><b>Efectivo</b><small>Alt+1</small></button>
+            <button data-pago="tarjeta" class="pg-tarjeta"><b>Tarjeta</b><small>Alt+2</small></button>
+            <button data-pago="transferencia" class="pg-transf"><b>Transferencia</b><small>Alt+3</small></button>
+            <button data-pago="credito" class="pg-fiado"><b>Fiado</b><small>Alt+4</small></button>
+          </div>
+          <div class="pv-mas">
+            <button id="pv-suspender">Suspender <kbd>F7</kbd></button>
+            <button id="pv-cancelar" class="peligro">Cancelar venta <kbd>F12</kbd></button>
+          </div>
           <button class="btn-cobrar" id="btn-cobrar" disabled>
-            <span>Cobrar</span><b class="num" id="btn-total">—</b>
+            <span>Cobrar <kbd>F10</kbd></span><b class="num" id="btn-total">—</b>
           </button>
         </div>
       </aside>
@@ -920,6 +1096,17 @@
         <div class="grid" id="grid"></div>
       </section>
     </div>
+
+    <!-- La barra de abajo: el estado de la caja de un vistazo. No dice cuánto
+         se ha vendido: eso no le toca a quien está en la fila. -->
+    <footer class="estado-caja" id="estado-caja">
+      <span class="ec-red" id="ec-red"></span>
+      <span id="ec-turno"></span>
+      <span class="oculto" id="ec-espera"></span>
+      <span class="oculto" id="ec-ultimo"></span>
+      <span class="ec-fiscal oculto" id="ec-fiscal"></span>
+      <span class="ec-hora num" id="ec-hora"></span>
+    </footer>
 
     <div class="movil">
       <button class="movil-btn" id="movil-ver" disabled>
@@ -1055,7 +1242,7 @@ const ver = (id, si = true) => $(id).classList.toggle('oculto', !si);
 if (SUPABASE_URL.startsWith('PEGUE')){ ver('#p-config'); throw new Error('sin configurar'); }
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { iniciales, escapar } from '../menu.js';
+import { iniciales, escapar, registrarAcceso } from '../menu.js';
 import { escanear, hayCamara } from '../escaner.js';
 import { imprimirTicket } from '../ticket.js';
 import { calcularPromos, nombreCorto } from '../promos.js';
@@ -1075,7 +1262,9 @@ const S = {
   partido:false, p1:{ metodo:'tarjeta', monto:0 },
   /* teclado: el puesto es la linea en la que esta parado, y el multiplicador
      es la cantidad escrita antes de escanear (en Maxi: 3 y luego *). */
-  puesto:null, multi:null
+  puesto:null, multi:null,
+  /* panel: el documento que va a salir y lo que dice la barra de abajo */
+  doc:'ticket', factura:null, turnoDesde:null, ultimoNumero:null, porSubir:0
 };
 
 const money = n => S.moneda + ' ' + (Number(n)||0).toLocaleString('es-HN',
@@ -1184,6 +1373,7 @@ function pintarRed(){
   const p = $('#h-red');
   p.className = 'pill ' + (S.enLinea ? 'online' : 'offline');
   p.textContent = S.enLinea ? 'En línea' : 'Sin internet';
+  pintarEstado();
 }
 window.addEventListener('online',  async () => {
   S.enLinea = true; pintarRed(); refrescarCobro(); await revisarCola();
@@ -1308,6 +1498,10 @@ async function entrarCaja(){
   }
   const { error } = await sb.auth.setSession(r.sesion);
   if (error) return errorEntrada('No se pudo abrir la sesión');
+  // Cada entrada a la caja queda anotada (IP y país). En una sesión nueva
+  // siempre: el sessionStorage se limpia para que cuente cada cajera.
+  try { sessionStorage.removeItem('pulp:acceso:caja'); } catch {}
+  registrarAcceso(sb, 'caja');
   await arrancar();
 }
 
@@ -1367,6 +1561,7 @@ async function arrancar(){
   cargarMarca();
   $('#h-cajero').textContent = data.usuario.nombre;
   ver('#caja-fiscal', data.organizacion.factura_fiscal);
+  ver('#pv-doc', !!data.organizacion.factura_fiscal);
 
   const problema =
     data.usuario.rol === 'repartidor' ? ['Esta app no es para su rol',
@@ -1501,6 +1696,7 @@ $('#t-continuar').addEventListener('click', async () => {
   S.caja = cajaSel;
   S.sucursal = cajaSel.sucursal_id;
   $('#h-caja').textContent = cajaSel.caja + ' · turno abierto';
+  leerTurnoDesde(); leerFacturacion();
   $('#b-caja').textContent = cajaSel.caja;
   $('#t-pin').value = ''; $('#t-monto').value = '';
   ver('#p-turno', false);
@@ -1933,6 +2129,15 @@ function pintarTicket(){
   $('#movil-conteo').textContent = cantTxt(S.ticket.reduce((s,l)=>s+l.cantidad,0));
   $('#movil-total').textContent = money(t.total);
   $('#movil-ver').disabled = !S.ticket.length;
+  const arts = S.ticket.reduce((a, l) => a + l.cantidad, 0);
+  $('#t-arts').textContent = S.ticket.length
+    ? `${cantTxt(arts)} ${arts === 1 ? 'artículo' : 'artículos'}` : '';
+  $('#vt-n').textContent = S.ticket.length;
+  const vacio = !S.ticket.length;
+  document.querySelectorAll('#pv-pagos button, #pv-mas button, .pv-mas button')
+    .forEach(b => { b.disabled = vacio; });
+  pintarDoc();
+  pintarEstado();
 }
 function pintar(){ pintarTicket(); pintarGrid(); pintarMulti(); }
 
@@ -2032,6 +2237,12 @@ document.addEventListener('keydown', e => {
     return;
   }
 
+  if (e.altKey && !e.ctrlKey){
+    const k = e.key.toLowerCase();
+    const pago = { '1':'efectivo', '2':'tarjeta', '3':'transferencia', '4':'credito' }[k];
+    if (pago){ e.preventDefault(); cobrarCon(pago); return; }
+    if (k === 'd'){ e.preventDefault(); siguienteDoc(); return; }
+  }
   const a = ATAJOS.find(x => x.k === e.key);
   if (a){ e.preventDefault(); if (!(a.linea && !S.ticket.length)) a.fn(); return; }
 
@@ -2645,7 +2856,7 @@ async function verificarPin(){
 function abrirPOS(){
   ver('#p-bloqueo', false);
   $('#app').classList.remove('oculto');
-  pintarRed(); pintar();
+  pintarRed(); pintar(); contarPorSubir();
 }
 
 /* El reloj, la caja y quién: lo primero que se mira al acercarse. */
@@ -3231,7 +3442,7 @@ async function leerClientes(){
   $('#cl-lista').innerHTML =
     '<div style="text-align:center;padding:26px"><span class="girando"></span></div>';
   const { data, error } = await sb.from('clientes')
-    .select('id,nombre,telefono,saldo,limite_credito,activo')
+    .select('id,nombre,telefono,saldo,limite_credito,activo,identificacion_fiscal')
     .eq('activo', true)
     .order('nombre')
     .limit(500);
@@ -3291,6 +3502,8 @@ $('#cl-lista').addEventListener('click', e => {
   pintarCliente();
   ver('#velo-cliente', false);
   cargarSituacion();
+  // Venía de escoger «Con RTN»: si el cliente tiene RTN queda puesta
+  if (S.docDespues){ S.docDespues = false; ponerDoc('rtn'); }
   // Venía de tocar «Fiado» en el cobro: vuelve con el fiado elegido
   if (S.fiarDespues){
     S.fiarDespues = false;
@@ -3298,7 +3511,8 @@ $('#cl-lista').addEventListener('click', e => {
   }
 });
 $('#cl-quitar').addEventListener('click', () => {
-  S.cliente = null; S.situacion = null; S.fiarDespues = false;
+  S.cliente = null; S.situacion = null; S.fiarDespues = false; S.docDespues = false;
+  if (S.doc === 'rtn') S.doc = 'factura';
   pintarCliente(); ver('#velo-cliente', false);
 });
 $('#cl-cerrar').addEventListener('click', () => ver('#velo-cliente', false));
@@ -3310,7 +3524,9 @@ $('#velo-cliente').addEventListener('click', e => {
    migracion 031 no esta instalada no pasa nada: se ve solo el saldo. */
 async function cargarSituacion(){
   const c = S.cliente;
+  S.riesgo = null;
   if (!c || !S.enLinea) return;
+  cargarRiesgo(c);
   const { data, error } = await sb.rpc('fn_situacion_cliente', { p_cliente_id:c.id });
   if (error || S.cliente?.id !== c.id) return;
   S.situacion = data;
@@ -3346,6 +3562,7 @@ function pintarCliente(){
   const b = $('#btn-cliente'), c = S.cliente;
   b.classList.remove('puesto', 'debe');
   pintarDeuda();
+  pintarRiesgo();
   if (!c){
     $('#cl-ini').textContent = '+';
     $('#cl-txt').textContent = 'Cliente sin registrar';
@@ -3371,6 +3588,221 @@ function fiadoDisponible(){
   return Math.max(lim - (Number(c.saldo) || 0), 0);
 }
 
+
+
+/* ================= la Central Pulpeando =================
+   Con el DNI y el permiso del cliente, la caja sabe si debe en otras
+   pulperías: verde, amarillo o rojo. Nunca cuánto ni dónde. */
+async function cargarRiesgo(c){
+  const { data, error } = await sb.rpc('fn_riesgo_cliente', { p_cliente_id:c.id });
+  if (error || S.cliente?.id !== c.id) return;
+  S.riesgo = { ...data, cliente_id:c.id };
+  pintarRiesgo();
+}
+const SENAL_TIT = { verde:'Buen pagador en la red', amarillo:'Debe en otro lado', rojo:'Cuidado con el fiado' };
+function pintarRiesgo(){
+  const z = $('#cl-riesgo'), c = S.cliente;
+  const r = S.riesgo && S.riesgo.cliente_id === c?.id ? S.riesgo : null;
+  if (!z) return;
+  ver('#cl-riesgo', !!c && S.enLinea);
+  if (!c) return;
+  z.className = 'riesgo';
+  if (r && r.verificado){
+    z.classList.add(r.senal);
+    z.innerHTML = `<i class="rg-punto"></i><span><b>${escapar(SENAL_TIT[r.senal] || '')}</b>
+      <small>${escapar(r.texto)} · DNI ···${escapar(r.dni_final || '')}</small></span>`;
+  } else {
+    z.innerHTML = `<i class="rg-punto"></i><span>Central Pulpeando
+      <small>Vea si debe en otras pulperías antes de fiarle</small></span><span class="rg-ir">Verificar</span>`;
+  }
+  z.classList.remove('oculto');
+}
+$('#cl-riesgo').addEventListener('click', () => {
+  if (!S.cliente) return;
+  if (S.riesgo?.verificado && S.riesgo.cliente_id === S.cliente.id) hojaRiesgoVer();
+  else hojaRiesgoVerificar();
+});
+
+function hojaRiesgoVer(){
+  const r = S.riesgo, c = S.cliente;
+  $('#hoja').innerHTML = `
+    <h2>Central Pulpeando</h2>
+    <p class="sub">${escapar(c.nombre)} · DNI ···${escapar(r.dni_final || '')}</p>
+    <div class="rg-senal ${r.senal}"><i></i><span><b>${escapar(SENAL_TIT[r.senal])}</b>
+      <small>${escapar(r.texto)}</small></span></div>
+    <p class="sub" style="font-size:12.5px">La señal sale de lo que registran las otras pulperías
+      donde el cliente también aceptó. Por respeto a él no se muestran montos ni nombres de negocios;
+      él puede ver su reporte completo en la app de Pulpeando.</p>
+    <button class="btn principal-b" style="width:100%" id="rg-ok">Entendido <kbd>Enter</kbd></button>`;
+  ver('#velo-hoja');
+  $('#rg-ok').onclick = () => { ver('#velo-hoja', false); $('#buscar').focus(); };
+}
+
+function hojaRiesgoVerificar(){
+  const c = S.cliente;
+  $('#hoja').innerHTML = `
+    <h2>Verificar en la Central</h2>
+    <p class="sub">${escapar(c.nombre)}. Pídale su DNI: se compara con las demás pulperías sin que
+      el número quede guardado.</p>
+    <div class="campo-g"><label for="rg-dni">DNI</label>
+      <input class="entrada num" id="rg-dni" inputmode="numeric" autocomplete="off"
+             placeholder="0801-1990-12345" maxlength="15"></div>
+    <label class="rg-acepto"><input type="checkbox" id="rg-acepto">
+      <span>El cliente aceptó que su fiado se comparta como una señal (sin montos) con las pulperías
+      de la Central, y sabe que puede ver su reporte y reclamar en la app.</span></label>
+    <div class="aviso malo oculto" id="rg-error"></div>
+    <div class="acciones">
+      <button class="btn secundario" id="rg-no">Volver <kbd>Esc</kbd></button>
+      <button class="btn principal-b" id="rg-si">Verificar <kbd>Enter</kbd></button>
+    </div>`;
+  ver('#velo-hoja');
+  const dni = $('#rg-dni');
+  setTimeout(() => dni.focus(), 40);
+  // 0801-1990-12345 mientras se escribe
+  dni.addEventListener('input', () => {
+    const d = dni.value.replace(/\D/g, '').slice(0, 13);
+    dni.value = [d.slice(0, 4), d.slice(4, 8), d.slice(8)].filter(Boolean).join('-');
+  });
+  const err = $('#rg-error');
+  const mal = t => { err.textContent = t; err.classList.remove('oculto'); };
+  const ir = async () => {
+    if (dni.value.replace(/\D/g, '').length !== 13) return mal('El DNI tiene 13 números.');
+    if (!$('#rg-acepto').checked) return mal('Marque que el cliente aceptó. Sin su permiso no se puede.');
+    $('#rg-si').disabled = true;
+    const { data, error } = await sb.rpc('fn_riesgo_verificar',
+      { p_cliente_id:c.id, p_dni:dni.value, p_acepto:true });
+    $('#rg-si').disabled = false;
+    if (error) return mal(limpiarError(error));
+    S.riesgo = { ...data, cliente_id:c.id };
+    pintarRiesgo();
+    hojaRiesgoVer();
+  };
+  $('#rg-no').onclick = () => { ver('#velo-hoja', false); $('#buscar').focus(); };
+  $('#rg-si').onclick = ir;
+  dni.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); ir(); } });
+}
+
+/* ================= el panel de la venta =================
+   El documento que va a salir se escoge antes de cobrar, a la vista del
+   cliente. «Con RTN» es una factura a nombre del cliente: sin cliente con
+   RTN no se puede. */
+function pintarDoc(){
+  document.querySelectorAll('#pv-doc [data-doc]').forEach(b =>
+    b.classList.toggle('activo', b.dataset.doc === S.doc));
+}
+function ponerDoc(d){
+  if (d === 'rtn'){
+    if (!S.cliente){ S.docDespues = true; S.fiarDespues = false; abrirClientes(); return; }
+    if (!(S.cliente.identificacion_fiscal || '').trim()){
+      avisoCaja(`${S.cliente.nombre} no tiene RTN registrado. Se agrega en Catálogos → Clientes.`);
+      return;
+    }
+  }
+  S.doc = d; pintarDoc();
+}
+$('#pv-doc').addEventListener('click', e => {
+  const b = e.target.closest('[data-doc]'); if (b) ponerDoc(b.dataset.doc);
+});
+const ORDEN_DOC = ['ticket', 'factura', 'rtn'];
+function siguienteDoc(){
+  if ($('#pv-doc').classList.contains('oculto')) return;
+  let d = ORDEN_DOC[(ORDEN_DOC.indexOf(S.doc) + 1) % ORDEN_DOC.length];
+  // Con el teclado se salta «Con RTN» si el cliente puesto no tiene RTN;
+  // para escoger cliente está F5.
+  if (d === 'rtn' && !(S.cliente?.identificacion_fiscal || '').trim()) d = 'ticket';
+  ponerDoc(d);
+}
+
+/* Cada botón de pago abre el cobro con esa forma ya puesta: un toque menos. */
+function cobrarCon(m){
+  if (!S.ticket.length) return;
+  $('#btn-cobrar').click();
+  if (m !== 'efectivo') document.querySelector(`.metodo[data-m="${m}"]`)?.click();
+}
+$('#pv-pagos').addEventListener('click', e => {
+  const b = e.target.closest('[data-pago]'); if (b && !b.disabled) cobrarCon(b.dataset.pago);
+});
+$('#pv-suspender').addEventListener('click', () => { if (S.ticket.length) suspender(); });
+$('#pv-cancelar').addEventListener('click', () => { if (S.ticket.length) hojaCancelarVenta(); });
+
+/* Tablet: el catálogo sale con la pestaña «Productos» encima del ticket. */
+$('#vista-tabs').addEventListener('click', e => {
+  const b = e.target.closest('[data-vt]'); if (!b) return;
+  const prod = b.dataset.vt === 'productos';
+  // El catálogo tapa las líneas, no las pestañas: así se vuelve al ticket.
+  $('.catalogo').style.top = prod ? $('.ticket-top').offsetHeight + 'px' : '';
+  $('.cuerpo').classList.toggle('ver-productos', prod);
+  document.querySelectorAll('#vista-tabs [data-vt]').forEach(x =>
+    x.classList.toggle('activo', x === b));
+});
+
+/* ================= la barra de abajo =================
+   Lo que la cajera (o el gerente que pasa) quiere saber sin preguntar: si
+   hay internet y si quedó algo por subir, desde cuándo está el turno, lo que
+   espera suspendido, la última venta y cómo va el rango de facturas. */
+async function leerTurnoDesde(){
+  S.turnoDesde = null;
+  try{
+    const id = typeof S.turno === 'string' ? S.turno : S.turno?.turno_id;
+    if (!id) return;
+    const { data } = await sb.from('turnos_caja').select('abierto_en').eq('id', id).limit(1);
+    const r = Array.isArray(data) ? data[0] : data;
+    S.turnoDesde = r?.abierto_en || null;
+  }catch(e){}
+  pintarEstado();
+}
+async function leerFacturacion(){
+  try{
+    const { data } = await sb.rpc('fn_estado_facturacion', { p_sucursal_id:S.sucursal });
+    const rangos = (data?.rangos || []).filter(x => x.tipo === 'factura' && x.activa);
+    S.factura = data?.activa || S.ctx?.organizacion?.factura_fiscal
+      ? (rangos.find(x => x.vigente) || { sin:true }) : null;
+  }catch(e){ S.factura = null; }
+  pintarEstado();
+}
+async function contarPorSubir(){
+  try{ S.porSubir = (await DB.pendientes()).length; }catch(e){ S.porSubir = 0; }
+  pintarEstado();
+}
+const horaEC  = d => d.toLocaleTimeString('es-HN', { hour:'numeric', minute:'2-digit' });
+const fechaEC = v => { const [a, m, d] = String(v).slice(0,10).split('-');
+  return `${d}/${m}/${a}`; };
+function numeroFactura(r){
+  return (r.prefijo ? r.prefijo + '-' : '') + String(r.siguiente).padStart(8, '0');
+}
+function pintarEstado(){
+  const red = $('#ec-red'); if (!red) return;
+  red.className = 'ec-red' + (S.enLinea ? '' : ' off');
+  red.innerHTML = S.enLinea
+    ? (S.porSubir ? `En línea · <b>${S.porSubir}</b> por subir` : 'En línea')
+    : `Sin internet${S.porSubir ? ` · <b>${S.porSubir}</b> por subir` : ' · se guarda aquí'}`;
+  const caja = S.caja?.caja || '';
+  $('#ec-turno').innerHTML = escapar(caja) +
+    (S.turnoDesde ? ` · turno desde <b>${horaEC(new Date(S.turnoDesde))}</b>` : '');
+  const esp = guardadas().length;
+  $('#ec-espera').innerHTML = `<b>${esp}</b> en espera (F8)`;
+  ver('#ec-espera', esp > 0);
+  $('#ec-ultimo').innerHTML = `Última: <b>${escapar(S.ultimoNumero || '')}</b>`;
+  ver('#ec-ultimo', !!S.ultimoNumero);
+  const f = S.factura, z = $('#ec-fiscal');
+  if (!f){ ver('#ec-fiscal', false); }
+  else if (f.sin){
+    z.className = 'ec-fiscal malo';
+    z.innerHTML = 'Sin CAI vigente: solo se pueden emitir tickets';
+    ver('#ec-fiscal');
+  } else {
+    const malo = f.quedan <= 20 || (f.dias !== null && f.dias <= 5);
+    const ojo  = f.quedan <= 100 || (f.dias !== null && f.dias <= 30);
+    z.className = 'ec-fiscal' + (malo ? ' malo' : ojo ? ' ojo' : '');
+    z.innerHTML = `Factura siguiente <b class="num">${escapar(numeroFactura(f))}</b>` +
+      (f.fecha_limite ? ` · CAI vence <b>${fechaEC(f.fecha_limite)}</b>` : '') +
+      ` · quedan <b>${Number(f.quedan).toLocaleString('es-HN')}</b>`;
+    ver('#ec-fiscal');
+  }
+  $('#ec-hora').textContent = horaEC(new Date());
+}
+setInterval(pintarEstado, 30000);
+
 /* ================= cobro =================
 
    El pago puede venir en dos formas a la vez ("la mitad con tarjeta y el
@@ -3391,7 +3823,7 @@ function resto(total){
 $('#btn-cobrar').addEventListener('click', () => {
   if (!S.ticket.length) return;
   const t = totales();
-  S.recibido = 0; S.metodo = 'efectivo'; S.fiscal = false; S.abono = 0; S.metodoTocado = null;
+  S.recibido = 0; S.metodo = 'efectivo'; S.fiscal = S.doc !== 'ticket'; S.abono = 0; S.metodoTocado = null;
   $('#abono-ahora').value = '0.00'; ver('#bloque-abono', false);
   S.partido = false; S.p1 = { metodo:'tarjeta', monto:0 };
   pintarPartes(t.total);
@@ -3400,7 +3832,7 @@ $('#btn-cobrar').addEventListener('click', () => {
     cantTxt(S.ticket.reduce((s,l)=>s+l.cantidad,0)) + ' productos · ' +
     S.ticket.length + (S.ticket.length === 1 ? ' línea' : ' líneas');
   $('#recibido').value = '0.00';
-  $('#sw-fiscal').classList.remove('on');
+  $('#sw-fiscal').classList.toggle('on', S.fiscal);
   document.querySelectorAll('.metodo').forEach(m => m.classList.toggle('activo', m.dataset.m === 'efectivo'));
   pintarFiado(resto(t.total));
   ver('#bloque-efectivo'); ver('#cobro-error', false);
@@ -3614,6 +4046,10 @@ $('#p1-monto').addEventListener('keydown', e => {
 });
 $('#sw-fiscal').addEventListener('click', () => {
   S.fiscal = !S.fiscal; $('#sw-fiscal').classList.toggle('on', S.fiscal);
+  // El interruptor del cobro y el panel dicen lo mismo.
+  if (!S.fiscal) S.doc = 'ticket';
+  else if (S.doc === 'ticket') S.doc = 'factura';
+  pintarDoc();
 });
 $('#cancelar-cobro').addEventListener('click', () => ver('#velo-cobro', false));
 
@@ -3658,7 +4094,7 @@ $('#confirmar-cobro').addEventListener('click', async () => {
 
   if (!S.enLinea){
     await DB.encolar({ items, pagos, fiscal:S.fiscal, sucursal:S.sucursal,
-                       turno:S.turno, cliente:clienteId, creada:new Date().toISOString() });
+                       turno:S.turno, cliente:clienteId, creada:new Date().toISOString() }); contarPorSubir();
     descontarLocal();
     mostrarListo({ offline:true, cambio:Math.max(dos(S.recibido - falta), 0),
                    recibido:S.metodo === 'efectivo' ? S.recibido : 0, era:falta });
@@ -3694,6 +4130,10 @@ $('#confirmar-cobro').addEventListener('click', async () => {
   }
 
   S.ultimaVenta = data.venta_id;
+  S.ultimoNumero = data.numero_fiscal || data.numero || null;
+  S.doc = 'ticket';
+  if (data.documento === 'factura') leerFacturacion();
+  pintarEstado();
   mostrarListo({ documento:data.documento, numero:data.numero_fiscal || data.numero,
                  cambio:Number(data.cambio), fiado, cliente:S.cliente?.nombre,
                  recibido:S.metodo === 'efectivo' ? S.recibido : 0, era:falta });
@@ -4158,6 +4598,7 @@ $('#sync-enviar').addEventListener('click', async () => {
     if (e2){ fallo = limpiarError(e2); break; }
     await DB.borrar(v.id);
     enviadas++;
+    contarPorSubir();
   }
   b.disabled = false; b.textContent = 'Enviar';
 

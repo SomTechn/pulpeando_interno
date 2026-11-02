@@ -237,6 +237,31 @@ button{border:none;background:none;cursor:pointer}
 .portada .cambiar{display:block;width:100%;text-align:center;margin-top:16px;
   color:#BDD2EC;font-size:14.5px;font-weight:600;text-decoration:underline}
 .portada .error{min-height:22px;font-size:14px;color:#FFB3BE;font-weight:600;margin:4px 0 8px}
+/* horario en la tarjeta de la pulpería */
+.abierta{display:inline-block;align-self:flex-start;font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:999px;margin-bottom:8px}
+.abierta.si{background:#DCFCE7;color:#14532D}
+.abierta.no{background:rgba(0,0,0,.18);color:#fff}
+.rotulo.sin-envio .abierta.no{background:var(--muro);color:var(--rotulo)}
+/* mi fiado */
+.cuenta{display:flex;flex-direction:column;gap:12px;padding-bottom:30px}
+.ficha-cl{background:#fff;border-radius:16px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.ficha-cl p{font-size:13.5px;line-height:1.5;margin:8px 0 0;color:#4B5563}
+.fc-cab{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.fc-cab b{font-size:16px} .fc-cab span{font-size:18px;font-weight:800}
+.fc-barra{height:8px;border-radius:4px;background:#EEF1F5;margin:10px 0 6px;overflow:hidden}
+.fc-barra i{display:block;height:100%;background:#F59E0B;border-radius:4px}
+.ficha-cl small{font-size:12.5px;color:#6B7280}
+.fc-movs{margin-top:10px;border-top:1px solid #EEF1F5;padding-top:6px}
+.fc-movs div,.fc-neg{display:flex;justify-content:space-between;font-size:13px;padding:5px 0}
+.fc-movs b.abono{color:#15803D}
+.central.verde{border-left:5px solid #16A34A} .central.amarillo{border-left:5px solid #F59E0B} .central.rojo{border-left:5px solid #E11D48}
+.central .senal{font-size:12.5px!important;font-weight:800}
+.fc-neg b.atr{color:#BE123C}
+.fc-rec{margin-top:10px;background:#F8FAFC;border-radius:10px;padding:10px}
+.fc-rec p{margin:4px 0 0} .fc-rec .resp{color:#14532D;font-weight:600}
+.fc-reclamo{margin-top:12px} .fc-reclamo summary{font-size:13.5px;font-weight:700;cursor:pointer;color:#1D4ED8}
+.fc-reclamo textarea{width:100%;margin-top:8px;border:1.5px solid #E5E7EB;border-radius:10px;padding:10px;font:inherit;font-size:14px}
+.btn-rc{margin-top:8px;width:100%;height:46px;border-radius:12px;background:#111827;color:#fff;font-weight:800;border:0}
 </style>
 </head>
 <body>
@@ -271,6 +296,12 @@ button{border:none;background:none;cursor:pointer}
           <path d="M8 6H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-2"/>
           <path d="M9 12h6M9 16h4"/></svg>
         <span class="globo oculto" id="globo-pedidos">0</span>
+      </button>
+      <button class="icono-btn" id="btn-cuenta" aria-label="Mi fiado">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 5h16a1 1 0 0 1 1 1v3H3V6a1 1 0 0 1 1-1z"/>
+          <path d="M3 9v9a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9"/><path d="M7 14h5"/></svg>
       </button>
       <button class="icono-btn" id="btn-salir" aria-label="Cerrar sesión">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -416,6 +447,7 @@ function irA(v){
     v === 'tiendas' ? 'Pulpeando'
     : v === 'tienda' ? (S.tienda?.negocio || 'Pulpería')
     : v === 'carrito' ? 'Su pedido'
+    : v === 'cuenta' ? 'Mi fiado'
     : 'Sus pedidos';
   pintar();
   window.scrollTo(0, 0);
@@ -428,6 +460,7 @@ $('#atras').addEventListener('click', () => {
   else irA('tiendas');
 });
 $('#btn-pedidos').addEventListener('click', () => { cargarPedidos(); irA('pedidos'); });
+$('#btn-cuenta').addEventListener('click', () => { irA('cuenta'); cargarCuenta(); });
 $('#carrito-btn').addEventListener('click', () => irA('carrito'));
 
 /* ===================== pintar ===================== */
@@ -437,15 +470,98 @@ function pintar(){
   if (S.vista === 'tienda')  return pintarTienda();
   if (S.vista === 'carrito') return pintarCarrito();
   if (S.vista === 'pedidos') return pintarPedidos();
+  if (S.vista === 'cuenta')  return pintarCuenta();
 }
 
 function cargando(){ $('#vista').innerHTML = '<div class="cargando"><i></i></div>'; }
 
+
+/* ---------- horario: «Abierta · cierra 9:00 p. m.» ---------- */
+function horaTxt(hhmm){
+  const [h, m] = hhmm.split(':').map(Number);
+  return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'a. m.' : 'p. m.'}`;
+}
+function textoHorario(t, ahora = new Date()){
+  const h = t.horario;
+  if (!h || t.abierta === null || t.abierta === undefined) return '';
+  const dia = ahora.getDay();
+  const min = ahora.getHours() * 60 + ahora.getMinutes();
+  const aMin = x => { const [a, b] = x.split(':').map(Number); return a * 60 + b; };
+  if (t.abierta){
+    const hoy = h[String(dia)], ayer = h[String((dia + 6) % 7)];
+    // abierta desde ayer, cierra de madrugada
+    if (ayer && aMin(ayer.cierra) < aMin(ayer.abre) && min < aMin(ayer.cierra))
+      return 'Abierta · cierra ' + horaTxt(ayer.cierra);
+    return hoy ? 'Abierta · cierra ' + horaTxt(hoy.cierra) : 'Abierta';
+  }
+  const hoy = h[String(dia)];
+  if (hoy && min < aMin(hoy.abre)) return 'Cerrada · abre ' + horaTxt(hoy.abre);
+  for (let i = 1; i <= 7; i++){
+    const d = h[String((dia + i) % 7)];
+    if (d) return 'Cerrada · abre ' + (i === 1 ? 'mañana ' : ['dom','lun','mar','mié','jue','vie','sáb'][(dia + i) % 7] + ' ') + horaTxt(d.abre);
+  }
+  return 'Cerrada';
+}
+
+/* ---------- mi fiado y mi Central ----------
+   Lo que debe en cada pulpería, cuánto le queda y sus movimientos. Si se
+   verificó en la Central, también su señal completa y el reclamo. */
+async function cargarCuenta(){
+  cargando();
+  const [f, c] = await Promise.all([sb.rpc('fn_mi_fiado'), sb.rpc('fn_mi_central')]);
+  S.fiado = f.error ? null : (f.data || []);
+  S.central = c.error ? null : c.data;
+  if (S.vista === 'cuenta') pintarCuenta();
+}
+const SENAL_CL = { verde:'Buen pagador', amarillo:'Con deudas al día', rojo:'Atrasado o con muchas deudas' };
+function pintarCuenta(){
+  if (S.fiado === undefined) return cargando();
+  const fecha = v => new Date(v).toLocaleDateString('es-HN', { day:'numeric', month:'short' });
+  const F = S.fiado || [];
+  const fiado = F.length ? F.map(x => `
+    <div class="ficha-cl">
+      <div class="fc-cab"><b>${esc(x.negocio)}</b><span>${plata(x.debe)}</span></div>
+      <div class="fc-barra"><i style="width:${x.limite > 0 ? Math.min(100, x.debe / x.limite * 100) : 0}%"></i></div>
+      <small>${x.limite > 0 ? `Le quedan <b>${plata(x.disponible)}</b> de ${plata(x.limite)}` : 'Sin límite de fiado'}</small>
+      ${(x.movimientos || []).length ? `<div class="fc-movs">${x.movimientos.map(m => `
+        <div><span>${m.tipo === 'abono' ? 'Abonó' : 'Fió'} · ${fecha(m.fecha)}</span>
+          <b class="${m.tipo}">${m.tipo === 'abono' ? '−' : '+'}${plata(m.monto)}</b></div>`).join('')}</div>` : ''}
+    </div>`).join('')
+    : `<div class="vacio"><b>No le debe a nadie</b><p>Cuando una pulpería le fíe, aquí ve cuánto debe y sus abonos.</p></div>`;
+
+  const c = S.central;
+  const central = !c ? '' : !c.verificado
+    ? `<div class="ficha-cl central"><b>Central Pulpeando</b>
+        <p>Cuando una pulpería le pida su DNI para fiarle, aquí va a ver lo mismo que ellas: su historial de pago.
+           Pagar a tiempo le abre el fiado en otras pulperías.</p></div>`
+    : `<div class="ficha-cl central ${esc(c.senal)}">
+        <div class="fc-cab"><b>Central Pulpeando</b><span class="senal">${esc(SENAL_CL[c.senal] || '')}</span></div>
+        <p>${esc(c.texto)}. Las pulperías solo ven esta señal: ni cuánto debe ni dónde.</p>
+        ${(c.negocios_detalle || []).map(n => `<div class="fc-neg"><span>${esc(n.negocio)}</span>
+          <b class="${n.atrasado ? 'atr' : ''}">${Number(n.debe) > 0 ? plata(n.debe) + (n.atrasado ? ' · atrasado' : '') : 'al día'}</b></div>`).join('')}
+        ${(c.reclamos || []).map(r => `<div class="fc-rec"><small>${esc(r.estado === 'abierto' ? 'Su reclamo está en revisión' : r.estado === 'resuelto' ? 'Reclamo resuelto' : 'Reclamo revisado')}</small>
+          <p>${esc(r.texto)}</p>${r.respuesta ? `<p class="resp">${esc(r.respuesta)}</p>` : ''}</div>`).join('')}
+        <details class="fc-reclamo"><summary>¿Algo está mal? Reclame</summary>
+          <textarea id="rc-texto" rows="3" placeholder="Por ejemplo: ya le pagué a Pulpería La Esquina el lunes"></textarea>
+          <div class="aviso malo oculto" id="rc-error"></div>
+          <button class="btn-rc" id="rc-enviar">Enviar reclamo</button></details>
+      </div>`;
+  $('#vista').innerHTML = `<div class="cuenta">${central}${fiado}</div>`;
+  $('#rc-enviar')?.addEventListener('click', async () => {
+    const t = $('#rc-texto').value.trim(), e = $('#rc-error');
+    const { error } = await sb.rpc('fn_reclamar_central', { p_texto:t });
+    if (error){ e.textContent = mensaje(error); e.classList.remove('oculto'); return; }
+    cargarCuenta();
+  });
+}
+
 /* ---------- las pulperias ---------- */
 async function cargarTiendas(){
   cargando();
-  const { data, error } = await sb.rpc('fn_tiendas_disponibles',
-    { p_busqueda:S.buscaTienda || null });
+  // fn_tiendas_cerca trae además el horario y si está abierta (053).
+  let { data, error } = await sb.rpc('fn_tiendas_cerca', { p_busqueda:S.buscaTienda || null });
+  if (error) ({ data, error } = await sb.rpc('fn_tiendas_disponibles',
+    { p_busqueda:S.buscaTienda || null }));
   if (error){
     $('#vista').innerHTML = `<div class="aviso malo">${esc(mensaje(error))}</div>`;
     return;
@@ -474,9 +590,11 @@ function pintarTiendas(){
           ? `<span class="dato">Desde <b>${plata(t.pedido_minimo)}</b></span>` : '';
         const conocida = t.ya_soy_cliente
           ? `<span class="dato">Ya pidió aquí</span>` : '';
+        const hor = textoHorario(t);
         return `
           <button class="rotulo ${t.acepta_domicilio ? '' : 'sin-envio'}"
                   data-suc="${esc(t.sucursal_id)}">
+            ${hor ? `<span class="abierta ${t.abierta ? 'si' : 'no'}">${esc(hor)}</span>` : ''}
             <span class="rotulo-nombre">${esc(t.negocio)}</span>
             ${t.sucursal && t.sucursal !== t.negocio
               ? `<span class="rotulo-suc">${esc(t.sucursal)}</span>` : ''}

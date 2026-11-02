@@ -545,7 +545,7 @@ async function arrancar(){
   const visibles = Object.entries(ENTIDADES)
     .filter(([,e]) => data.usuario.nivel >= e.nivel);
 
-  S.menu = montarMenu({
+  S.menu = montarMenu({ sb,
     contenedor:'#menu', modulo:'catalogo', ctx:S.ctx,
     alSalir: async () => { await sb.auth.signOut(); location.reload(); },
     secciones:[{

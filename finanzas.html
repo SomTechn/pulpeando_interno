@@ -403,7 +403,7 @@ async function arrancar(){
   const pedida = SECCIONES.find(x => x.valor === location.hash.slice(1));
   const inicial = pedida && (!pedida.nivel || S.nivel >= pedida.nivel) ? pedida.valor : 'resumen';
   S.seccion = inicial;
-  S.menu = montarMenu({
+  S.menu = montarMenu({ sb,
     contenedor:'#menu', modulo:'finanzas', ctx:S.ctx,
     alSalir: async () => { await sb.auth.signOut(); location.reload(); },
     secciones:[{ id:'finanzas', titulo:'Finanzas',
