@@ -234,6 +234,8 @@ ${lineas.map(l => `<div class="it">
   ${fila(`${cant(l.cantidad)} x ${n2(l.precio)}`, n2(l.total))}
   ${Number(l.descuento) ? fila('  Descuento', '-' + n2(l.descuento)) : ''}
 </div>`).join('')}
+${(d.rebajas || []).length ? `<div class="chico" style="margin-top:4px"><b>ANULADO EN CAJA</b></div>
+${d.rebajas.map(r => fila(`-${cant(r.cantidad)} x ${esc(r.producto)}`, '-' + n2(r.total))).join('')}` : ''}
 <hr>
 ${fiscal ? `
 ${fila('Importe exento', n2(des.exento))}

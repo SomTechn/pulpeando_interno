@@ -159,6 +159,10 @@ function dibujar(doc, d, op){
     if (Number(l.descuento)) fila('  Descuento', '-' + n2(l.descuento));
     y += 0.5;
   }
+  if ((d.rebajas || []).length){
+    izq('ANULADO EN CAJA', fs * 0.9);
+    for (const r of d.rebajas) fila(`-${cant(r.cantidad)} x ${r.producto}`, '-' + n2(r.total));
+  }
   raya();
 
   if (fiscal){

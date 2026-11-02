@@ -417,15 +417,16 @@ console.log('\n=== MOVERSE Y QUITAR CON EL TECLADO ===');
   tecla(w, d, 'ArrowDown');
   chk('la flecha baja', C.S.puesto === 'p2');
 
-  tecla(w, d, 'F4');
-  await esperar();
-  chk('F4 quita la línea donde está parado',
-      !C.S.ticket.some(l => l.producto_id === 'p2'));
-  chk('y el puesto pasa a la que ocupó su lugar', C.S.puesto === 'p3');
-
   tecla(w, d, 'Delete');
   await esperar();
-  chk('Supr hace lo mismo', C.S.ticket.length === 1);
+  chk('Supr en una línea de antes no la quita', C.S.ticket.length === 3);
+  chk('y explica cómo rebajar', /Rebajar \(F4\)/.test(d.body.textContent));
+  tecla(w, d, '-');
+  chk('- tampoco le baja a una de antes', C.S.ticket.find(l => l.producto_id === 'p2').cantidad === 1);
+  tecla(w, d, 'ArrowDown');
+  tecla(w, d, 'Delete');
+  await esperar();
+  chk('Supr sí quita la última escaneada', !C.S.ticket.some(l => l.producto_id === 'p3'));
 }
 {
   const { w, d, C } = await montar(base());
@@ -1716,10 +1717,10 @@ console.log('\n=== LO QUE NO TERMINA EN VENTA SE ANOTA ===');
   try { w.localStorage.removeItem('pulp:eventos'); } catch(e){}
   C.agregar('p1'); C.agregar('p3'); C.agregar('p3');
   await esperar();
-  tecla(w, d, 'F4');
+  tecla(w, d, 'Delete');
   await esperar();
   let ev = C.eventosPendientes();
-  chk('F4 anota la línea quitada', ev.length === 1 && ev[0].tipo === 'linea_quitada');
+  chk('quitar la última anota la línea quitada', ev.length === 1 && ev[0].tipo === 'linea_quitada');
   chk('con producto, cantidad y monto', ev[0].detalle[0].producto_id === 'p3'
       && ev[0].unidades === 2 && ev[0].monto > 0);
   chk('con la caja y el turno', ev[0].caja_id === 'c1' && ev[0].turno_id === 't1');
@@ -1737,6 +1738,8 @@ console.log('\n=== LO QUE NO TERMINA EN VENTA SE ANOTA ===');
       ev.some(e => e.tipo === 'abortada' && e.motivo === 'No traía dinero' && e.lineas === 1));
   chk('sin internet no se llamó al servidor',
       !estado.llamadas.some(l => l.fn === 'fn_eventos_caja'));
+  chk('y la caja quedó bloqueada', d.querySelector('#app').classList.contains('oculto'));
+  C.abrirPOS();
 
   C.agregar('p2');
   await esperar();
@@ -1761,7 +1764,7 @@ console.log('\n=== LO QUE NO TERMINA EN VENTA SE ANOTA ===');
   try { w.localStorage.removeItem('pulp:eventos'); } catch(e){}
   C.agregar('p1');
   await esperar();
-  tecla(w, d, 'F4');
+  tecla(w, d, 'Delete');
   await esperar(120);
   chk('si el servidor falla, el evento sigue en la cola', C.eventosPendientes().length === 1);
 }
@@ -1799,7 +1802,7 @@ console.log('\n=== EL PERMISO DEL SUPERVISOR ===');
   C.agregar('p1'); C.agregar('p3');
   await esperar();
 
-  tecla(w, d, 'F4');
+  tecla(w, d, 'Delete');
   await esperar();
   chk('quitar una línea pide al supervisor', /Autoriza un supervisor/.test(d.querySelector('#hoja').textContent));
   chk('y la línea sigue ahí mientras tanto', C.S.ticket.length === 2);
@@ -1929,6 +1932,8 @@ const VENTA = (estado = 'completada') => ({ venta:{ id:'v9', numero:'T-S01-00000
   chk('dice cuánto devolver en efectivo', /Venta anulada/.test(h()) && /Devuelva al cliente/.test(h()) && /L 180/.test(h()) && /Don Supervisor/.test(h()));
   d.querySelector('#an-listo').click();
   chk('Listo cierra', d.querySelector('#velo-hoja').classList.contains('oculto'));
+  chk('y anular también bloquea la caja', d.querySelector('#app').classList.contains('oculto'));
+  C.abrirPOS();
 
   teclear(w, d, '1950020159636974', { pistola:true });
   await esperar(160);
@@ -2080,6 +2085,115 @@ console.log('\n=== LA CENTRAL PULPEANDO EN LA CAJA ===');
   d.querySelector('#rg-ok').click();
   chk('el panel queda en amarillo con los últimos 4 del DNI',
       rg.classList.contains('amarillo') && /···2345/.test(rg.textContent));
+}
+
+console.log('\n=== SOLO EL ÚLTIMO CAMBIA; LO DE ANTES SE REBAJA ESCANEANDO ===');
+{
+  const { w, d, C } = await montar(base());
+  C.agregar('p1'); C.agregar('p1'); C.agregar('p3');
+  await esperar();
+  chk('solo la última línea tiene + y −', d.querySelectorAll('#lineas [data-mas]').length === 1
+      && !!d.querySelector('#lineas [data-mas="p3"]'));
+  chk('las de antes enseñan la cantidad fija', !!d.querySelector('#lineas .qty.fija'));
+  C.fijarCant('p1', 1);
+  chk('no se puede bajar la cantidad de una de antes', C.S.ticket.find(l => l.producto_id === 'p1').cantidad === 2);
+  tecla(w, d, 'F4');
+  await esperar();
+  chk('F4 entra en modo rebajar', C.S.rebajando && /Rebajar/.test(d.querySelector('#foco').textContent));
+  teclear(w, d, '7501001', { pistola:true });
+  await esperar(120);
+  chk('escanear el de antes le baja uno', C.S.ticket.find(l => l.producto_id === 'p1').cantidad === 1);
+  chk('y sale del modo', !C.S.rebajando);
+  chk('queda anotado como rebaja', C.S.rebajas.length === 1 && C.S.rebajas[0].producto_id === 'p1'
+      && C.S.rebajas[0].cantidad === 1 && C.S.rebajas[0].precio === 98);
+  chk('y se ve en el ticket', /Rebajado/.test(d.querySelector('#lineas').textContent)
+      && /Arroz de primera/.test(d.querySelector('.rebajas').textContent));
+  chk('el total ya no lo cuenta', Math.abs(C.totales().total - (98 + 20)) < 0.001);
+  tecla(w, d, 'F4');
+  teclear(w, d, '7501002', { pistola:true });
+  await esperar(120);
+  chk('rebajar algo que no está en el ticket lo avisa', /no está en el ticket/.test(d.body.textContent)
+      && C.S.rebajas.length === 1);
+  tecla(w, d, 'F4');
+  tecla(w, d, 'Escape');
+  chk('Esc sale del modo rebajar', !C.S.rebajando);
+}
+{
+  const estado = base();
+  const { w, d, C } = await montar(estado);
+  C.agregar('p1'); C.agregar('p3');
+  await esperar();
+  tecla(w, d, 'F4');
+  teclear(w, d, '7501001', { pistola:true });
+  await esperar(120);
+  chk('rebajar todo lo de una línea la quita', !C.S.ticket.some(l => l.producto_id === 'p1'));
+  estado.rpc.fn_anotar_rebajas = { data:1, error:null };
+  tecla(w, d, 'F10');
+  await esperar();
+  const r = d.querySelector('#recibido');
+  r.value = '20'; r.dispatchEvent(new w.Event('input', { bubbles:true }));
+  d.querySelector('#confirmar-cobro').click();
+  await esperar(200);
+  const an = estado.llamadas.find(l => l.fn === 'fn_anotar_rebajas');
+  chk('al cobrar manda las rebajas con la venta', an && an.args.p_venta_id === 'v-123'
+      && an.args.p_rebajas.length === 1 && an.args.p_rebajas[0].producto_id === 'p1');
+  d.querySelector('#btn-terminar').click();
+  await esperar(80);
+  chk('y la siguiente venta arranca sin rebajas', C.S.rebajas.length === 0);
+}
+{
+  const { w, d, C } = await montar(base());
+  C.agregar('p1'); C.agregar('p3');
+  await esperar();
+  tecla(w, d, 'F4');
+  teclear(w, d, '7501001', { pistola:true });
+  await esperar(120);
+  C.suspender();
+  C.retomar(C.guardadas()[0].id);
+  await esperar(120);
+  chk('suspender y retomar conserva las rebajas', C.S.rebajas.length === 1);
+}
+
+console.log('\n=== EL PRODUCTO EN GRANDE ===');
+{
+  const estado = base();
+  estado.catalogo[0].precio_normal = 120; estado.catalogo[0].oferta_hasta = '2026-11-08';
+  const { d, C } = await montar(estado);
+  chk('sin productos no se ve', d.querySelector('#foco').classList.contains('oculto'));
+  C.agregar('p1'); C.agregar('p1');
+  await esperar();
+  const f = d.querySelector('#foco');
+  chk('enseña el último producto en grande', !f.classList.contains('oculto') && /Arroz de primera 5 lb/.test(f.textContent));
+  chk('con su precio', /L 98\.00/.test(f.textContent));
+  chk('y la oferta con el precio de antes', /Oferta hasta 8 nov/.test(f.textContent) && /L 120\.00/.test(f.querySelector('s').textContent));
+  chk('arriba el ahorro de la compra', /Ahorro en esta compra/.test(f.textContent) && /L 44\.00/.test(f.textContent));
+  chk('y el total también lo cuenta', /44\.00/.test(d.querySelector('#t-ahorro').textContent)
+      && !d.querySelector('#t-ahorro-fila').classList.contains('oculto'));
+  C.agregar('p3');
+  await esperar();
+  chk('al escanear otro cambia', /Refresco 600 ml/.test(f.textContent) && !/Oferta/.test(f.textContent));
+}
+
+console.log('\n=== CANCELAR O ANULAR BLOQUEA LA CAJA ===');
+{
+  const { w, d, C } = await montar(base());
+  C.agregar('p1');
+  await esperar();
+  tecla(w, d, 'F12');
+  await esperar();
+  d.querySelector('#cv-si').click();
+  await esperar(120);
+  chk('cancelar la venta bloquea la caja', !d.querySelector('#p-bloqueo').classList.contains('oculto')
+      && d.querySelector('#app').classList.contains('oculto'));
+}
+
+console.log('\n=== LA CAJERA EN LA BARRA DE ABAJO ===');
+{
+  const estado = base();
+  estado.tablas = { perfiles:[{ codigo:'ANA', numero_cajero:2 }], organizaciones:[{ nombre:'X', config:{} }] };
+  const { d, C } = await montar(estado);
+  C.pintarEstado();
+  chk('dice el nombre de la cajera', /Ana Maradiaga/.test(d.querySelector('#ec-cajero').textContent));
 }
 
 console.log(`\n${ok} bien · ${mal} mal`);
