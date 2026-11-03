@@ -1,11 +1,12 @@
 {
+  "id": "./",
   "name": "Pulpeando · Caja",
   "short_name": "Caja",
   "description": "Cobrar, turnos y gaveta. La pantalla del mostrador.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "landscape",
+  "orientation": "any",
   "background_color": "#0F1729",
   "theme_color": "#0F1729",
   "lang": "es-HN",

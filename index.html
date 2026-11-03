@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0F1729">
 <link rel="manifest" href="manifest.webmanifest">
+<script src="instalar.js"></script>
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" href="icono-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icono-192.png">
@@ -86,6 +87,14 @@
   background:var(--fondo);font-size:13px;color:var(--tenue)}
 .muestra-fila span{flex:1}
 .muestra-fila button{font-weight:800;color:var(--tinta);font-size:13px}
+.instalar-ini{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:0 0 14px;
+  padding:13px 52px 13px 16px;border-radius:var(--r-md);background:var(--panel);border:1px solid var(--linea);position:relative}
+.instalar-ini.oculto{display:none}
+.instalar-ini > div:first-child{flex:1 1 220px;min-width:0}
+.instalar-ini b{display:block;font-size:14.5px}
+.instalar-ini small{display:block;font-size:12.5px;color:var(--tenue);margin-top:2px}
+.instalar-ini .ii-btn{flex:0 0 auto}
+.instalar-ini .ii-x{position:absolute;top:50%;margin-top:-18px;right:8px;width:36px;height:36px;border-radius:50%;color:var(--tenue);font-size:15px}
 .alerta-accesos{display:block;margin:0 0 14px;padding:13px 16px;border-radius:var(--r-md);
   background:#FFF1F4;border:1px solid #F6C3CE;color:#9F1239;text-decoration:none}
 .alerta-accesos b{display:block;font-size:14.5px}
@@ -115,6 +124,7 @@
       <a href="caja/" style="color:var(--marca-tinta);font-weight:700">Entre a la caja</a></p>
     <p class="sub-o" style="margin:-14px 0 0">¿Tiene una pulpería y quiere probar?
       <a href="registro.html" style="color:var(--marca-tinta);font-weight:700">Registre su negocio gratis</a></p>
+    <div class="instalar-login" style="margin-top:18px;text-align:center"></div>
   </div>
 </div>
 
@@ -143,6 +153,12 @@
       </div>
 
       <div id="alerta-accesos"></div>
+      <div class="instalar-ini oculto" id="instalar-ini">
+        <div><b>Instale Pulpeando en este aparato</b>
+          <small>Abre como app, desde la pantalla de inicio.</small></div>
+        <div class="ii-btn" id="instalar-ini-btn"></div>
+        <button class="ii-x" id="instalar-ini-x" aria-label="Ahora no">✕</button>
+      </div>
       <div id="pasos"></div>
 
       <a class="a-caja" href="caja/">
@@ -232,6 +248,26 @@ $('#s-entrar').addEventListener('click', async () => {
 $('#s-clave').addEventListener('keydown', e => { if (e.key === 'Enter') $('#s-entrar').click(); });
 
 /* ================= arranque ================= */
+/* La invitación a instalar: se ve mientras se pueda instalar y nadie la
+   haya cerrado en este aparato. El botón del menú queda siempre. */
+function tarjetaInstalar(){
+  const PI = window.PulpeandoInstalar; if (!PI) return;
+  let cerrada = false;
+  try { cerrada = localStorage.getItem('pulpeando-instalar-no') === '1'; } catch(e){}
+  const z = $('#instalar-ini');
+  const pintar = () => z.classList.toggle('oculto', cerrada || PI.modo() === 'instalada');
+  PI.montar($('#instalar-ini-btn'), { tema:'claro', texto:'Instalar' });
+  PI.alCambiar(pintar);
+  $('#instalar-ini-x').onclick = () => {
+    cerrada = true; pintar();
+    try { localStorage.setItem('pulpeando-instalar-no', '1'); } catch(e){}
+  };
+  pintar();
+}
+
+document.querySelectorAll('.instalar-login').forEach(z =>
+  window.PulpeandoInstalar?.montar(z, { tema:'claro', texto:'Instalar Pulpeando' }));
+
 async function arrancar(){
   const { data:{ session } } = await sb.auth.getSession();
   if (!session){ ver('#p-sesion'); return; }
@@ -266,6 +302,7 @@ async function arrancar(){
 
   $('#app').classList.remove('oculto');
   if (S.nivel >= 3){ pintarPasos(); pintarAlertaAccesos(); }
+  tarjetaInstalar();
   S.menu = montarMenu({ sb,
     contenedor:'#menu', modulo:'panel', ctx:S.ctx,
     alSalir: async () => { await sb.auth.signOut(); location.reload(); }

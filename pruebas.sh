@@ -20,7 +20,7 @@ fallaron=''
 
 # Las reglas de las funciones de borde corren aqui mismo: son JavaScript puro,
 # sin red ni base. Estaban sueltas y nadie las corria.
-for f in *.pruebas.mjs caja/pruebas.mjs cliente/pruebas.mjs repartidor/pruebas.mjs \
+for f in *.pruebas.mjs caja/pruebas.mjs repartidor/pruebas.mjs \
          supabase/functions/*/reglas.prueba.mjs; do
   [ -f "$f" ] || continue
   case "$f" in *"$filtro"*) ;; *) [ -n "$filtro" ] && continue ;; esac

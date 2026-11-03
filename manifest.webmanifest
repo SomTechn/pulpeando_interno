@@ -1,5 +1,6 @@
 {
-  "name": "Pulpeando · Caja",
+  "id": "./",
+  "name": "Pulpeando · Negocio",
   "short_name": "Pulpeando",
   "description": "Punto de venta e inventario para tiendas de abarrotes",
   "start_url": "./index.html",

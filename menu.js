@@ -191,6 +191,7 @@ export function montarMenu({ contenedor, modulo, ctx, alSalir, secciones = [], s
     </nav>
 
     <div class="menu-abajo">
+      <div class="menu-instalar" id="menu-instalar"></div>
       <button class="menu-usuario" data-m="salir" title="Cerrar sesión">
         <span class="menu-avatar">${iniciales(ctx?.usuario?.nombre)}</span>
         <span class="menu-quien">
@@ -200,6 +201,10 @@ export function montarMenu({ contenedor, modulo, ctx, alSalir, secciones = [], s
         <span class="menu-icono menu-salir">${svg(ICONOS.salir, 18)}</span>
       </button>
     </div>`;
+
+  // Instalar en el aparato (instalar.js va en el <head> de cada pantalla).
+  window.PulpeandoInstalar?.montar(raiz.querySelector('#menu-instalar'),
+    { tema:'claro', texto:'Instalar Pulpeando' });
 
   // Un logo que no carga no deja un cuadro roto: vuelve a las iniciales.
   const img = raiz.querySelector('.menu-marca img');

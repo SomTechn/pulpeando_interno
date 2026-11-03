@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0F1729">
 <link rel="manifest" href="manifest.webmanifest">
+<script src="../instalar.js"></script>
 <link rel="icon" href="../favicon.ico" sizes="any">
 <link rel="icon" href="../icono-192.png" type="image/png">
 <link rel="apple-touch-icon" href="../icono-192.png">
@@ -370,6 +371,13 @@
 .bq-barra b{font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bq-pie{margin-left:auto;align-self:center;font-size:12px;font-weight:800;letter-spacing:.14em;
   text-transform:uppercase;color:var(--claro);white-space:nowrap}
+
+.bq-barra > .bq-instalar{border-right:0;margin:0 0 0 auto;padding:8px 0;align-self:center;
+  display:flex;flex-direction:row;align-items:center;gap:10px;max-width:520px}
+.bq-barra > .bq-instalar.oculto{display:none}
+.bq-instalar .pi-ayuda{font-size:12px}
+.bq-instalar:not(.oculto) ~ .bq-pie{margin-left:18px}
+.bq-barra > div:nth-last-of-type(2){border-right:0}
 
 /* lo que devuelve la consulta de precio */
 .pr-tarjeta{display:grid;grid-template-columns:56px minmax(0,1fr);gap:12px;align-items:center;
@@ -935,7 +943,8 @@
     <div class="titulo-o">Este aparato no está pareado</div>
     <p class="sub-o">Pídale a su gerente que lo paree con una caja desde
       <b>Configuración</b>. Mientras tanto no se puede vender aquí.</p>
-    <a class="btn-o" href="../">Ir al sistema</a>
+    <a class="btn-o" href="../" style="display:grid;place-items:center;text-decoration:none">Ir al sistema</a>
+    <div class="instalar-caja" style="margin-top:14px;text-align:center"></div>
   </div>
 </div>
 
@@ -963,6 +972,7 @@
       <button class="tecla plana" data-accion="borrar">Borrar</button>
     </div>
     <div class="pie-o" id="s-pie">—</div>
+    <div class="instalar-caja" style="margin-top:14px;text-align:center"></div>
   </div>
 </div>
 
@@ -1039,6 +1049,7 @@
     <div><small>Caja</small><b id="b-caja">Caja</b></div>
     <div><small>Cajero</small><b id="b-cajero">—</b></div>
     <div><small>Código</small><b class="num" id="b-codigo">—</b></div>
+    <div class="instalar-caja bq-instalar"></div>
     <span class="bq-pie">Pulpeando</span>
   </footer>
 </div>
@@ -4917,6 +4928,9 @@ $('#sync-enviar').addEventListener('click', async () => {
 /* ================= inicio ================= */
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT') location.reload(); });
+// Instalar la caja en la tablet o la PC: en la entrada, el pareo y la caja bloqueada.
+document.querySelectorAll('.instalar-caja').forEach(z =>
+  window.PulpeandoInstalar?.montar(z, { tema:'claro', texto:'Instalar la caja' }));
 arrancar();
 </script>
 </body>
