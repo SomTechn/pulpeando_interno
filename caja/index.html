@@ -51,6 +51,9 @@
   /* 118 y no 140: en la columna angosta con 140 entraba UNA tarjeta por fila
      y se veia la mitad de productos. */
   grid-template-columns:repeat(auto-fill,minmax(118px,1fr));align-content:start;
+  /* max-content: con filas «auto» y muchas tarjetas, el navegador repartía la
+     altura de la columna entre todas las filas y las aplastaba a rayas. */
+  grid-auto-rows:max-content;
 }
 .prod{
   background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);
@@ -900,8 +903,15 @@
   .fc-tarjeta{gap:10px;padding:8px 10px;min-height:0;flex-wrap:wrap}
   .fc-img{width:42px;height:42px}
   .fc-cuenta{flex-basis:100%;text-align:left;font-size:17px}
-  .fc-cant{font-size:18px;padding:0}
-  .fc-ah{min-width:0;padding:4px 9px}
+  /* En el teléfono la tarjeta crece: el nombre arriba a lo ancho y abajo,
+     en una fila, cantidad × precio y el ahorro. */
+  .fc-tarjeta{row-gap:10px;padding:12px 12px 10px}
+  .fc-txt{flex:1 1 calc(100% - 56px)}
+  .fc-txt b{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:20px}
+  .fc-txt small{white-space:normal}
+  .fc-cant{flex:1 1 auto;font-size:22px;padding:0}
+  .fc-ah{flex:0 0 auto;min-width:0;padding:5px 11px}
+  .fc-ah b{font-size:19px}
   .fc-ahorro{font-size:13px;padding:7px 10px}
 }
 </style>

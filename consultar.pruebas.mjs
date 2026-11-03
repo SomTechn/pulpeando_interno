@@ -862,6 +862,34 @@ console.log('\n=== CONTEO DE PISO (EDITAR) ===');
       r && r.args.p_cantidad === 0);
 }
 
+console.log('\n=== DOS BODEGAS: UNA SOLA CIFRA ===');
+{
+  const estado = base();
+  const perfil = JSON.parse(JSON.stringify(estado.rpc.fn_consultar_producto.data));
+  perfil.ubicaciones.push({ ubicacion_id:'u4', nombre:'Bodega de arriba', predeterminada:false, cantidad:8,
+    tipo:'bodega', codigo:'S01-B02', activa:true },
+    { ubicacion_id:'u5', nombre:'Bodega del patio', predeterminada:false, cantidad:0,
+    tipo:'bodega', codigo:'S01-B03', activa:true });
+  estado.rpc.fn_consultar_producto = { data:perfil, error:null };
+  const { d, p } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(140);
+  const nombres = [...d.querySelectorAll('.tiles .tile small')].map(e => e.textContent);
+  chk('las bodegas no salen una por una', !nombres.includes('Bodega') && !nombres.includes('Bodega de arriba'));
+  const t = d.querySelector('.tiles [data-bod]');
+  chk('sale una cifra con la suma de las bodegas', t && t.querySelector('b').textContent === '38' && /Bodegas · 3/.test(t.textContent));
+  chk('la lista empieza cerrada', d.querySelector('#bod-lista').classList.contains('oculto'));
+  t.click();
+  await esperar(20);
+  const filas = [...d.querySelectorAll('#bod-lista .bod-fila')];
+  chk('al tocarla se despliegan las bodegas que lo tienen', !d.querySelector('#bod-lista').classList.contains('oculto')
+      && filas.length === 2 && /Bodega/.test(filas[0].textContent) && /30/.test(filas[0].textContent) && /8/.test(filas[1].textContent));
+  chk('y dice cuántas no lo tienen', /1 bodega sin este producto/.test(d.querySelector('#bod-lista').textContent));
+  filas[1].click();
+  await esperar();
+  chk('tocar una bodega abre su detalle', d.querySelector('.fila-l.aqui')?.textContent.includes('Bodega de arriba'));
+}
+
 console.log('\n=== LA PUERTA DE LAS 24 HORAS ===');
 {
   const estado = base();
@@ -879,11 +907,39 @@ console.log('\n=== LA PUERTA DE LAS 24 HORAS ===');
   await esperar();
   chk('la hoja no deja contar', !d.querySelector('#ed-cant'));
   chk('explica por qué',
-      /se calcula restando lo que hay[\s\S]*en bodega/.test(d.querySelector('#hoja').textContent));
+      /en bodega y el piso se calcula restándola/.test(d.querySelector('#hoja').textContent.replace(/\s+/g, ' ')));
   chk('dice qué falta', /Bodega de arriba/.test(d.querySelector('#hoja').textContent));
   chk('y manda a auditar', !!d.querySelector('#hoja a[href="auditoria.html"]'));
   chk('sin llamar al servidor',
       !e.llamadas.some(l => l.fn === 'fn_solicitar_conteo_piso'));
+}
+{
+  // 058: sin nada en bodega, el piso se cuenta aunque la bodega no esté al día.
+  const estado = base();
+  estado.rpc.fn_estado_bodega = { data:{ horas:24, bodegas:1, al_dia:false, ubicaciones:[
+    { ubicacion_id:'u3', nombre:'Bodega', codigo:'S01-B01', auditada_en:null, al_dia:false }] }, error:null };
+  estado.rpc.fn_conteo_pide_bodega = { data:{ pide:false, bodega:0, piso:30, capacidad:null, razon:null }, error:null };
+  const { d, p } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(140);
+  d.querySelector('#btn-editar').click();
+  await esperar();
+  chk('sin nada en bodega deja contar el piso sin auditar', !!d.querySelector('#ed-cant'));
+  chk('y lo dice', /No hay nada en bodega/.test(d.querySelector('#hoja').textContent));
+}
+{
+  const estado = base();
+  estado.rpc.fn_estado_bodega = { data:{ horas:24, bodegas:1, al_dia:false, ubicaciones:[
+    { ubicacion_id:'u3', nombre:'Bodega', codigo:'S01-B01', auditada_en:null, al_dia:false }] }, error:null };
+  estado.rpc.fn_conteo_pide_bodega = { data:{ pide:true, bodega:0, piso:50, capacidad:40, razon:'capacidad' }, error:null };
+  const { d, p } = await montar(estado);
+  await p.abrir('p1');
+  await esperar(140);
+  d.querySelector('#btn-editar').click();
+  await esperar();
+  const t = d.querySelector('#hoja').textContent.replace(/\s+/g, ' ');
+  chk('si el piso pasa la capacidad del estante, pide auditar', !d.querySelector('#ed-cant') && /Primero hay que auditar/.test(t));
+  chk('y explica que no cabe', /50 en el piso y en el estante caben 40/.test(t));
 }
 {
   const estado = base();

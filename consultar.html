@@ -147,6 +147,19 @@ button.tile.fuerte::after{border-color:#9AA8BC}
 .barras-otros button.si{border-color:var(--marca);background:var(--marca-suave);color:var(--marca-oscuro)}
 .tile.fuerte.bajo{background:#7F1D32}
 .tile.vacio b{color:var(--claro)}
+/* La suma de las bodegas: su flecha apunta abajo y gira al abrir la lista. */
+button.tile.bodegas::after{transform:rotate(45deg);top:8px}
+button.tile.bodegas.abierta::after{transform:rotate(-135deg);top:12px}
+button.tile.bodegas.abierta{box-shadow:inset 0 0 0 2px var(--marca)}
+.bod-lista{margin-top:9px;background:var(--fondo);border-radius:var(--r-sm);padding:4px 0}
+.bod-fila{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;
+  min-height:46px;padding:8px 14px;border:0;background:none;font:inherit;color:inherit;
+  text-align:left;cursor:pointer;border-bottom:1px solid var(--linea)}
+.bod-fila:last-of-type{border-bottom:0}
+.bod-fila span{min-width:0;font-weight:700;font-size:14px}
+.bod-fila small{display:block;font-size:11.5px;font-weight:600;color:var(--tenue);font-family:var(--num)}
+.bod-fila b{font-family:var(--num);font-size:18px;font-weight:700}
+.bod-nada{padding:9px 14px;font-size:12.5px;color:var(--tenue)}
 .tile-pie{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:12px;
   font-size:12px;color:var(--tenue);line-height:1.5}
 .tile-pie b{font-family:var(--num);font-weight:700;color:var(--tinta)}
@@ -715,16 +728,18 @@ async function escanearCodigo(){
 
 /* ================= abrir el producto ================= */
 async function abrir(id){
+  if (S.prod?.producto_id !== id) S.verBodegas = false;
   S.cargando = true; S.vista = 'ficha'; pintar();
 
-  const [perfil, semanas, conteos, etq, dias] = await Promise.all([
+  const [perfil, semanas, conteos, etq, dias, regla] = await Promise.all([
     sb.rpc('fn_consultar_producto', { p_producto_id:id, p_sucursal_id:S.sucursal }),
     sb.rpc('fn_ventas_producto_semanas', { p_producto_id:id, p_semanas:5,
                                            p_sucursal_id:S.sucursal }),
     sb.rpc('fn_conteos_del_producto', { p_producto_id:id, p_sucursal_id:S.sucursal,
                                         p_limite:5 }),
     sb.rpc('fn_etiqueta_producto', { p_producto_id:id, p_sucursal_id:S.sucursal }),
-    sb.rpc('fn_ventas_producto_dias', { p_producto_id:id, p_dias:30, p_sucursal_id:S.sucursal })
+    sb.rpc('fn_ventas_producto_dias', { p_producto_id:id, p_dias:30, p_sucursal_id:S.sucursal }),
+    sb.rpc('fn_conteo_pide_bodega', { p_producto_id:id, p_sucursal_id:S.sucursal })
   ]);
 
   S.cargando = false;
@@ -741,6 +756,9 @@ async function abrir(id){
   S.dias = dias?.error ? [] : (dias?.data || []);
   S.conteos = conteos.error ? [] : (conteos.data || []);
   S.etq = etq?.error ? null : (etq?.data || null);
+  // Sin nada en bodega (y el piso dentro de lo que cabe en el estante) el
+  // piso se cuenta sin auditar: la resta de la bodega es cero (058).
+  S.regla = regla?.error ? null : (regla?.data || null);
   await cargarBodega();
   pintar();
   // El campo queda listo para el siguiente escaneo sin tocar nada.
@@ -844,16 +862,37 @@ function pintarFicha(){
   const lugares = p.ubicaciones || [];
   /* Cada cifra se toca: abre el detalle por lugar, que es desde donde se baja
      a piso y se carga a bodega. */
+  /* Con dos bodegas o más va una sola cifra, la suma, y al tocarla se
+     despliega cuáles tienen el producto (pedido de Somar). */
+  const bodegas = lugares.filter(u => u.tipo === 'bodega');
+  const juntar = bodegas.length >= 2;
+  const enTiles = juntar ? lugares.filter(u => u.tipo !== 'bodega') : lugares;
+  const tileLugar = u => {
+    const n = Number(u.cantidad) || 0;
+    return `<button class="tile ${n === 0 ? 'vacio' : ''}"
+       data-u="${escapar(u.ubicacion_id)}">
+      <b>${cant(n)}</b><small>${escapar(u.nombre)}</small></button>`;
+  };
+  const sumaBod = bodegas.reduce((a, u) => a + Math.max(0, Number(u.cantidad) || 0), 0);
+  const conProd = bodegas.filter(u => Number(u.cantidad) > 0)
+    .sort((x, y) => Number(y.cantidad) - Number(x.cantidad));
   const tiles = [
     `<button class="tile fuerte ${p.stock_bajo ? 'bajo' : ''}" data-u="">
        <b>${cant(p.existencia)}</b><small>Existencia</small></button>`,
-    ...lugares.map(u => {
-      const n = Number(u.cantidad) || 0;
-      return `<button class="tile ${n === 0 ? 'vacio' : ''}"
-         data-u="${escapar(u.ubicacion_id)}">
-        <b>${cant(n)}</b><small>${escapar(u.nombre)}</small></button>`;
-    })
+    ...enTiles.map(tileLugar),
+    juntar ? `<button class="tile bodegas ${sumaBod === 0 ? 'vacio' : ''} ${S.verBodegas ? 'abierta' : ''}"
+       data-bod aria-expanded="${S.verBodegas ? 'true' : 'false'}">
+      <b>${cant(sumaBod)}</b><small>Bodegas · ${bodegas.length}</small></button>` : ''
   ].join('');
+  const listaBod = !juntar ? '' : `<div class="bod-lista ${S.verBodegas ? '' : 'oculto'}" id="bod-lista">
+    ${conProd.length ? conProd.map(u => `<button class="bod-fila" data-u="${escapar(u.ubicacion_id)}">
+        <span>${escapar(u.nombre)}${u.codigo ? `<small>${escapar(u.codigo)}</small>` : ''}</span>
+        <b>${cant(u.cantidad)}</b></button>`).join('')
+      : '<div class="bod-nada">Ninguna bodega tiene este producto.</div>'}
+    ${conProd.length && conProd.length < bodegas.length
+      ? `<div class="bod-nada">${bodegas.length - conProd.length} bodega${bodegas.length - conProd.length === 1 ? '' : 's'} sin este producto</div>` : ''}
+  </div>`;
+  const nTiles = enTiles.length + 1 + (juntar ? 1 : 0);
 
   const pie = [
     Number(p.apartado) > 0 ? `Apartado <b>${cant(p.apartado)}</b>` : '',
@@ -866,6 +905,8 @@ function pintarFicha(){
   const faltanBod = (bod?.ubicaciones || []).filter(u => !u.al_dia);
   const avisoBodega = !bod || !bod.bodegas ? '' : (bod.al_dia
     ? `<div class="bodega-av ok">Bodega auditada hace menos de 24 h. Se puede contar el piso.</div>`
+    : S.regla?.pide === false
+    ? `<div class="bodega-av ok">No hay nada en bodega: el piso se cuenta sin auditar.</div>`
     : `<div class="bodega-av no">Para contar el piso falta auditar
          <b>${escapar(faltanBod.map(u => u.nombre).join(', ') || 'la bodega')}</b>.
          <a href="auditoria.html">Ir a auditar</a></div>`);
@@ -1020,7 +1061,8 @@ function pintarFicha(){
           Editar
         </button>
       </div>
-      <div class="tiles n${Math.min(lugares.length + 1, 6)}">${tiles}</div>
+      <div class="tiles n${Math.min(nTiles, 6)}">${tiles}</div>
+      ${listaBod}
       ${barraInventario(p)}
       ${pie ? `<div class="tile-pie">${pie}</div>` : ''}
       ${otras ? `<div class="titulin" style="margin-top:16px">En otras sucursales</div>
@@ -1054,8 +1096,16 @@ function pintarFicha(){
   $('#btn-editar').addEventListener('click', () => hojaEditar());
   conectarFab();
   conectarVentas();
-  $$('.tiles button.tile').forEach(b =>
+  $$('.tiles button.tile[data-u]').forEach(b =>
     b.addEventListener('click', () => hojaLugares(b.dataset.u || null)));
+  $('.tiles [data-bod]')?.addEventListener('click', e => {
+    S.verBodegas = !S.verBodegas;
+    ver('#bod-lista', S.verBodegas);
+    e.currentTarget.classList.toggle('abierta', S.verBodegas);
+    e.currentTarget.setAttribute('aria-expanded', S.verBodegas ? 'true' : 'false');
+  });
+  $$('#bod-lista [data-u]').forEach(b =>
+    b.addEventListener('click', () => hojaLugares(b.dataset.u)));
   // El código de barras: tocarlo lo agranda (para leerlo de lejos); los
   // otros códigos del producto se escogen abajo.
   $('#barras-caja')?.addEventListener('click', e => e.currentTarget.classList.toggle('grande'));
@@ -1449,17 +1499,22 @@ function hojaEditar(loteElegido){
     : (loteElegido || null);
 
   const bod = S.bodega;
-  const alDia = bod && bod.al_dia;
+  const alDia = (bod && bod.al_dia) || S.regla?.pide === false;
   const faltan = alDia ? [] :
     (bod?.ubicaciones || []).filter(u => !u.al_dia).map(u => u.nombre);
+  const porCapacidad = S.regla?.razon === 'capacidad';
 
   if (!alDia){
     $('#hoja').innerHTML = `
       <h2>Primero hay que auditar la bodega</h2>
       <p class="sub">${escapar(p.nombre)}</p>
-      <div class="aviso ojo">El piso de ventas se calcula restando lo que hay
-        en bodega. Con la bodega sin auditar en las últimas 24 horas, la cifra
-        contra la que se compararía el conteo no sirve.</div>
+      ${porCapacidad
+        ? `<div class="aviso ojo">El sistema dice <b>${cant(S.regla.piso)}</b> en el piso
+            y en el estante caben <b>${cant(S.regla.capacidad)}</b>: lo demás debe estar
+            en bodega sin registrar.</div>`
+        : `<div class="aviso ojo">Este producto tiene <b>${cant(S.regla?.bodega ?? 0)}</b>
+            en bodega y el piso se calcula restándola: sin auditar la bodega en las
+            últimas 24 horas, el conteo no sirve.</div>`}
       ${faltan.length ? `<div class="aviso malo">Falta auditar:
         <b>${escapar(faltan.join(', '))}</b>.</div>`
         : '<div class="aviso malo">No hay ninguna ubicación de bodega configurada.</div>'}
