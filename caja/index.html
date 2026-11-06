@@ -490,6 +490,11 @@
   .metodo kbd,.partir kbd,.partes-cerrar kbd,.btn kbd,.btn-o kbd,.tecla kbd,.gav-op kbd,.fiscal kbd,.kbd-o{display:none}
 }
 .pg-ancho .gav-op{background:var(--panel)}
+.pill kbd,.pg-boton kbd{font-family:var(--num);font-size:10px;font-weight:800;padding:1px 5px;border-radius:5px;
+  background:rgba(15,23,41,.07);border:1px solid rgba(15,23,41,.12);color:inherit;opacity:.8;margin-left:5px}
+.pill.tinta kbd{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.3)}
+.gav-op b kbd{float:right;font-size:12px;padding:2px 8px;opacity:.9}
+@media (hover:none) and (pointer:coarse){ .pill kbd,.pg-boton kbd{display:none} }
 .pg-lista{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r-md);
   padding:4px 16px}
 .gav-mov[data-id]{cursor:pointer}
@@ -795,7 +800,9 @@
   font-size:13px;font-weight:700;color:var(--tinta);display:flex;align-items:center;justify-content:center;gap:6px}
 .pv-mas button:disabled{opacity:.45}
 .pv-mas .peligro{color:var(--rojo);border-color:#F4C9D3}
-.panel-venta .btn-cobrar{margin-top:0;height:62px;flex:0 0 auto}
+.panel-venta .btn-cobrar{margin-top:auto;height:72px;flex:0 0 auto}
+/* Aunque el panel no quepa, Cobrar se queda a la vista abajo. */
+@media (min-width:821px){ .panel-venta .btn-cobrar{position:sticky;bottom:0;z-index:2;box-shadow:0 -10px 0 var(--fondo)} }
 .panel-venta .btn-cobrar kbd{background:rgba(255,255,255,.2);margin-left:6px}
 
 .vista-tabs{display:none;background:var(--fondo);border-radius:11px;padding:3px;gap:3px}
@@ -906,6 +913,16 @@
 .rb-tit{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#BE123C;margin-bottom:4px}
 .rb{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;color:#9F1239;padding:2px 0}
 .rb span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:line-through}
+/* En PC y tablet: nombre | cantidad × precio al centro | ahorro a la derecha,
+   del ancho de la columna de totales que tiene debajo (Somar, 6 de nov). */
+@media (min-width:821px){
+  .fc-txt{flex:1 1 0}
+  .fc-cant{flex:1 1 0;text-align:center;font-size:clamp(26px,2.6vw,36px)}
+  .fc-ah{flex:0 0 auto;width:300px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 14px}
+  .fc-ah small{font-size:12px}
+  .fc-ah b{font-size:clamp(24px,2.4vw,32px)}
+}
+@media (min-width:821px) and (max-width:1180px){ .fc-ah{width:auto;min-width:200px} }
 @media (max-width:820px){
   .foco{padding:8px 12px}
   .fc-tarjeta{gap:10px;padding:8px 10px;min-height:0;flex-wrap:wrap}
@@ -1071,8 +1088,8 @@
       <div class="barra-fin">
         <span class="pill online" id="h-red">En línea</span>
         <span class="pill num" id="h-ventas">0 ventas</span>
-        <button class="pill accion" id="h-gaveta">Gaveta</button>
-        <button class="pill tinta" id="h-bloquear">Bloquear</button>
+        <button class="pill accion" id="h-gaveta">Gaveta <kbd>F6</kbd></button>
+        <button class="pill tinta" id="h-bloquear">Bloquear <kbd>F9</kbd></button>
       </div>
     </header>
 
@@ -1145,12 +1162,8 @@
             </div>
           </div>
 
-          <div class="pv-pagos" id="pv-pagos">
-            <button data-pago="efectivo" class="pg-efectivo"><b>Efectivo</b><small>Alt+1</small></button>
-            <button data-pago="tarjeta" class="pg-tarjeta"><b>Tarjeta</b><small>Alt+2</small></button>
-            <button data-pago="transferencia" class="pg-transf"><b>Transferencia</b><small>Alt+3</small></button>
-            <button data-pago="credito" class="pg-fiado"><b>Fiado</b><small>Alt+4</small></button>
-          </div>
+          <!-- Un solo botón: las formas de pago salen al cobrar (Somar, 6 de nov).
+               Alt+1..4 siguen abriendo el cobro con la forma puesta. -->
           <div class="pv-mas">
             <button id="pv-suspender">Suspender <kbd>F7</kbd></button>
             <button id="pv-cancelar" class="peligro">Cancelar venta <kbd>F12</kbd></button>
@@ -3423,11 +3436,11 @@ function barraGaveta(titulo, atras){
   const caja = (S.ctx?.cajas || []).find(c => c.caja_id === cajaId());
   return `<header class="pg-barra">
     ${atras ? `<button class="pg-boton" id="gv-no" aria-label="Volver a la gaveta"
-                 >←<span class="pg-largo"> Gaveta</span></button>` : ''}
+                 >←<span class="pg-largo"> Gaveta</span> <kbd class="kbd-o">Esc</kbd></button>` : ''}
     <div class="pg-titulo"><b>${escapar(titulo)}</b>
       <small>${escapar(caja?.caja || 'Caja')} · turno de ${escapar(S.cajero?.nombre || '—')}</small></div>
     <button class="pg-boton" id="gv-x"><span class="pg-largo">Volver a la caja</span
-      ><span class="pg-corto">Caja</span></button>
+      ><span class="pg-corto">Caja</span>${atras ? '' : ' <kbd class="kbd-o">Esc</kbd>'}</button>
   </header>`;
 }
 
@@ -3536,7 +3549,7 @@ function hojaGaveta(tipo){
         </div>
         <div class="aviso malo oculto" id="gv-error" style="margin-top:12px"></div>
         <div class="acciones" style="margin-top:14px">
-          <button class="btn principal-b" id="gv-si">${escapar(g.v)}</button>
+          <button class="btn principal-b" id="gv-si">${escapar(g.v)} <kbd>Enter</kbd></button>
         </div>
       </aside>
     </div></div>`;
@@ -3596,7 +3609,7 @@ async function mandarGaveta(tipo){
   mandarGaveta.vacia = false;
   if (!codigo || !pin) return fallar('Falta el código y el PIN de quien autoriza.');
 
-  const b = $('#gv-si'); const texto = b.textContent;
+  const b = $('#gv-si'); const texto = b.innerHTML;
   b.disabled = true; b.innerHTML = '<span class="girando"></span>';
 
   /* p_detalle va siempre, aunque sea null: con la llave presente la llamada
@@ -3613,7 +3626,7 @@ async function mandarGaveta(tipo){
           p_monto_declarado:monto, p_codigo:codigo, p_pin:pin, p_notas:motivo,
           p_detalle:detalle });
 
-  b.disabled = false; b.textContent = texto;
+  b.disabled = false; b.innerHTML = texto;
   if (r.error) return fallar(limpiarError(r.error));
 
   /* La credencial mala NO llega como error: la función termina bien y
@@ -4002,7 +4015,7 @@ function cobrarCon(m){
   $('#btn-cobrar').click();
   if (m !== 'efectivo') document.querySelector(`.metodo[data-m="${m}"]`)?.click();
 }
-$('#pv-pagos').addEventListener('click', e => {
+$('#pv-pagos')?.addEventListener('click', e => {
   const b = e.target.closest('[data-pago]'); if (b && !b.disabled) cobrarCon(b.dataset.pago);
 });
 $('#pv-suspender').addEventListener('click', () => { if (S.ticket.length) suspender(); });

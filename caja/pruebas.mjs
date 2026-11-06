@@ -1962,16 +1962,16 @@ const VENTA = (estado = 'completada') => ({ venta:{ id:'v9', numero:'T-S01-00000
 console.log('\n=== EL PANEL DE LA VENTA ===');
 {
   const { w, d, C } = await montar(base());
-  chk('sin productos los botones de pago están apagados',
-      [...d.querySelectorAll('#pv-pagos button')].every(b => b.disabled));
+  chk('el panel ya no trae los botones de pago, solo Cobrar', !d.querySelector('#pv-pagos [data-pago]')
+      && d.querySelector('.panel-venta #btn-cobrar').disabled);
   C.agregar('p1'); C.agregar('p3'); C.agregar('p3');
   await esperar();
-  chk('con productos se prenden', [...d.querySelectorAll('#pv-pagos button')].every(b => !b.disabled));
+  chk('con productos se prende Cobrar', !d.querySelector('#btn-cobrar').disabled);
   chk('el total dice cuántos artículos', /3 artículos/.test(d.querySelector('#t-arts').textContent));
-  d.querySelector('[data-pago="tarjeta"]').click();
+  d.querySelector('#btn-cobrar').click();
   await esperar();
-  chk('Tarjeta abre el cobro', !d.querySelector('#velo-cobro').classList.contains('oculto'));
-  chk('con la tarjeta ya puesta', C.S.metodo === 'tarjeta');
+  chk('Cobrar abre el cobro con las formas de pago', !d.querySelector('#velo-cobro').classList.contains('oculto')
+      && d.querySelectorAll('#metodos .metodo').length >= 4);
   d.querySelector('#cancelar-cobro').click();
   await esperar();
   w.document.body.dispatchEvent(new w.KeyboardEvent('keydown', { key:'3', altKey:true, bubbles:true }));
@@ -2282,6 +2282,21 @@ console.log('\n=== TIEMPO DE LA VENTA ===');
   d.querySelector('#btn-terminar').click();
   await esperar(60);
   chk('y la siguiente arranca de cero', C.S.inicioVenta === null);
+}
+
+console.log('\n=== LAS TECLAS SE VEN ===');
+{
+  const { w, d } = await montar(base());
+  chk('Gaveta y Bloquear dicen su tecla', /F6/.test(d.querySelector('#h-gaveta').textContent)
+      && /F9/.test(d.querySelector('#h-bloquear').textContent));
+  tecla(w, d, 'F6');
+  await esperar();
+  chk('en la gaveta, cada operación con su número', [...d.querySelectorAll('.gav-op kbd')].map(k => k.textContent).join('') === '1234');
+  chk('y volver dice Esc', /Esc/.test(d.querySelector('#gv-x').textContent));
+  tecla(w, d, '1');
+  await esperar();
+  chk('dentro de la operación: ← Gaveta Esc y el botón Enter', /Esc/.test(d.querySelector('#gv-no').textContent)
+      && /Enter/.test(d.querySelector('#gv-si').textContent));
 }
 
 console.log('\n=== TURNO CERRADO A MEDIANOCHE ===');
